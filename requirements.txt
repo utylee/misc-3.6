@@ -1,4 +1,6 @@
-beautifulsoup4==4.4.0
-pycurl==7.19.3
-selenium==2.47.1
-wheel==0.24.0
+pbr==3.0.1
+six==1.10.0
+stevedore==1.23.0
+virtualenv==15.1.0
+virtualenv-clone==0.2.6
+virtualenvwrapper==4.7.2
