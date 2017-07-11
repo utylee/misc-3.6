@@ -3,14 +3,22 @@ from bs4 import BeautifulSoup
 import time, re
 import requests
 from peewee import *
-#ctrl_pageLogin_login
 
+URL = 'https://www.akiba-online.com'
+ROOT = 'https://www.akiba-online.com'
+LOCAL = '/mnt/c/Users/utylee/'
+username = 'seoru'
+password = 'akibaqnwk11'
+
+keys = ['thread_no', 'title', 'date', 'href', 'code', 'main_image', 'etc_images', 'text', 'torrents', 'guess_quality']
+entry = dict.fromkeys(key for key in keys)
 
 # db 관련 생성 및 초기화
 
 db = SqliteDatabase('akiba.db')
 
 class Akiba(Model):
+    thread_no = CharField()         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
     title = CharField()             # 각 페이지의 제목입니다
     code = CharField()              #  품번명입니다
     title_image = CharField()       # 메인 이미지의 이름입니다
@@ -31,11 +39,6 @@ try:
 except:
     pass
 
-URL = 'https://www.akiba-online.com'
-ROOT = 'https://www.akiba-online.com'
-LOCAL = '/mnt/c/Users/utylee/'
-username = 'seoru'
-password = 'akibaqnwk11'
 
 drv = webdriver.PhantomJS("/usr/local/bin/phantomjs")
 drv.set_window_size(1024, 768)
@@ -98,19 +101,35 @@ time.sleep(3)
 drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 
 
+# requests 다운로드를 위해 webdriver쿠키 전달
 session = requests.Session()
 cookies = drv.get_cookies()
 for c in cookies:
     session.cookies.set(c['name'], c['value'])
 
 li_urls = []
+title = ""
+
 
 for i in l:
-    text = i.get_attribute('outerHTML' )
+    #entry 초기화
+    for key in entry.keys():
+        entry[key] = None
+
+    text = i.get_attribute('outerHTML')
     print(text)
     m = re.search('href=\"(.*)\" title=', text)
     href = m.group(1)
+    m = re.search('\">(.*)</a>', text)
+    title = m.group(1)
+    m = re.search('\[(.*)\]', title)
+    code = m.group(1)
     li_urls.append("{}/{}".format(ROOT, href))
+    print("title: {}".format(title))
+    entry['href'] = href
+    entry['title'] = title
+    entry['code'] = code
+    print(entry)
     '''
     #response = session.get('https://www.akiba-online.com/attachments/nkkd-038_s-jpg.1072048/')
     response = session.get('{}/{}'.format(ROOT, href))
@@ -129,6 +148,9 @@ for l in li_urls:
     filename = "{}/{}.png".format(LOCAL, l[-8:-1])
     print('shot : {}'.format(filename))
     drv.save_screenshot(filename)
+
+    #title, main_image, text, etc_images, torrent, guess_quality, tag
+    
 
     # 각 페이지를 파싱하여, jpg과 torrent 를 가져옵니다
 #o = drv.find_element_by_xpath("//ol[@class='discussionListItems']")
