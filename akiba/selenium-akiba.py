@@ -10,8 +10,10 @@ LOCAL = '/mnt/c/Users/utylee/'
 username = 'seoru'
 password = 'akibaqnwk11'
 
-keys = ['thread_no', 'title', 'date', 'href', 'code', 'main_image', 'etc_images', 'text', 'torrents', 'guess_quality']
+# akiba dict의 key들 입니다
+keys = ['thread_no', 'title', 'date', 'href', 'code', 'main_image', 'etc_images', 'text', 'torrents', 'guess_quality', 'tag']
 entry = dict.fromkeys(key for key in keys)
+akiba = {}                          # {'글번호': 'entry dict'}
 
 # db 관련 생성 및 초기화
 
@@ -21,11 +23,13 @@ class Akiba(Model):
     thread_no = CharField()         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
     title = CharField()             # 각 페이지의 제목입니다
     code = CharField()              #  품번명입니다
-    title_image = CharField()       # 메인 이미지의 이름입니다
-    detail_images = CharField()     # 상세 이미지들을 ; 로 구분하여 이름들을 저장합니다
+    main_image = CharField()        # 메인 이미지의 이름입니다
+    etc_images = CharField()        # 상세 이미지들을 ; 로 구분하여 이름들을 저장합니다
     date = DateField()              # 글의 생성 날짜입니다
     torrent = CharField()           # 토렌트 파일의 이름입니다
-    content = TextField()           # 글의 내용을 html 형식으로 그대로 갖고 있습니다
+    text = TextField()              # 글의 내용을 html 형식으로 그대로 갖고 있습니다
+    guess_quality = CharField()     # 화질을 글의 내용이나 용량을 통해 추측합니다
+    tag = CharField()               # tag 등을 ;로 구분하여 저장합니다
 
     class Meta:
         database = db
@@ -39,6 +43,8 @@ try:
 except:
     pass
 
+
+# PhantomJS를 로드해 출발합니다
 
 drv = webdriver.PhantomJS("/usr/local/bin/phantomjs")
 drv.set_window_size(1024, 768)
@@ -113,23 +119,26 @@ title = ""
 
 for i in l:
     #entry 초기화
-    for key in entry.keys():
-        entry[key] = None
+    entry = dict.fromkeys(key for key in keys)
 
     text = i.get_attribute('outerHTML')
     print(text)
     m = re.search('href=\"(.*)\" title=', text)
     href = m.group(1)
+    m = re.search('\.(.*)/+', href)
+    thread_no = m.group(1)[-7:]
     m = re.search('\">(.*)</a>', text)
     title = m.group(1)
     m = re.search('\[(.*)\]', title)
     code = m.group(1)
     li_urls.append("{}/{}".format(ROOT, href))
     print("title: {}".format(title))
+    entry['thread_no'] = thread_no
     entry['href'] = href
     entry['title'] = title
     entry['code'] = code
-    print(entry)
+    akiba[thread_no] = entry
+    print(akiba)
     '''
     #response = session.get('https://www.akiba-online.com/attachments/nkkd-038_s-jpg.1072048/')
     response = session.get('{}/{}'.format(ROOT, href))
@@ -143,9 +152,16 @@ print(li_urls)
 
 print('visit each sites...')
 for l in li_urls:
-    print('site : {}'.format(l))
+    thread_no = l[-8:-1]
+    print('{} thread url : {}'.format(thread_no, l))
+    print('fetching...')
     drv.get(l)
-    filename = "{}/{}.png".format(LOCAL, l[-8:-1])
+    # date 찾기
+    l = drv.find_element_by_xpath("//abbr[@class='DateTime']")
+    l.get_attribute('outerHTML')
+    date = 
+    
+    filename = "{}/{}.png".format(LOCAL, thread_no)
     print('shot : {}'.format(filename))
     drv.save_screenshot(filename)
 
