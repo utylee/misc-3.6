@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 import time, re
 import requests
 from peewee import *
+# google translate 를 위한
+from trans import *
 
 URL = 'https://www.akiba-online.com'
 ROOT = 'https://www.akiba-online.com'
@@ -11,7 +13,7 @@ username = 'seoru'
 password = 'akibaqnwk11'
 
 # akiba dict의 key들 입니다
-keys = ['thread_no', 'title', 'date', 'href', 'code', 'main_image', 'etc_images', 'text', 'torrents', 'guess_quality', 'tag']
+keys = ['thread_no', 'title', 'title_ko', 'date', 'href', 'code', 'main_image', 'etc_images', 'text', 'torrents', 'guess_quality', 'tag']
 entry = dict.fromkeys(key for key in keys)
 akiba = {}                          # {'글번호': 'entry dict'}
 
@@ -36,6 +38,19 @@ class Akiba(Model):
 
 
 db.connect()
+
+
+# google translate 를 위한 header
+agent = {'User-Agent':
+            "Mozilla/4.0 (\
+            compatible;\
+            MSIE 6.0;\
+            Windows NT 5.1;\
+            SV1;\
+            .NET CLR 1.1.4322;\
+            .NET CLR 2.0.50727;\
+            .NET CLR 3.0.04506.30\
+            )"}
 
 #이미 db table이 생성되었을 경우, 에러가 날 때를 대비해 try 합니다
 try:
@@ -136,19 +151,11 @@ for i in l:
     entry['thread_no'] = thread_no
     entry['href'] = href
     entry['title'] = title
+    entry['title_ko'] = translate(title, 'ko')
     entry['code'] = code
     akiba[thread_no] = entry
-    print(akiba)
-    '''
-    #response = session.get('https://www.akiba-online.com/attachments/nkkd-038_s-jpg.1072048/')
-    response = session.get('{}/{}'.format(ROOT, href))
-    #print(response.content)
-    filename = "{}/{}.jpg".format(LOCAL, href[8:])
-    #with open("/mnt/c/Users/utylee/temp.jpg", "wb") as w:
-    with open(filename, "wb") as w:
-        w.write(response.content)
-        '''
-print(li_urls)
+#print(li_urls)
+
 
 print('visit each sites...')
 for l in li_urls:
@@ -156,14 +163,64 @@ for l in li_urls:
     print('{} thread url : {}'.format(thread_no, l))
     print('fetching...')
     drv.get(l)
+
     # date 찾기
     l = drv.find_element_by_xpath("//abbr[@class='DateTime']")
-    l.get_attribute('outerHTML')
-    date = 
+    t = l.get_attribute('outerHTML')
+    m = re.search('data-time=\"(\d*)\"', t)
+    akiba[thread_no]['date'] = m.group(1)
+
+    # text 찾기
+    l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
+    #i = drv.find_element_by_xpath("//img[@class='bbCodeImage']")
+    t = l.get_attribute('innerHTML')
+    m = re.search('<img.*src=\"(.*)\.\d+/*\"', t)
+    o = re.search('alt=\"(\w+\-*\d+)\.*\"', t)
+    akiba[thread_no]['main_image'] = m.group(1)
+    akiba[thread_no]['code'] = o.group(1)
+    #n = re.sub('<img.*\">', '', t, re.MULTILINE)
+    # text 를 추출하기 위한 프로세스입니다. <img 관련 태크, \n 태그, \t 태그 등을 제거합니다
+    n = re.sub('<img.*\">', '', t)
+    n = re.sub('\t', '', n)
+    n = re.sub('\n', '', n)
+    akiba[thread_no]['text'] = n 
+    l = drv.find_elements_by_xpath("//ul[starts-with(@class, 'attachmentList')]/li/div/div/h6/a")
+    for e in l:
+        '''
+        <a href="attachments/cmc-181-torrent.1073552/" target="_blank">cmc-181.torrent</a>
+        <a href="attachments/cmc-181a-mp4-jpg.1073553/" target="_blank">cmc-181A.mp4.jpg</a>                                                 <a href="attachments/cmc-181b-mp4-jpg.1073554/" target="_blank">cmc-181B.mp4.jpg</a>
+        '''
+        t1 = e.get_attribute('outerHTML')
+        m1 = re.search('href=\"(.*\.\d+/*)\"', t1)
+        href = m1.group(1)
+        print(t1)
+        print(href)
+
+        dir1 = 'static/images'
+        ext = 'jpg'
+        if re.search('jpg\.\d+',href) is not None:
+            f = re.search('attachments/(.*jpg\.\d+)', href).group(1)
+        elif re.search('torrent\.\d+',href) is not None:
+            f = re.search('attachments/(.*torrent\.\d+)', href).group(1)
+            ext = 'torrent'
+            dir1 = 'static/torrents'
+
+        #response = session.get('https://www.akiba-online.com/attachments/nkkd-038_s-jpg.1072048/')
+        response = session.get('{}/{}'.format(ROOT, href))
+        #print(response.content)
+        #filename = "{}/{}.{}".format(LOCAL, href[8:], ext)
+        filename = "{}/{}.{}".format(dir1, f, ext)
+        #with open("/mnt/c/Users/utylee/temp.jpg", "wb") as w:
+        with open(filename, "wb") as w:
+            w.write(response.content)
+print(akiba)
     
-    filename = "{}/{}.png".format(LOCAL, thread_no)
-    print('shot : {}'.format(filename))
-    drv.save_screenshot(filename)
+    #print(akiba[thread_no])
+    
+    #filename = "{}/{}.png".format(LOCAL, thread_no)
+    #print('shot : {}'.format(filename))
+    #drv.save_screenshot(filename)
+    
 
     #title, main_image, text, etc_images, torrent, guess_quality, tag
     
