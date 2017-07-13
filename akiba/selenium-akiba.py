@@ -90,14 +90,14 @@ print('click "login" button')
 l = drv.find_element_by_xpath("//div[@class='xenOverlay']/form/dl/dd/input[@class='button primary'][@value='Log in']")
 print('sleep 1')
 time.sleep(1)
-print('shot')
-drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+#print('shot')
+#drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 l.click()
 #l.submit()
 print('sleep 4')
 #time.sleep(4)
-print('shot')
-drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+#print('shot')
+#drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 
 # Jav torrent 클릭
 l = drv.find_element_by_xpath("//a[.='JAV Torrents']")
@@ -105,7 +105,7 @@ print('clicking JAV Torrents')
 l.click()
 print('sleep 3')
 time.sleep(3)
-drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+#drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 #t = drv.page_source
 #t = drv.get_attribute('innerHTML')
 
@@ -118,8 +118,8 @@ print('fetching JAV torrents list items...')
 l = drv.find_elements_by_xpath("//ol/li[not(contains(@class, 'sticky'))]/div/div/h3/a[@class='PreviewTooltip']")
 #print(l)
 #l.click()
-time.sleep(3)
-drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+#time.sleep(3)
+#drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 
 
 # requests 다운로드를 위해 webdriver쿠키 전달
@@ -143,9 +143,10 @@ for i in l:
     m = re.search('\.(.*)/+', href)
     thread_no = m.group(1)[-7:]
     m = re.search('\">(.*)</a>', text)
-    title = m.group(1)
-    m = re.search('\[(.*)\]', title)
-    code = m.group(1)
+    if m is not None: title = m.group(1)
+    m = re.search('\[(.*)\]', title) 
+    if m is not None: code = m.group(1)
+
     li_urls.append("{}/{}".format(ROOT, href))
     print("title: {}".format(title))
     entry['thread_no'] = thread_no
@@ -174,6 +175,7 @@ for l in li_urls:
     l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
     #i = drv.find_element_by_xpath("//img[@class='bbCodeImage']")
     t = l.get_attribute('innerHTML')
+    print(t)
     m = re.search('<img.*src=\"(.*)\.\d+/*\"', t)
     o = re.search('alt=\"(\w+\-*\d+)\.*\"', t)
     akiba[thread_no]['main_image'] = m.group(1)
