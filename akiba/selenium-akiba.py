@@ -165,7 +165,10 @@ while True:
         entry['thread_no'] = thread_no
         entry['href'] = href
         entry['title'] = title
-        entry['title_ko'] = translate(title, 'ko')
+        try:
+            entry['title_ko'] = translate(title, 'ko')
+        except:
+            entry['title_ko'] = entry['title'] 
         entry['code'] = code
         akiba[thread_no] = entry
     #print(li_urls)
@@ -177,6 +180,7 @@ while True:
     for l in li_urls:
 
         thread_no = l[-8:-1]
+        print(thread_no)
         akiba[thread_no]['etc_images'] = []
         akiba[thread_no]['torrents'] = []
 
@@ -184,9 +188,9 @@ while True:
         print('fetching...')
 
         # 해당 쓰레드 html 을 가져옵니다
+        drv.get(l)
         #임시
-        #drv.get(l)
-        drv.get('https://www.akiba-online.com/threads/asami_yuma-fhd-collection-pack-vol-5-170711-no-watermark.1748000/')
+        #drv.get('https://www.akiba-online.com/threads/asami_yuma-fhd-collection-pack-vol-5-170711-no-watermark.1748000/')
 
         # date 찾기
         l = drv.find_element_by_xpath("//abbr[@class='DateTime']")
