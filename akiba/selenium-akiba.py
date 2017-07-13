@@ -159,7 +159,11 @@ for i in l:
 
 print('visit each sites...')
 for l in li_urls:
+
     thread_no = l[-8:-1]
+    akiba[thread_no]['etc_images'] = []
+    akiba[thread_no]['torrents'] = []
+
     print('{} thread url : {}'.format(thread_no, l))
     print('fetching...')
     drv.get(l)
@@ -174,22 +178,36 @@ for l in li_urls:
     l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
     #i = drv.find_element_by_xpath("//img[@class='bbCodeImage']")
     t = l.get_attribute('innerHTML')
-    m = re.search('<img.*src=\"(.*)\.\d+/*\"', t)
+
+    # main_image 저장 및 지정 프로세스
+    m = re.search('<img.*src=\"(.*\.\d+)/*\"', t)
+    href = m.group(1)
+    print(href)
+    f = re.search('attachments/(.*jpg\.\d+)/*', href).group(1) + '.jpg'
+    print(f)
+    akiba[thread_no]['main_image'] = f
+    dir1 = 'static/images'
+    #response = session.get('{}/{}'.format(ROOT, href))
+    response = session.get(href)
+    filename = "{}/{}".format(dir1, f)
+    with open(filename, "wb") as w:
+        w.write(response.content)
+
+    # code 저장
     o = re.search('alt=\"(\w+\-*\d+)\.*\"', t)
-    akiba[thread_no]['main_image'] = m.group(1)
     akiba[thread_no]['code'] = o.group(1)
     #n = re.sub('<img.*\">', '', t, re.MULTILINE)
     # text 를 추출하기 위한 프로세스입니다. <img 관련 태크, \n 태그, \t 태그 등을 제거합니다
     n = re.sub('<img.*\">', '', t)
     n = re.sub('\t', '', n)
     n = re.sub('\n', '', n)
+
+    # text 저장
     akiba[thread_no]['text'] = n 
     l = drv.find_elements_by_xpath("//ul[starts-with(@class, 'attachmentList')]/li/div/div/h6/a")
+
+    # etc_images 및 torrents 저장
     for e in l:
-        '''
-        <a href="attachments/cmc-181-torrent.1073552/" target="_blank">cmc-181.torrent</a>
-        <a href="attachments/cmc-181a-mp4-jpg.1073553/" target="_blank">cmc-181A.mp4.jpg</a>                                                 <a href="attachments/cmc-181b-mp4-jpg.1073554/" target="_blank">cmc-181B.mp4.jpg</a>
-        '''
         t1 = e.get_attribute('outerHTML')
         m1 = re.search('href=\"(.*\.\d+/*)\"', t1)
         href = m1.group(1)
@@ -197,22 +215,24 @@ for l in li_urls:
         print(href)
 
         dir1 = 'static/images'
-        ext = 'jpg'
+        #ext = 'jpg'
         if re.search('jpg\.\d+',href) is not None:
-            f = re.search('attachments/(.*jpg\.\d+)', href).group(1)
+            f = re.search('attachments/(.*jpg\.\d+)', href).group(1) + '.jpg'
+            akiba[thread_no]['etc_images'].append(f)
         elif re.search('torrent\.\d+',href) is not None:
-            f = re.search('attachments/(.*torrent\.\d+)', href).group(1)
-            ext = 'torrent'
+            f = re.search('attachments/(.*torrent\.\d+)', href).group(1) + '.torrent'
+            akiba[thread_no]['torrents'].append(f)
+            #ext = 'torrent'
             dir1 = 'static/torrents'
 
-        #response = session.get('https://www.akiba-online.com/attachments/nkkd-038_s-jpg.1072048/')
         response = session.get('{}/{}'.format(ROOT, href))
         #print(response.content)
         #filename = "{}/{}.{}".format(LOCAL, href[8:], ext)
-        filename = "{}/{}.{}".format(dir1, f, ext)
-        #with open("/mnt/c/Users/utylee/temp.jpg", "wb") as w:
+        #filename = "{}/{}.{}".format(dir1, f, ext)
+        filename = "{}/{}".format(dir1, f)
         with open(filename, "wb") as w:
             w.write(response.content)
+        print(akiba[thread_no])
 print(akiba)
     
     #print(akiba[thread_no])
