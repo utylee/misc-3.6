@@ -1,1 +1,5 @@
 __pycache__/*
+akiba/__pycache__/*
+akiba/static/images/*
+akiba/static/torrents/*
+akiba/ghostdriver.log
