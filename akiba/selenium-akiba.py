@@ -11,6 +11,7 @@ ROOT = 'https://www.akiba-online.com'
 LOCAL = '/mnt/c/Users/utylee/'
 username = 'seoru'
 password = 'akibaqnwk11'
+start_page_num = 2
 
 # akiba dict의 key들 입니다
 keys = ['thread_no', 'title', 'title_ko', 'date', 'href', 'code', 'main_image', 'etc_images', 'text', 'torrents', 'guess_quality', 'tag']
@@ -99,7 +100,9 @@ print('sleep 4')
 #print('shot')
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 
+
 # Jav torrent 클릭
+# 첫페이지부터 시작
 l = drv.find_element_by_xpath("//a[.='JAV Torrents']")
 print('clicking JAV Torrents')
 l.click()
@@ -109,162 +112,200 @@ time.sleep(3)
 #t = drv.page_source
 #t = drv.get_attribute('innerHTML')
 
+# requests다운로드를 위해 webdriver쿠키를 미리 전달해 놓습니다
+session = requests.Session()
+cookies = drv.get_cookies()
+for c in cookies:
+    session.cookies.set(c['name'], c['value'])
 
 # Jav torrent 내의 list들을 가진 목록을 가져옵니다
 print('fetching JAV torrents list items...')
 #o = drv.find_elements_by_xpath("//li[@class='discussionListItem visible*'][not(@class='*sticky ')]")
 #o = drv.find_elements_by_xpath("//li[contains(@class, 'discussionListItem visible')]")
 #l = drv.find_element_by_xpath("//a[@class='PreviewTooltip'][contains(@href, '1747531')]")
-l = drv.find_elements_by_xpath("//ol/li[not(contains(@class, 'sticky'))]/div/div/h3/a[@class='PreviewTooltip']")
-#print(l)
-#l.click()
-#time.sleep(3)
-#drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+
+page_num = 1
+next_page_link = drv.find_element_by_xpath("//div[@class='PageNav']/nav/a[@class='text']")
+print('next_page_link.drv : {}'.format(next_page_link))
+if next_page_link is not None:
+    n = next_page_link.get_attribute('outerHTML') 
+    print(n)
+    next_page_link_is = re.search('Next', n) 
+
+    m = re.search('href=\"(.*/page\-(\d+))\"', n)
+    next_page_link_url = '{}/{}'.format(ROOT, m.group(1))
+    next_page_num = m.group(2)
+    print('nexturl: {}, nextnum : {}'.format(next_page_link_url, next_page_num))
 
 
-# requests 다운로드를 위해 webdriver쿠키 전달
-session = requests.Session()
-cookies = drv.get_cookies()
-for c in cookies:
-    session.cookies.set(c['name'], c['value'])
 
-li_urls = []
-title = ""
+# 페이지별 반복 프로세스
+while True:
+    l = drv.find_elements_by_xpath("//ol/li[not(contains(@class, 'sticky'))]/div/div/h3/a[@class='PreviewTooltip']")
+    li_urls = []
+    title = ""
 
+    for i in l:
+        #entry 초기화
+        entry = dict.fromkeys(key for key in keys)
 
-for i in l:
-    #entry 초기화
-    entry = dict.fromkeys(key for key in keys)
+        text = i.get_attribute('outerHTML')
+        print(text)
+        m = re.search('href=\"(.*)\" title=', text)
+        href = m.group(1)
+        m = re.search('\.(.*)/+', href)
+        thread_no = m.group(1)[-7:]
+        m = re.search('\">(.*)</a>', text)
+        if m is not None: title = m.group(1)
+        m = re.search('\[(.*)\]', title) 
+        if m is not None: code = m.group(1)
 
-    text = i.get_attribute('outerHTML')
-    print(text)
-    m = re.search('href=\"(.*)\" title=', text)
-    href = m.group(1)
-    m = re.search('\.(.*)/+', href)
-    thread_no = m.group(1)[-7:]
-    m = re.search('\">(.*)</a>', text)
-    if m is not None: title = m.group(1)
-    m = re.search('\[(.*)\]', title) 
-    if m is not None: code = m.group(1)
-
-    li_urls.append("{}/{}".format(ROOT, href))
-    print("title: {}".format(title))
-    entry['thread_no'] = thread_no
-    entry['href'] = href
-    entry['title'] = title
-    entry['title_ko'] = translate(title, 'ko')
-    entry['code'] = code
-    akiba[thread_no] = entry
-#print(li_urls)
+        li_urls.append("{}/{}".format(ROOT, href))
+        print("title: {}".format(title))
+        entry['thread_no'] = thread_no
+        entry['href'] = href
+        entry['title'] = title
+        entry['title_ko'] = translate(title, 'ko')
+        entry['code'] = code
+        akiba[thread_no] = entry
+    #print(li_urls)
 
 
-print('visit each sites...')
-for l in li_urls:
 
-    thread_no = l[-8:-1]
-    akiba[thread_no]['etc_images'] = []
-    akiba[thread_no]['torrents'] = []
+    # 페이지내의 쓰레드별 반복 프로세스
+    print('visit each sites...')
+    for l in li_urls:
 
-    print('{} thread url : {}'.format(thread_no, l))
-    print('fetching...')
-    drv.get(l)
+        thread_no = l[-8:-1]
+        akiba[thread_no]['etc_images'] = []
+        akiba[thread_no]['torrents'] = []
 
-    # date 찾기
-    l = drv.find_element_by_xpath("//abbr[@class='DateTime']")
-    t = l.get_attribute('outerHTML')
-    m = re.search('data-time=\"(\d*)\"', t)
-    akiba[thread_no]['date'] = m.group(1)
+        print('{} thread url : {}'.format(thread_no, l))
+        print('fetching...')
 
-    # text 찾기
-    l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
-    #i = drv.find_element_by_xpath("//img[@class='bbCodeImage']")
-    t = l.get_attribute('innerHTML')
+        # 해당 쓰레드 html 을 가져옵니다
+        #임시
+        #drv.get(l)
+        drv.get('https://www.akiba-online.com/threads/asami_yuma-fhd-collection-pack-vol-5-170711-no-watermark.1748000/')
 
-    # main_image 저장 및 지정 프로세스
-    m = re.search('<img.*src=\"(.*\.\d+)/*\"', t)
-    href = m.group(1)
-    print(href)
-    f = re.search('attachments/(.*jpg\.\d+)/*', href).group(1) + '.jpg'
-    print(f)
-    akiba[thread_no]['main_image'] = f
-    dir1 = 'static/images'
-    #response = session.get('{}/{}'.format(ROOT, href))
-    response = session.get(href)
-    filename = "{}/{}".format(dir1, f)
-    with open(filename, "wb") as w:
-        w.write(response.content)
+        # date 찾기
+        l = drv.find_element_by_xpath("//abbr[@class='DateTime']")
+        t = l.get_attribute('outerHTML')
+        m = re.search('data-time=\"(\d*)\"', t)
+        akiba[thread_no]['date'] = m.group(1)
 
-    # code 저장
-    print(t)
-    m = re.search('<img.*src=\"(.*)\.\d+/*\"', t)
-    o = re.search('alt=\"(\w+\-*\d+)\.*\"', t)
-    #akiba[thread_no]['code'] = o.group(1)
-    #n = re.sub('<img.*\">', '', t, re.MULTILINE)
-    # text 를 추출하기 위한 프로세스입니다. <img 관련 태크, \n 태그, \t 태그 등을 제거합니다
-    n = re.sub('<img.*\">', '', t)
-    n = re.sub('\t', '', n)
-    n = re.sub('\n', '', n)
+        # text 찾기
+        l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
+        #i = drv.find_element_by_xpath("//img[@class='bbCodeImage']")
+        t = l.get_attribute('innerHTML')
+        print(t)
 
-    # text 저장
-    akiba[thread_no]['text'] = n 
-    l = drv.find_elements_by_xpath("//ul[starts-with(@class, 'attachmentList')]/li/div/div/h6/a")
+        # main_image 저장 및 지정 프로세스
+        m = re.search('<img.*src=\"(.*\.\d+)/*\"', t)
+        if m is not None : 
+            href = m.group(1)
+            f = re.search('attachments/(.*jpg\.\d+)/*', href).group(1) + '.jpg'
+            print(f)
+            akiba[thread_no]['main_image'] = f
+            dir1 = 'static/images'
+            #response = session.get('{}/{}'.format(ROOT, href))
+            response = session.get(href)
+            filename = "{}/{}".format(dir1, f)
+            with open(filename, "wb") as w:
+                w.write(response.content)
 
-    # etc_images 및 torrents 저장
-    for e in l:
-        t1 = e.get_attribute('outerHTML')
-        m1 = re.search('href=\"(.*\.\d+/*)\"', t1)
-        href = m1.group(1)
-        print(t1)
-        print(href)
+        # code 저장
+        print(t)
+        #m = re.search('<img.*src=\"(.*)\.\d+/*\"', t)
+        o = re.search('alt=\"(\w+\-*\d+)\.*\"', t)
+        if o is not None : akiba[thread_no]['code'] = o.group(1)
+        #n = re.sub('<img.*\">', '', t, re.MULTILINE)
 
-        dir1 = 'static/images'
-        #ext = 'jpg'
-        if re.search('jpg\.\d+',href) is not None:
-            f = re.search('attachments/(.*jpg\.\d+)', href).group(1) + '.jpg'
-            akiba[thread_no]['etc_images'].append(f)
-        elif re.search('torrent\.\d+',href) is not None:
-            f = re.search('attachments/(.*torrent\.\d+)', href).group(1) + '.torrent'
-            akiba[thread_no]['torrents'].append(f)
-            #ext = 'torrent'
-            dir1 = 'static/torrents'
+        # text 저장
+        # text 를 추출하기 위한 프로세스입니다. <img 관련 태크, \n 태그, \t 태그 등을 제거합니다
+        n = re.sub('<img.*\">', '', t)
+        n = re.sub('\t', '', n)
+        n = re.sub('\n', '', n)
+        akiba[thread_no]['text'] = n 
 
-        response = session.get('{}/{}'.format(ROOT, href))
-        #print(response.content)
-        #filename = "{}/{}.{}".format(LOCAL, href[8:], ext)
-        #filename = "{}/{}.{}".format(dir1, f, ext)
-        filename = "{}/{}".format(dir1, f)
-        with open(filename, "wb") as w:
-            w.write(response.content)
+        # etc_images 및 torrents 저장
+        l = drv.find_elements_by_xpath("//ul[starts-with(@class, 'attachmentList')]/li/div/div/h6/a")
+        for e in l:
+            t1 = e.get_attribute('outerHTML')
+            m1 = re.search('href=\"(.*\.\d+/*)\"', t1)
+            href = m1.group(1)
+            print(t1)
+            print(href)
+
+            dir1 = 'static/images'
+            #ext = 'jpg'
+            if re.search('jpg\.\d+',href) is not None:
+                f = re.search('attachments/(.*jpg\.\d+)', href).group(1) + '.jpg'
+                akiba[thread_no]['etc_images'].append(f)
+            elif re.search('torrent\.\d+',href) is not None:
+                f = re.search('attachments/(.*torrent\.\d+)', href).group(1) + '.torrent'
+                akiba[thread_no]['torrents'].append(f)
+                #ext = 'torrent'
+                dir1 = 'static/torrents'
+
+            response = session.get('{}/{}'.format(ROOT, href))
+            #print(response.content)
+            #filename = "{}/{}.{}".format(LOCAL, href[8:], ext)
+            #filename = "{}/{}.{}".format(dir1, f, ext)
+            filename = "{}/{}".format(dir1, f)
+            with open(filename, "wb") as w:
+                w.write(response.content)
         print(akiba[thread_no])
-print(akiba)
+
+        if akiba[thread_no]['main_image'] is None:
+            #첨부 이미지가 하나도 없는 경우, 본문 내 img 태그들 주소를 검색해 모두 다운로드하고 db에 연결합니다
+            if not len(akiba[thread_no]['etc_images']):
+                ele_images = drv.find_elements_by_xpath("//img[starts-with(@class, 'bbCodeImage')]")     
+                for e in ele_images:
+                    if e is not None:
+                        src = e.get_attribute('outerHTML')
+                        print(src)
+                        #m = re.search('src=\"(.*/(.+\.w+))\"', src)
+                        #if m is not None:
+                            #url = m.group(1)
+                            #f = m.group(2)
+                        url = e.get_attribute('src')
+                        print(url)
+                        f = url.split('/')[-1]
+                        print(f)
+                        
+                        print("url:{}, f:{}".format(url, f))
+                        print("url[:4]:{}".format(url[:4].lower()))
+
+                        dir1 = 'static/images'
+                        if (url[:4].lower() == 'http') and (url is not None) and (f is not None):
+                            print('came in')
+                            response = session.get('{}'.format(url))
+                            #print(response.content)
+                            #filename = "{}/{}.{}".format(dir1, f, ext)
+                            f = "{}-{}".format(thread_no, f)
+                            akiba[thread_no]['etc_images'].append(f)
+                            filename = "{}/{}".format(dir1, f)
+                            print('saving from {} to {}'.format(url, filename))
+                            with open(filename, "wb") as w:
+                                w.write(response.content)
+            if len(akiba[thread_no]['etc_images']):
+                akiba[thread_no]['main_image'] = akiba[thread_no]['etc_images'][0]
+        print(akiba[thread_no])
+    print(akiba)
+
+
+    print('\n\n################### ended current page ######################\n\n')
+
+    # 다음페이지 탐색
+    if next_page_link is None:
+        break
+
+    print('starting page-{}'.format(next_page_num))
+    print(next_page_link_url)
+    drv.get(next_page_link_url)
     
-    #print(akiba[thread_no])
-    
-    #filename = "{}/{}.png".format(LOCAL, thread_no)
-    #print('shot : {}'.format(filename))
-    #drv.save_screenshot(filename)
+print('!!!!!!!!!!!!!!!!  Come to last page. completed!!!!!!!!!!!!!!!!!')
     
 
-    #title, main_image, text, etc_images, torrent, guess_quality, tag
-    
 
-    # 각 페이지를 파싱하여, jpg과 torrent 를 가져옵니다
-#o = drv.find_element_by_xpath("//ol[@class='discussionListItems']")
-#text = o.get_attribute('innerHTML')
-#print(text)
-
-'''
-#jpg 클릭
-
-l = drv.find_element_by_xpath("//h6/a[contains(@href, '1072048')]")
-t = l.get_attribute('outerHTML')
-
-
-#l.click()
-#print(response.content)
-
-
-time.sleep(3)
-drv.save_screenshot('/mnt/c/Users/utylee/out.png')
-# sticky가 아닌 목록들만 추출합니다
-'''
