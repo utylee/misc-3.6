@@ -14,7 +14,8 @@ password = 'akibaqnwk11'
 start_page_num = 2
 
 # akiba dict의 key들 입니다
-keys = ['thread_no', 'title', 'title_ko', 'date', 'href', 'code', 'main_image', 'etc_images', 'text', 'torrents', 'guess_quality', 'tag']
+keys = ['thread_no', 'title', 'title_ko', 'date', 'href', 'code', 'main_image', 'etc_images', 
+        'text', 'torrents', 'guess_quality', 'tag', 'already_has']
 entry = dict.fromkeys(key for key in keys)
 akiba = {}                          # {'글번호': 'entry dict'}
 
@@ -25,21 +26,22 @@ db = SqliteDatabase('akiba.db')
 class Akiba(Model):
     thread_no = CharField()         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
     title = CharField()             # 각 페이지의 제목입니다
+    title_ko = CharField()          # 각 페이지의 번역한 제목입니다
+    date = DateField()              # 글의 생성 날짜입니다
+    href = CharField()              # 글의 쓰레드 주소입니다
     code = CharField()              #  품번명입니다
     main_image = CharField()        # 메인 이미지의 이름입니다
     etc_images = CharField()        # 상세 이미지들을 ; 로 구분하여 이름들을 저장합니다
-    date = DateField()              # 글의 생성 날짜입니다
-    torrent = CharField()           # 토렌트 파일의 이름입니다
     text = TextField()              # 글의 내용을 html 형식으로 그대로 갖고 있습니다
+    torrent = CharField()           # 토렌트 파일의 이름입니다
     guess_quality = CharField()     # 화질을 글의 내용이나 용량을 통해 추측합니다
     tag = CharField()               # tag 등을 ;로 구분하여 저장합니다
+    already_has = CharField()       # 이미 성공적으로 긁어오기가 긁어온 쓰레드임을 표시합니다
 
     class Meta:
         database = db
 
-
 db.connect()
-
 
 # google translate 를 위한 header
 agent = {'User-Agent':
@@ -77,7 +79,6 @@ time.sleep(1)
 print('input id')
 l = drv.find_element_by_xpath("//input[@id='ctrl_pageLogin_login'][@name='login']")
 l.send_keys(username)
-#time.sleep(1)
 
 print('click "yes i have id"')
 l = drv.find_element_by_xpath("//input[@id='ctrl_pageLogin_registered'][@name='register']")
@@ -85,8 +86,6 @@ l.click()
 print('input password')
 l = drv.find_element_by_xpath("//input[@id='ctrl_pageLogin_password'][@name='password']")
 l.send_keys(password)
-#print('sleep 1')
-#time.sleep(1)
 print('click "login" button')
 l = drv.find_element_by_xpath("//div[@class='xenOverlay']/form/dl/dd/input[@class='button primary'][@value='Log in']")
 print('sleep 1')
@@ -94,15 +93,12 @@ time.sleep(1)
 #print('shot')
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 l.click()
-#l.submit()
-print('sleep 4')
 #time.sleep(4)
 #print('shot')
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 
 
 # Jav torrent 클릭
-# 첫페이지부터 시작
 l = drv.find_element_by_xpath("//a[.='JAV Torrents']")
 print('clicking JAV Torrents')
 l.click()
@@ -118,12 +114,11 @@ cookies = drv.get_cookies()
 for c in cookies:
     session.cookies.set(c['name'], c['value'])
 
-# Jav torrent 내의 list들을 가진 목록을 가져옵니다
-print('fetching JAV torrents list items...')
 #o = drv.find_elements_by_xpath("//li[@class='discussionListItem visible*'][not(@class='*sticky ')]")
 #o = drv.find_elements_by_xpath("//li[contains(@class, 'discussionListItem visible')]")
 #l = drv.find_element_by_xpath("//a[@class='PreviewTooltip'][contains(@href, '1747531')]")
 
+'''
 page_num = 1
 next_page_link = drv.find_element_by_xpath("//div[@class='PageNav']/nav/a[@class='text']")
 print('next_page_link.drv : {}'.format(next_page_link))
@@ -136,25 +131,43 @@ if next_page_link is not None:
     next_page_link_url = '{}/{}'.format(ROOT, m.group(1))
     next_page_num = m.group(2)
     print('nexturl: {}, nextnum : {}'.format(next_page_link_url, next_page_num))
-
+    '''
 
 
 # 페이지별 반복 프로세스
 while True:
+    # 다음페이지주소를 미리 얻어놓습니다
+    next_page_link = drv.find_element_by_xpath("//div[@class='PageNav']/nav/a[@class='text'][contains(text(), 'Next')]")
+    print('\n\nnext_page_link : {}'.format(next_page_link))
+    if next_page_link is not None:
+        n = next_page_link.get_attribute('outerHTML') 
+        print(n)
+        next_page_link_is = re.search('Next', n) 
+
+        m = re.search('href=\"(.*/page\-(\d+))\"', n)
+        next_page_link_url = '{}/{}'.format(ROOT, m.group(1))
+        next_page_num = m.group(2)
+        print('nexturl: {}, nextnum : {}'.format(next_page_link_url, next_page_num))
+
+    # 페이지 내의 list들을 가진 목록을 가져옵니다
+    print('fetching current page list items...')
     l = drv.find_elements_by_xpath("//ol/li[not(contains(@class, 'sticky'))]/div/div/h3/a[@class='PreviewTooltip']")
     li_urls = []
     title = ""
 
     for i in l:
         #entry 초기화
+        code = title = thread_no = href = None 
         entry = dict.fromkeys(key for key in keys)
 
         text = i.get_attribute('outerHTML')
         print(text)
         m = re.search('href=\"(.*)\" title=', text)
         href = m.group(1)
-        m = re.search('\.(.*)/+', href)
-        thread_no = m.group(1)[-7:]
+        #m = re.search('\.(.*)/+', href)
+        #thread_no = m.group(1)[-7:]
+        m = re.search('\.(\d{7})/', href)
+        thread_no = m.group(1)
         m = re.search('\">(.*)</a>', text)
         if m is not None: title = m.group(1)
         m = re.search('\[(.*)\]', title) 
@@ -173,20 +186,25 @@ while True:
 
 
     # 페이지내의 쓰레드별 반복 프로세스
-    print('visit each sites...')
+    print('\n\nvisit each threads...')
     for l in li_urls:
 
-        thread_no = l[-8:-1]
+        print('\n\nli_urls(cur):{}'.format(l))
+        m = re.search('\.(\d{7})/*', l)
+        #thread_no = l[-8:-1]
+        thread_no = m.group(1) 
+        print('thread_no : {}'.format(thread_no))
         akiba[thread_no]['etc_images'] = []
         akiba[thread_no]['torrents'] = []
 
         print('{} thread url : {}'.format(thread_no, l))
-        print('fetching...')
+        print('\nfetching...')
 
         # 해당 쓰레드 html 을 가져옵니다
+        drv.get(l)
         #임시
-        #drv.get(l)
-        drv.get('https://www.akiba-online.com/threads/asami_yuma-fhd-collection-pack-vol-5-170711-no-watermark.1748000/')
+        #https://www.akiba-online.com/threads/pgd-919-shiosannotodeu.1747668/
+        drv.get('https://www.akiba-online.com/threads/pgd-919-shiosannotodeu.1747668/')
 
         # date 찾기
         l = drv.find_element_by_xpath("//abbr[@class='DateTime']")
@@ -200,10 +218,47 @@ while True:
         t = l.get_attribute('innerHTML')
         print(t)
 
-        # main_image 저장 및 지정 프로세스
-        m = re.search('<img.*src=\"(.*\.\d+)/*\"', t)
-        if m is not None : 
-            href = m.group(1)
+
+        # main_image 저장 및 지정 추가 image는 etc_images 에 넣는 프로세스
+        im = drv.find_elements_by_xpath("//blockquote[starts-with(@class, 'messageText')]/*/*/img\
+                                        |//blockquote[starts-with(@class, 'messageText')]/*/img\
+                                        |//blockquote[starts-with(@class, 'messageText')]/img")
+        print('im size : {}'.format(len(im)))
+        for i in im:
+            href = i.get_attribute('src')
+            if href is not '' : 
+                print('href : ' + href)
+                if href[:4] != 'http':
+                    href = ROOT + '/' + href
+                spl = href.split('/')
+                print(spl)
+                print(spl[-1])
+                print(spl[-2])
+                f = spl[-1]
+                if f is '':
+                    f = spl[-2]
+                print('f :' + f + '.')
+                f = f + '.jpg'
+                filename = 'static/images/' + f
+                if akiba[thread_no]['main_image'] is None: 
+                    akiba[thread_no]['main_image'] = f
+                    print('downloading main images...')
+                else:
+                    akiba[thread_no]['etc_images'].append(f) 
+                    print('downloading etc images...')
+                response = session.get(href)
+                with open(filename, "wb") as w:
+                    w.write(response.content)
+
+        '''
+        # main_image 저장 및 지정 추가 image는 etc_images 에 넣는 프로세스
+        href = l.get_attribute('src')
+        print('href : ' + href)
+        #m = re.search('<img.*src=\"(.*\.\d+)/*\"', t)
+        #if m is not None : 
+        if href is not None : 
+            print('came in href')
+            #href = m.group(1)
             f = re.search('attachments/(.*jpg\.\d+)/*', href).group(1) + '.jpg'
             print(f)
             akiba[thread_no]['main_image'] = f
@@ -211,12 +266,12 @@ while True:
             #response = session.get('{}/{}'.format(ROOT, href))
             response = session.get(href)
             filename = "{}/{}".format(dir1, f)
+            print('downloading main images...')
             with open(filename, "wb") as w:
                 w.write(response.content)
+        '''
 
         # code 저장
-        print(t)
-        #m = re.search('<img.*src=\"(.*)\.\d+/*\"', t)
         o = re.search('alt=\"(\w+\-*\d+)\.*\"', t)
         if o is not None : akiba[thread_no]['code'] = o.group(1)
         #n = re.sub('<img.*\">', '', t, re.MULTILINE)
@@ -291,6 +346,11 @@ while True:
                                 w.write(response.content)
             if len(akiba[thread_no]['etc_images']):
                 akiba[thread_no]['main_image'] = akiba[thread_no]['etc_images'][0]
+        # title, thread_no, main_image, torrent 가 있으면 ok 사인
+        if (akiba[thread_no]['title'] is not None) and \
+            (akiba[thread_no]['main_image'] is not None) and \
+            (akiba[thread_no]['torrents'] is not None):
+            akiba[thread_no]['already_has'] = 1
         print(akiba[thread_no])
     print(akiba)
 
