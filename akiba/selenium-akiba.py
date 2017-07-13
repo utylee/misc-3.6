@@ -2,7 +2,28 @@ from selenium import webdriver
 from bs4 import BeautifulSoup
 import time, re
 import requests
+from peewee import *
 #ctrl_pageLogin_login
+
+
+db = SqliteDatabase('akiba.db')
+
+class Akiba(Model):
+    title = CharField()
+    code = CharField()
+    title_image = CharField()
+    content_images = CharField()
+    text = TextField()
+    date = DateField()
+
+    class Meta:
+        database = db
+
+db.connect()
+try:
+    db.create_tables([Akiba])
+except:
+    pass
 
 URL = 'https://www.akiba-online.com'
 ROOT = 'https://www.akiba-online.com'
@@ -39,13 +60,15 @@ l = drv.find_element_by_xpath("//div[@class='xenOverlay']/form/dl/dd/input[@clas
 print('sleep 1')
 time.sleep(1)
 print('shot')
-drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+#drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+drv.save_screenshot('out.png')
 l.click()
 #l.submit()
 print('sleep 4')
 #time.sleep(4)
 print('shot')
-drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+#drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+drv.save_screenshot('out.png')
 
 # Jav torrent 클릭
 l = drv.find_element_by_xpath("//a[.='JAV Torrents']")
@@ -67,7 +90,8 @@ l = drv.find_element_by_xpath("//a[@class='PreviewTooltip'][contains(@href, '174
 print(l)
 l.click()
 time.sleep(3)
-drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+#drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+drv.save_screenshot('out.png')
 #for i in o:
     #print(i.get_attribute('outerHTML'))
 #print(len(o))
@@ -94,7 +118,8 @@ for c in cookies:
 response = session.get('{}/{}'.format(ROOT, t))
 #print(response.content)
 
-with open("/mnt/c/Users/utylee/temp.jpg", "wb") as w:
+#with open("/mnt/c/Users/utylee/temp.jpg", "wb") as w:
+with open("temp.jpg", "wb") as w:
     w.write(response.content)
 
 #l.click()
