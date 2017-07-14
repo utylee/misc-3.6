@@ -208,8 +208,9 @@ while True:
         #debug시 시간이 너무 소요돼서 일단 이쪽으로 빼놓음
         #또한 종종 에러가 나서 try 구문을 추가함
         try:
-            entry['title_ko'] = translate(entry['title'], 'ko')
+            akiba[thread_no]['title_ko'] = translate(akiba[thread_no]['title'], 'ko')
         except:
+            print(' !!! translate error. Passing ')
             pass
 
         # 해당 thread_no 가 이미 과거에 완료한 항목일 경우 패스합니다
@@ -281,9 +282,12 @@ while True:
                 else:
                     akiba[thread_no]['etc_images'].append(f) 
                     print('downloading etc images...')
-                response = session.get(href)
-                with open(filename, "wb") as w:
-                    w.write(response.content)
+                try:
+                    response = session.get(href)
+                    with open(filename, "wb") as w:
+                        w.write(response.content)
+                except:
+                    print('exception occurred on downloading...')
 
         '''
         # main_image 저장 및 지정 추가 image는 etc_images 에 넣는 프로세스
