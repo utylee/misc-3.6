@@ -3,8 +3,7 @@ from bs4 import BeautifulSoup
 import time, re
 import requests
 from peewee import *
-# google translate 를 위한
-from trans import *
+#ctrl_pageLogin_login
 
 URL = 'https://www.akiba-online.com'
 ROOT = 'https://www.akiba-online.com'
@@ -37,6 +36,12 @@ class Akiba(Model):
     guess_quality = CharField()     # 화질을 글의 내용이나 용량을 통해 추측합니다
     tag = CharField()               # tag 등을 ;로 구분하여 저장합니다
     already_has = CharField()       # 이미 성공적으로 긁어오기가 긁어온 쓰레드임을 표시합니다
+    title = CharField()
+    code = CharField()
+    title_image = CharField()
+    content_images = CharField()
+    text = TextField()
+    date = DateField()
 
     class Meta:
         database = db
@@ -61,8 +66,10 @@ try:
 except:
     pass
 
-
-# PhantomJS를 로드해 출발합니다
+URL = 'https://www.akiba-online.com'
+ROOT = 'https://www.akiba-online.com'
+username = 'seoru'
+password = 'akibaqnwk11'
 
 drv = webdriver.PhantomJS("/usr/local/bin/phantomjs")
 drv.set_window_size(1024, 768)
@@ -90,13 +97,14 @@ print('click "login" button')
 l = drv.find_element_by_xpath("//div[@class='xenOverlay']/form/dl/dd/input[@class='button primary'][@value='Log in']")
 print('sleep 1')
 time.sleep(1)
-#print('shot')
+print('shot')
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+drv.save_screenshot('out.png')
 l.click()
 #time.sleep(4)
-#print('shot')
+print('shot')
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
-
+drv.save_screenshot('out.png')
 
 # Jav torrent 클릭
 l = drv.find_element_by_xpath("//a[.='JAV Torrents']")
@@ -104,15 +112,10 @@ print('clicking JAV Torrents')
 l.click()
 print('sleep 3')
 time.sleep(3)
-#drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 #t = drv.page_source
 #t = drv.get_attribute('innerHTML')
 
-# requests다운로드를 위해 webdriver쿠키를 미리 전달해 놓습니다
-session = requests.Session()
-cookies = drv.get_cookies()
-for c in cookies:
-    session.cookies.set(c['name'], c['value'])
 
 #o = drv.find_elements_by_xpath("//li[@class='discussionListItem visible*'][not(@class='*sticky ')]")
 #o = drv.find_elements_by_xpath("//li[contains(@class, 'discussionListItem visible')]")
@@ -291,46 +294,25 @@ while True:
             href = m1.group(1)
             print(t1)
             print(href)
+l = drv.find_element_by_xpath("//a[@class='PreviewTooltip'][contains(@href, '1747531')]")
+#l = drv.find_elements_by_xpath("//a[@class='PreviewTooltip']")
+print(l)
+l.click()
+time.sleep(3)
+#drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+drv.save_screenshot('out.png')
+#for i in o:
+    #print(i.get_attribute('outerHTML'))
+#print(len(o))
+#o = drv.find_element_by_xpath("//ol[@class='discussionListItems']")
+#text = o.get_attribute('innerHTML')
+#print(text)
 
-            dir1 = 'static/images'
-            #ext = 'jpg'
-            if re.search('jpg\.\d+',href) is not None:
-                f = re.search('attachments/(.*jpg\.\d+)', href).group(1) + '.jpg'
-                akiba[thread_no]['etc_images'].append(f)
-            elif re.search('torrent\.\d+',href) is not None:
-                f = re.search('attachments/(.*torrent\.\d+)', href).group(1) + '.torrent'
-                akiba[thread_no]['torrents'].append(f)
-                #ext = 'torrent'
-                dir1 = 'static/torrents'
 
-            response = session.get('{}/{}'.format(ROOT, href))
-            #print(response.content)
-            #filename = "{}/{}.{}".format(LOCAL, href[8:], ext)
-            #filename = "{}/{}.{}".format(dir1, f, ext)
-            filename = "{}/{}".format(dir1, f)
-            with open(filename, "wb") as w:
-                w.write(response.content)
-        print(akiba[thread_no])
+#jpg 클릭
 
-        if akiba[thread_no]['main_image'] is None:
-            #첨부 이미지가 하나도 없는 경우, 본문 내 img 태그들 주소를 검색해 모두 다운로드하고 db에 연결합니다
-            if not len(akiba[thread_no]['etc_images']):
-                ele_images = drv.find_elements_by_xpath("//img[starts-with(@class, 'bbCodeImage')]")     
-                for e in ele_images:
-                    if e is not None:
-                        src = e.get_attribute('outerHTML')
-                        print(src)
-                        #m = re.search('src=\"(.*/(.+\.w+))\"', src)
-                        #if m is not None:
-                            #url = m.group(1)
-                            #f = m.group(2)
-                        url = e.get_attribute('src')
-                        print(url)
-                        f = url.split('/')[-1]
-                        print(f)
-                        
-                        print("url:{}, f:{}".format(url, f))
-                        print("url[:4]:{}".format(url[:4].lower()))
+l = drv.find_element_by_xpath("//h6/a[contains(@href, '1072048')]")
+t = l.get_attribute('outerHTML')
 
                         dir1 = 'static/images'
                         if (url[:4].lower() == 'http') and (url is not None) and (f is not None):
@@ -353,19 +335,29 @@ while True:
             akiba[thread_no]['already_has'] = 1
         print(akiba[thread_no])
     print(akiba)
+    '''
+    m = re.search('href=\"(.*)/\"', t)
+    t = m.group(1)
+    print(t)
+
+    session = requests.Session()
+    cookies = drv.get_cookies()
+
+    for c in cookies:
+        session.cookies.set(c['name'], c['value'])
+    #response = session.get('https://www.akiba-online.com/attachments/nkkd-038_s-jpg.1072048/')
+    response = session.get('{}/{}'.format(ROOT, t))
+    #print(response.content)
+
+    #with open("/mnt/c/Users/utylee/temp.jpg", "wb") as w:
+    with open("temp.jpg", "wb") as w:
+        w.write(response.content)
+
+    #l.click()
+    #print(response.content)
 
 
-    print('\n\n################### ended current page ######################\n\n')
-
-    # 다음페이지 탐색
-    if next_page_link is None:
-        break
-
-    print('starting page-{}'.format(next_page_num))
-    print(next_page_link_url)
-    drv.get(next_page_link_url)
-    
-print('!!!!!!!!!!!!!!!!  Come to last page. completed!!!!!!!!!!!!!!!!!')
-    
-
-
+    time.sleep(3)
+    drv.save_screenshot('/mnt/c/Users/utylee/out.png')
+    # sticky가 아닌 목록들만 추출합니다
+    '''
