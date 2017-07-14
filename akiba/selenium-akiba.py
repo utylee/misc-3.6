@@ -12,6 +12,7 @@ LOCAL = '/mnt/c/Users/utylee/'
 username = 'seoru'
 password = 'akibaqnwk11'
 start_page_num = 2
+DEBUG = True
 
 # akiba dict의 key들 입니다
 keys = ['thread_no', 'title', 'title_ko', 'date', 'href', 'code', 'main_image', 'etc_images', 
@@ -24,24 +25,40 @@ akiba = {}                          # {'글번호': 'entry dict'}
 db = SqliteDatabase('akiba.db')
 
 class Akiba(Model):
-    thread_no = CharField()         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
-    title = CharField()             # 각 페이지의 제목입니다
-    title_ko = CharField()          # 각 페이지의 번역한 제목입니다
-    date = DateField()              # 글의 생성 날짜입니다
-    href = CharField()              # 글의 쓰레드 주소입니다
-    code = CharField()              #  품번명입니다
-    main_image = CharField()        # 메인 이미지의 이름입니다
-    etc_images = CharField()        # 상세 이미지들을 ; 로 구분하여 이름들을 저장합니다
-    text = TextField()              # 글의 내용을 html 형식으로 그대로 갖고 있습니다
-    torrent = CharField()           # 토렌트 파일의 이름입니다
-    guess_quality = CharField()     # 화질을 글의 내용이나 용량을 통해 추측합니다
-    tag = CharField()               # tag 등을 ;로 구분하여 저장합니다
-    already_has = CharField()       # 이미 성공적으로 긁어오기가 긁어온 쓰레드임을 표시합니다
+    #thread_no = CharField(primary_key=True)         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
+    thread_no = CharField(null = True)         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
+    title = CharField(null = True)             # 각 페이지의 제목입니다
+    title_ko = CharField(null = True)          # 각 페이지의 번역한 제목입니다
+    date = CharField(null = True)              # 글의 생성 날짜입니다
+    href = CharField(null = True)              # 글의 쓰레드 주소입니다
+    code = CharField(null = True)              # 품번명입니다
+    main_image = CharField(null = True)        # 메인 이미지의 이름입니다
+    etc_images = CharField(null = True)        # 상세 이미지들을 ; 로 구분하여 이름들을 저장합니다
+    text = TextField(null = True)              # 글의 내용을 html 형식으로 그대로 갖고 있습니다
+    torrents = CharField(null = True)           # 토렌트 파일의 이름입니다
+    guess_quality = CharField(null = True)     # 화질을 글의 내용이나 용량을 통해 추측합니다
+    tag = CharField(null = True)               # tag 등을 ;로 구분하여 저장합니다
+    already_has = CharField(null = True)       # 이미 성공적으로 긁어오기가 긁어온 쓰레드임을 표시합니다
 
     class Meta:
         database = db
 
 db.connect()
+
+#이미 db table이 생성되었을 경우, 에러가 날 때를 대비해 try 합니다
+try:
+    db.create_tables([Akiba])
+except:
+    pass
+
+# 임시
+if DEBUG:
+    print('debug')
+    r = Akiba.select()
+    for i in r:
+        print("{}, {}, {}, \n {}, \n{}, {}, {}".format(i.thread_no, i.title, i.title_ko,
+                                    i.text, i.main_image, i.torrents,i.already_has))
+
 
 # google translate 를 위한 header
 agent = {'User-Agent':
@@ -54,13 +71,6 @@ agent = {'User-Agent':
             .NET CLR 2.0.50727;\
             .NET CLR 3.0.04506.30\
             )"}
-
-#이미 db table이 생성되었을 경우, 에러가 날 때를 대비해 try 합니다
-try:
-    db.create_tables([Akiba])
-except:
-    pass
-
 
 # PhantomJS를 로드해 출발합니다
 
@@ -102,8 +112,9 @@ l.click()
 l = drv.find_element_by_xpath("//a[.='JAV Torrents']")
 print('clicking JAV Torrents')
 l.click()
-print('sleep 3')
-time.sleep(3)
+#print('sleep 3')
+#time.sleep(3)
+
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 #t = drv.page_source
 #t = drv.get_attribute('innerHTML')
@@ -149,7 +160,7 @@ while True:
         next_page_num = m.group(2)
         print('nexturl: {}, nextnum : {}'.format(next_page_link_url, next_page_num))
 
-    # 페이지 내의 list들을 가진 목록을 가져옵니다
+    # 페이지 내의 thread list들을 가진 목록을 가져옵니다
     print('fetching current page list items...')
     l = drv.find_elements_by_xpath("//ol/li[not(contains(@class, 'sticky'))]/div/div/h3/a[@class='PreviewTooltip']")
     li_urls = []
@@ -178,14 +189,14 @@ while True:
         entry['thread_no'] = thread_no
         entry['href'] = href
         entry['title'] = title
-        entry['title_ko'] = translate(title, 'ko')
+        #entry['title_ko'] = translate(title, 'ko')
         entry['code'] = code
         akiba[thread_no] = entry
     #print(li_urls)
 
 
 
-    # 페이지내의 쓰레드별 반복 프로세스
+    # 페이지내의 thread별 반복 프로세스
     print('\n\nvisit each threads...')
     for l in li_urls:
 
@@ -194,6 +205,25 @@ while True:
         #thread_no = l[-8:-1]
         thread_no = m.group(1) 
         print('thread_no : {}'.format(thread_no))
+        #debug시 시간이 너무 소요돼서 일단 이쪽으로 빼놓음
+        #또한 종종 에러가 나서 try 구문을 추가함
+        try:
+            entry['title_ko'] = translate(entry['title'], 'ko')
+        except:
+            pass
+
+        # 해당 thread_no 가 이미 과거에 완료한 항목일 경우 패스합니다
+        with db.transaction():
+            has = 0
+            qresult = Akiba.select().where(Akiba.thread_no == thread_no)
+            for query in qresult:
+                has = query.already_has
+                print('{}.already_has is {}'.format(query.thread_no, query.already_has))
+            if has == '1':
+                print('\n\n <<< will be passed >> \n')
+                continue
+        #if akiba[thread_no]['already_has'] == '1':
+
         akiba[thread_no]['etc_images'] = []
         akiba[thread_no]['torrents'] = []
 
@@ -204,13 +234,18 @@ while True:
         drv.get(l)
         #임시
         #https://www.akiba-online.com/threads/pgd-919-shiosannotodeu.1747668/
-        drv.get('https://www.akiba-online.com/threads/pgd-919-shiosannotodeu.1747668/')
+        #drv.get('https://www.akiba-online.com/threads/pgd-919-shiosannotodeu.1747668/')
 
         # date 찾기
-        l = drv.find_element_by_xpath("//abbr[@class='DateTime']")
-        t = l.get_attribute('outerHTML')
-        m = re.search('data-time=\"(\d*)\"', t)
-        akiba[thread_no]['date'] = m.group(1)
+        #l = drv.find_element_by_xpath("//abbr[@class='DateTime']")
+        l = drv.find_element_by_xpath("//*[@class='DateTime']")
+        m = l.get_attribute('data-time')
+        #t = l.get_attribute('outerHTML')
+        #m = re.search('data-time=\"(\d*)\"', t)
+        if m is None:
+            m = l.get_attribute('title')
+        #akiba[thread_no]['date'] = m.group(1)
+        akiba[thread_no]['date'] = m
 
         # text 찾기
         l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
@@ -346,12 +381,53 @@ while True:
                                 w.write(response.content)
             if len(akiba[thread_no]['etc_images']):
                 akiba[thread_no]['main_image'] = akiba[thread_no]['etc_images'][0]
-        # title, thread_no, main_image, torrent 가 있으면 ok 사인
+
+        # title, thread_no, main_image, torrent 가 있으면 ok 사인을 표시해 놓습니다
         if (akiba[thread_no]['title'] is not None) and \
             (akiba[thread_no]['main_image'] is not None) and \
             (akiba[thread_no]['torrents'] is not None):
             akiba[thread_no]['already_has'] = 1
         print(akiba[thread_no])
+
+        # db 삽입
+        with db.transaction():
+        #with db.atomic():
+            # thread_no key는 없기에 db에 통째로 넣기 위해 임시로 막판에 추가
+            #akiba[thread_no]['thread_no'] = thread_no
+            #Akiba.insert_many(akiba[thread_no]).execute()
+            #temp = Akiba.create()
+            #temp.insert_many(akiba[thread_no]).execute()
+            Akiba.create(
+                    thread_no = akiba[thread_no]['thread_no'],
+                    title = akiba[thread_no]['title'],
+                    title_ko = akiba[thread_no]['title_ko'],
+                    date = akiba[thread_no]['date'],
+                    href = akiba[thread_no]['href'],
+                    code = akiba[thread_no]['code'],
+                    main_image = akiba[thread_no]['main_image'],
+                    etc_images = akiba[thread_no]['etc_images'],
+                    text = akiba[thread_no]['text'],
+                    torrents = akiba[thread_no]['torrents'],
+                    guess_quality = akiba[thread_no]['guess_quality'],
+                    tag = akiba[thread_no]['tag'],
+                    already_has = akiba[thread_no]['already_has']
+                    )
+
+            #cur_akiba.thread_no = akiba[thread_no]['thread_no']
+            #cur_akiba.title = akiba[thread_no]['title']
+            #cur_akiba.title_ko = akiba[thread_no]['title_ko']
+            #cur_akiba.save()
+            print('db insert succeeded! ')
+            #Akiba.insert(thread_no = akiba[thread_no]['thread_no']).execute()
+            #Akiba.insert(title = akiba[thread_no]['title']).execute()
+            #Akiba.insert(title_ko = akiba[thread_no]['title_ko']).execute()
+            '''
+                # akiba dict의 key들 입니다
+                keys = ['thread_no', 'title', 'title_ko', 'date', 'href', 'code', 'main_image', 'etc_images', 
+                'text', 'torrents', 'guess_quality', 'tag', 'already_has']
+            '''
+            #db.close()
+            
     print(akiba)
 
 
