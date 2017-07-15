@@ -11,7 +11,8 @@ ROOT = 'https://www.akiba-online.com'
 LOCAL = '/mnt/c/Users/utylee/'
 username = 'seoru'
 password = 'akibaqnwk11'
-start_page_num = 2
+#start_page_num = 2
+start_page_num = 0
 DEBUG = True
 
 # akiba dict의 key들 입니다
@@ -112,8 +113,9 @@ l.click()
 l = drv.find_element_by_xpath("//a[.='JAV Torrents']")
 print('clicking JAV Torrents')
 l.click()
-#print('sleep 3')
-#time.sleep(3)
+
+#start_page_num 이 지정되어 있다면 해당 페이지로 다시 로딩
+url = '{}/page-{}'.format(drv.current_url, start_page_num) 
 
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 #t = drv.page_source
