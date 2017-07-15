@@ -5,6 +5,7 @@ import requests
 from peewee import *
 # google translate 를 위한
 from trans import *
+from playhouse.apsw_ext import *
 
 URL = 'https://www.akiba-online.com'
 ROOT = 'https://www.akiba-online.com'
@@ -13,8 +14,8 @@ ROOT = 'https://www.akiba-online.com'
 LOCAL = '/home/pi/media/3001/30-flask/python/selenium/akiba/'
 username = 'seoru'
 password = 'akibaqnwk11'
-#start_page_num = 2
-start_page_num = 50
+start_page_num = 87
+#start_page_num = 50
 #DEBUG = True
 DEBUG = False
 
@@ -27,7 +28,9 @@ akiba = {}                          # {'글번호': 'entry dict'}
 # db 관련 생성 및 초기화
 
 #db = SqliteDatabase('akiba.db')
-db = SqliteDatabase( LOCAL + 'akiba.db')
+#db = SqliteDatabase( LOCAL + 'akiba.db')
+db = APSWDatabase( LOCAL + 'akiba.db')
+#db = APSWDatabase( LOCAL + 'apsw.db')
 
 class Akiba(Model):
     #thread_no = CharField(primary_key=True)         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
@@ -48,7 +51,8 @@ class Akiba(Model):
     class Meta:
         database = db
 
-db.connect()
+db_con = db.connect()
+#db_con.setbusytimeout(1000)
 
 #이미 db table이 생성되었을 경우, 에러가 날 때를 대비해 try 합니다
 try:
@@ -222,7 +226,9 @@ while True:
             pass
 
         # 해당 thread_no 가 이미 과거에 완료한 항목일 경우 패스합니다
-        with db.transaction():
+        #with db.transaction():
+        with db.atomic():
+            #with db_con:
             has = 0
             qresult = Akiba.select().where(Akiba.thread_no == thread_no)
             for query in qresult:
@@ -402,8 +408,9 @@ while True:
         print(akiba[thread_no])
 
         # db 삽입
-        with db.transaction():
-        #with db.atomic():
+        #with db_con:
+        #with db.transaction():
+        with db.atomic():
             # thread_no key는 없기에 db에 통째로 넣기 위해 임시로 막판에 추가
             #akiba[thread_no]['thread_no'] = thread_no
             #Akiba.insert_many(akiba[thread_no]).execute()
