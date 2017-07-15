@@ -12,7 +12,7 @@ LOCAL = '/mnt/c/Users/utylee/'
 username = 'seoru'
 password = 'akibaqnwk11'
 #start_page_num = 2
-start_page_num = 0
+start_page_num = 100
 DEBUG = True
 
 # akiba dict의 key들 입니다
@@ -116,6 +116,7 @@ l.click()
 
 #start_page_num 이 지정되어 있다면 해당 페이지로 다시 로딩
 url = '{}/page-{}'.format(drv.current_url, start_page_num) 
+drv.get(url)
 
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 #t = drv.page_source
