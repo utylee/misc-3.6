@@ -8,12 +8,15 @@ from trans import *
 
 URL = 'https://www.akiba-online.com'
 ROOT = 'https://www.akiba-online.com'
-LOCAL = '/mnt/c/Users/utylee/'
+#LOCAL = '/mnt/c/Users/utylee/'
+#LOCAL = '/home/pi/.virtualenvs/misc/src/akiba/'
+LOCAL = '/home/pi/media/3001/30-flask/python/selenium/akiba/'
 username = 'seoru'
 password = 'akibaqnwk11'
 #start_page_num = 2
-start_page_num = 0
-DEBUG = True
+start_page_num = 50
+#DEBUG = True
+DEBUG = False
 
 # akiba dict의 key들 입니다
 keys = ['thread_no', 'title', 'title_ko', 'date', 'href', 'code', 'main_image', 'etc_images', 
@@ -23,7 +26,8 @@ akiba = {}                          # {'글번호': 'entry dict'}
 
 # db 관련 생성 및 초기화
 
-db = SqliteDatabase('akiba.db')
+#db = SqliteDatabase('akiba.db')
+db = SqliteDatabase( LOCAL + 'akiba.db')
 
 class Akiba(Model):
     #thread_no = CharField(primary_key=True)         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
@@ -116,6 +120,8 @@ l.click()
 
 #start_page_num 이 지정되어 있다면 해당 페이지로 다시 로딩
 url = '{}/page-{}'.format(drv.current_url, start_page_num) 
+print(' >>>>>>>>>>>> \n starting from page - {}'.format(start_page_num))
+drv.get(url)
 
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 #t = drv.page_source
@@ -277,7 +283,7 @@ while True:
                     f = spl[-2]
                 print('f :' + f + '.')
                 f = f + '.jpg'
-                filename = 'static/images/' + f
+                filename = LOCAL + 'static/images/' + f
                 if akiba[thread_no]['main_image'] is None: 
                     akiba[thread_no]['main_image'] = f
                     print('downloading main images...')
@@ -333,7 +339,7 @@ while True:
             print(t1)
             print(href)
 
-            dir1 = 'static/images'
+            dir1 = LOCAL + 'static/images'
             #ext = 'jpg'
             if re.search('jpg\.\d+',href) is not None:
                 f = re.search('attachments/(.*jpg\.\d+)', href).group(1) + '.jpg'
@@ -342,7 +348,7 @@ while True:
                 f = re.search('attachments/(.*torrent\.\d+)', href).group(1) + '.torrent'
                 akiba[thread_no]['torrents'].append(f)
                 #ext = 'torrent'
-                dir1 = 'static/torrents'
+                dir1 = LOCAL + 'static/torrents'
 
             response = session.get('{}/{}'.format(ROOT, href))
             #print(response.content)
@@ -373,7 +379,7 @@ while True:
                         print("url:{}, f:{}".format(url, f))
                         print("url[:4]:{}".format(url[:4].lower()))
 
-                        dir1 = 'static/images'
+                        dir1 = LOCAL + 'static/images'
                         if (url[:4].lower() == 'http') and (url is not None) and (f is not None):
                             print('came in')
                             response = session.get('{}'.format(url))
