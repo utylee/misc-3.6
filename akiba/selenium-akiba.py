@@ -7,9 +7,9 @@ from peewee import *
 from trans import *
 from playhouse.apsw_ext import *
 
-def errhandle(e):
-    print('\n\ndb called {} times'.format(e))
-    return True
+#def errhandle(e):
+    #print('\n\ndb called {} times'.format(e))
+    #return True
 
 URL = 'https://www.akiba-online.com'
 ROOT = 'https://www.akiba-online.com'
@@ -18,7 +18,7 @@ ROOT = 'https://www.akiba-online.com'
 LOCAL = '/home/pi/media/3001/30-flask/python/selenium/akiba/'
 username = 'seoru'
 password = 'akibaqnwk11'
-start_page_num = 90
+start_page_num = 109
 #start_page_num = 50
 #DEBUG = True
 DEBUG = False
@@ -33,7 +33,7 @@ akiba = {}                          # {'글번호': 'entry dict'}
 
 #db = SqliteDatabase('akiba.db')
 #db = SqliteDatabase( LOCAL + 'akiba.db')
-db = APSWDatabase( LOCAL + 'akiba.db', timeout=3000)
+db = APSWDatabase( LOCAL + 'akiba.db', timeout=3000, pragmas=[('journal_mode', 'wal')])
 #db = APSWDatabase( LOCAL + 'apsw.db')
 
 class Akiba(Model):
@@ -56,12 +56,13 @@ class Akiba(Model):
         database = db
 
 #Connection(db)
-db_con = apsw.Connection(LOCAL + 'akiba.db')
+#db_con = apsw.Connection(LOCAL + 'akiba.db')
 #db_con = apsw.Connection(db)
-#db.connect()
+db.connect()
 #print(db_con)
-db_con.setbusytimeout(3000)
-db_con.setbusyhandler(errhandle, e)
+#db_con.setbusytimeout(3000)
+#db_con.setbusyhandler(errhandle)
+#db_con.setbusyhandler(errhandle, e)
 
 
 #이미 db table이 생성되었을 경우, 에러가 날 때를 대비해 try 합니다
@@ -239,8 +240,8 @@ while True:
         #with db.transaction():
         #with db.get_conn():
         #with db.atomic():
-        with db_con:
-        #with db.atomic():
+        #with db_con:
+        with db.atomic():
             has = 0
             qresult = Akiba.select().where(Akiba.thread_no == thread_no)
             for query in qresult:
@@ -420,9 +421,9 @@ while True:
         print(akiba[thread_no])
 
         # db 삽입
-        with db_con:
+        #with db_con:
         #with db.transaction():
-        #with db.atomic():
+        with db.atomic():
         #with db.get_conn():
             # thread_no key는 없기에 db에 통째로 넣기 위해 임시로 막판에 추가
             #akiba[thread_no]['thread_no'] = thread_no
@@ -445,20 +446,7 @@ while True:
                     already_has = akiba[thread_no]['already_has']
                     )
 
-            #cur_akiba.thread_no = akiba[thread_no]['thread_no']
-            #cur_akiba.title = akiba[thread_no]['title']
-            #cur_akiba.title_ko = akiba[thread_no]['title_ko']
-            #cur_akiba.save()
-            print('db insert succeeded! ')
-            #Akiba.insert(thread_no = akiba[thread_no]['thread_no']).execute()
-            #Akiba.insert(title = akiba[thread_no]['title']).execute()
-            #Akiba.insert(title_ko = akiba[thread_no]['title_ko']).execute()
-            '''
-                # akiba dict의 key들 입니다
-                keys = ['thread_no', 'title', 'title_ko', 'date', 'href', 'code', 'main_image', 'etc_images', 
-                'text', 'torrents', 'guess_quality', 'tag', 'already_has']
-            '''
-            #db.close()
+        print('db insert succeeded! ')
             
     print(akiba)
 
