@@ -51,8 +51,11 @@ class Akiba(Model):
     class Meta:
         database = db
 
-db_con = db.connect()
-#db_con.setbusytimeout(1000)
+#Connection(db)
+db_con = apsw.Connection(LOCAL + 'akiba.db')
+#db.connect()
+#print(db_con)
+db_con.setbusytimeout(1000)
 
 #이미 db table이 생성되었을 경우, 에러가 날 때를 대비해 try 합니다
 try:
@@ -227,8 +230,8 @@ while True:
 
         # 해당 thread_no 가 이미 과거에 완료한 항목일 경우 패스합니다
         #with db.transaction():
-        with db.atomic():
-            #with db_con:
+        #with db.atomic():
+        with db_con:
             has = 0
             qresult = Akiba.select().where(Akiba.thread_no == thread_no)
             for query in qresult:
@@ -408,9 +411,9 @@ while True:
         print(akiba[thread_no])
 
         # db 삽입
-        #with db_con:
+        with db_con:
         #with db.transaction():
-        with db.atomic():
+        #with db.atomic():
             # thread_no key는 없기에 db에 통째로 넣기 위해 임시로 막판에 추가
             #akiba[thread_no]['thread_no'] = thread_no
             #Akiba.insert_many(akiba[thread_no]).execute()
