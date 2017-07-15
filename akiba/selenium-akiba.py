@@ -57,6 +57,7 @@ class Akiba(Model):
 
 #Connection(db)
 db_con = apsw.Connection(LOCAL + 'akiba.db')
+#db_con = apsw.Connection(db)
 #db.connect()
 #print(db_con)
 db_con.setbusytimeout(3000)
@@ -239,6 +240,7 @@ while True:
         #with db.get_conn():
         #with db.atomic():
         with db_con:
+        #with db.atomic():
             has = 0
             qresult = Akiba.select().where(Akiba.thread_no == thread_no)
             for query in qresult:
