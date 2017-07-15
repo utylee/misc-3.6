@@ -14,7 +14,7 @@ LOCAL = '/home/pi/media/3001/30-flask/python/selenium/akiba/'
 username = 'seoru'
 password = 'akibaqnwk11'
 #start_page_num = 2
-start_page_num = 50
+start_page_num = 75
 #DEBUG = True
 DEBUG = False
 
