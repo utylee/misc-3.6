@@ -415,6 +415,7 @@ while True:
                                         |//blockquote[starts-with(@class, 'messageText')]/*/img\
                                         |//blockquote[starts-with(@class, 'messageText')]/img")
         print('.text내의 <img> 개수 (im size) : {}'.format(len(im)))
+        download_err = False
         for i in im:
             href = i.get_attribute('src')
             if href is not '' : 
@@ -448,7 +449,15 @@ while True:
                     with open(filename, "wb") as w:
                         w.write(response.content)
                 except:
-                    print('exception occurred on downloading...')
+                    print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                    print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                    print('.exception while downloading!!! \n proceed to next Thread') 
+                    print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                    print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                    download_err = True
+                    break
+        if download_err:
+            continue
 
         '''
         # main_image 저장 및 지정 추가 image는 etc_images 에 넣는 프로세스
@@ -487,6 +496,7 @@ while True:
         # 첨부된 etc_images 및 torrents 저장
         print('.save etc_images and torrents...')
         attach = drv.find_elements_by_xpath("//ul[starts-with(@class, 'attachmentList')]/li/div/div/h6/a")
+        download_err = False
         for a in attach:
             outer = a.get_attribute('outerHTML')
             m1 = re.search('href=\"(.*\.\d+/*)\"', outer)
@@ -516,14 +526,25 @@ while True:
                 dir1 = REMOTE + 'static/images'
 
             # 해당 파일 다운로드
-            response = session.get('{}/{}'.format(ROOT, href))
+            try:
+                response = session.get('{}/{}'.format(ROOT, href))
+            except:
+                print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                print('.exception while downloading!!! \n proceed to next Thread') 
+                print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                download_err = True
+                break
             #print(response.content)
             #filename = "{}/{}.{}".format(LOCAL, href[8:], ext)
             #filename = "{}/{}.{}".format(dir1, f, ext)
             filename = "{}/{}".format(dir1, f)
             with open(filename, "wb") as w:
                 w.write(response.content)
-        #print(akiba[thread_no])
+
+        if download_err:
+            continue
 
         # 본문에 메인 이미지설정이 없어서 main image가 비어있는 경우에 대한 특별 관리입니다
         #if akiba[thread_no]['main_image'] is None:
