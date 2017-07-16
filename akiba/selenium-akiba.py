@@ -1,6 +1,5 @@
-import sys
+import sys, os
 from selenium import webdriver
-from bs4 import BeautifulSoup
 import time, re
 import requests
 from peewee import *
@@ -14,7 +13,7 @@ URL = 'https://www.akiba-online.com'
 ROOT = 'https://www.akiba-online.com'
 #LOCAL = '/mnt/c/Users/utylee/'
 LOCAL = '/home/pi/.virtualenvs/misc/src/akiba/'
-#LOCAL = '/home/pi/media/3001/30-flask/python/selenium/akiba/'
+REMOTE = '/home/pi/media/3001/30-flask/python/selenium/akiba/'
 username = 'seoru'
 password = 'akibaqnwk11'
 start_page_num = 1
@@ -24,7 +23,7 @@ if len(sys.argv) > 1:
 #DEBUG = True
 DEBUG = False
 
-print(get_akiba_proc_list())
+print('cur : {}'.format(os.getpid()))
 '''
 def temp():
     #for a  in entry:
@@ -45,7 +44,7 @@ entry = dict.fromkeys(key for key in keys)
 akiba = {}                          # {'글번호': 'entry dict'}
 
 
-db = APSWDatabase( LOCAL + 'test.db', timeout=3000)
+db = APSWDatabase( LOCAL + 'akiba.db', timeout=3000)
 class Akiba(Model):
     #thread_no = CharField(primary_key=True)         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
     thread_no = CharField(null = True, unique = True)           # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
@@ -72,6 +71,7 @@ class Akiba(Model):
 class Hanging(Model):
     thread_no = CharField(null = True, unique=True)
     processing = CharField(null = True)
+    pid = CharField(null = True)                            #해당 쓰레드를 작업중인 프로세스의 pid를 가져옵니다
 
     class Meta:
         #database = db_hanging
@@ -85,15 +85,10 @@ class Hanging(Model):
 #이미 db table이 생성되었을 경우, 에러가 날 때를 대비해 try 합니다
 try:
     with db.get_conn():
-        db.create_tables([Akiba])
+        db.create_tables([Akiba, Hanging])
 except:
     pass
 
-try:
-    with db.get_conn():
-        db.create_tables([Hanging])
-except:
-    pass
 
 '''
 with db.get_conn():
@@ -106,14 +101,6 @@ with db.get_conn():
     h_thread_no = Akiba.select().where(Akiba.thread_no == 
     '''
 
-
-# 임시
-if DEBUG:
-    print('debug')
-    r = Akiba.select()
-    for i in r:
-        print("{}, {}, {}, \n {}, \n{}, {}, {}".format(i.thread_no, i.title, i.title_ko,
-                                    i.text, i.main_image, i.torrents,i.already_has))
 
 
 # google translate 를 위한 header
@@ -269,8 +256,6 @@ while True:
     # 페이지내의 thread별 반복 프로세스
     print('\n\nvisit each threads...')
     for l in li_urls:        # l 은 href가 각각들어있습니다
-        # 해당 쓰레드를 로딩합니다
-        drv.get(l)
 
         # entry 초기화 후 
         code = title = thread_no = href = None 
@@ -297,33 +282,60 @@ while True:
         with db.get_conn():
         #with db.connect():
             #with db.atomic():
-                entrys = Akiba.select().where(Akiba.thread_no == thread_no)
-                # 해당 thread_no 가 존재할 경우, processing 과 already의 설정을 보고 pass할지를 결정합니다
-                if len(entrys):
-                    for query in entrys:
-                        processing = query.processing 
-                        has = query.already_has
-                        if processing == '1':
+            entrys = Akiba.select().where(Akiba.thread_no == thread_no)
+            # 해당 thread_no 가 존재할 경우, processing 과 already의 설정을 보고 pass할지를 결정합니다
+            if len(entrys):
+                for query in entrys:
+                    processing = query.processing 
+                    has = query.already_has
+                    if processing == '1':
+                        hang_query = Hanging.select().where(Hanging.thread_no == thread_no).get()
+                        # 다른 프로세스가 현재 작업중인 게 맞을 경우,
+                        hang_id = hang_query.pid
+                        akiba_proc_list = get_akiba_proc_list()
+                        print('.proc:\n\tdb:{}, akiba:{}, this:{}'.format(hang_id, akiba_proc_list, os.getpid()))
+                        if hang_id in akiba_proc_list:
                             print('................\n이미 다른 프로세스가 작업중입니다. pass 합니다')
                             print('................\n')
                             c_flag = 1
                             break
-                        elif has == '1':
-                            print('================\n 이전에 완료했던 쓰레드입니다. pass 합니다')
-                            print('================\n')
-                            c_flag = 1
-                            break
+                        # akiba pid목록에 없는 pid가 들어 있을 경우
                         else:
-                            query.processing = '1'
-                            query.save()
-                    if c_flag:
-                        continue
+                            print('vvvvvvvvvvvvvvvvvv\n')
+                            print('vvvvvvvvvvvvvvvvvv\n')
+                            print('vvvvvvvvvvvvvvvvvv\n')
+                            print('\n작업 중 종료가 되었던 것 같습니다. 작업을 이어서 진행하겠습니다')
+                            print('vvvvvvvvvvvvvvvvvv\n')
+                            print('vvvvvvvvvvvvvvvvvv\n')
+                            print('vvvvvvvvvvvvvvvvvv\n')
+                            hang_query.pid = '{}'.format(os.getpid())
+                            hang_query.save()
+                            c_flag = 0
+                            break
 
-                # 해당 thread_no 의 entry가 존재하지 않을 경우, processing에 1을 넣은 채 entry를 생성합니다
-                else:
-                    entry['processing'] = '1' 
-                    print('\n삽입전 entry:\n{}'.format(entry))
-                    Akiba.insert_many([entry]).execute()
+                    elif has == '1':
+                        print('================\n 이전에 완료했던 쓰레드입니다. pass 합니다')
+                        print('================\n')
+                        c_flag = 1
+                        break
+                    else:
+                        query.processing = '1'
+                        query.save()
+                if c_flag:
+                    continue
+
+            # 해당 thread_no 의 entry가 존재하지 않을 경우, processing에 1을 넣은 채 entry를 생성합니다
+            # 또한 hanging 테이블에도 해당 entry를 삽입합니다
+            else:
+                entry['processing'] = '1' 
+                print('\n삽입전 entry:\n{}'.format(entry))
+                Akiba.insert_many([entry]).execute()
+                d = {'thread_no': thread_no, 'processing': '1', 'pid': os.getpid()}
+                Hanging.insert_many([d]).execute()
+
+        # 해당 쓰레드를 로딩합니다
+        print('\n\n.loading current thread')
+        drv.get(l)
 
         # title attribute
         title = drv.find_element_by_xpath('//div[@class="titleBar"]/h1').get_attribute('innerHTML')
@@ -418,7 +430,8 @@ while True:
                     f = spl[-2]
                 print('f :' + f + '.')
                 f = f + '.jpg'
-                filename = LOCAL + 'static/images/' + f
+                #filename = LOCAL + 'static/images/' + f
+                filename = REMOTE + 'static/images/' + f
                 if entry['main_image'] is None: 
                     entry['main_image'] = f
                 #if akiba[thread_no]['main_image'] is None: 
@@ -486,19 +499,21 @@ while True:
                 f = re.search('attachments/(.*jpg\.\d+)', href).group(1) + '.' + ext
                 #akiba[thread_no]['etc_images'].append(f)
                 entry['etc_images'].append(f)
-                dir1 = LOCAL + 'static/images'
+                #dir1 = LOCAL + 'static/images'
+                dir1 = REMOTE + 'static/images'
             elif re.search('torrent\.\d+',href) is not None:
                 ext = 'torrent'
                 f = re.search('attachments/(.*torrent\.\d+)', href).group(1) + '.' + ext
                 entry['torrents'].append(f)
-                dir1 = LOCAL + 'static/torrents'
+                #dir1 = LOCAL + 'static/torrents'
+                dir1 = REMOTE + 'static/torrents'
             # 혹시 zip이나 다른 확장자일 경우를 대비해 마련해 놓습니다. 뭔가 zip같은 게 나왔던 기억이 있습니다
             else:
                 m = re.search('(w+)\.\d+',href) 
                 ext = m.group(1)
                 f = re.search('attachments/(.*\.\d+)', href).group(1) + '.' + ext
                 entry['etc_images'].append(f)
-                dir1 = LOCAL + 'static/images'
+                dir1 = REMOTE + 'static/images'
 
             # 해당 파일 다운로드
             response = session.get('{}/{}'.format(ROOT, href))
@@ -567,50 +582,52 @@ while True:
         print(akiba[thread_no])
         '''
 
-        # db 삽입
+        # Akiba 테이블에 완성된 entry삽입, 또한 Hanging 테이블에서 해당 thread_no 엔트리는 삭제
         #with db_con:
         #with db.transaction():
         with db.get_conn():
         #with db.connect():
             #with db.atomic():
-                # thread_no key는 없기에 db에 통째로 넣기 위해 임시로 막판에 추가
-                #akiba[thread_no]['thread_no'] = thread_no
-                entry['processing'] = '0'
-                Akiba.update(title = entry['title'], \
-                            title_ko = entry['title_ko'],\
-                            date = entry['date'],\
-                            code = entry['code'],\
-                            main_image = entry['main_image'],\
-                            etc_images = entry['etc_images'],\
-                            text = entry['text'],\
-                            torrents = entry['torrents'],\
-                            quality = entry['quality'],\
-                            size = entry['size'],\
-                            guess_quality = entry['guess_quality'],\
-                            already_has = entry['already_has'],\
-                            processing = entry['processing']
-                            ).where(Akiba.thread_no == thread_no).execute()
 
-                #Akiba.insert_many([entry]).execute()
-                #Akiba.insert_many(akiba[thread_no]).execute()
-                ''' 
-                Akiba.create(
-                        thread_no = akiba[thread_no]['thread_no'],
-                        title = akiba[thread_no]['title'],
-                        title_ko = akiba[thread_no]['title_ko'],
-                        date = akiba[thread_no]['date'],
-                        href = akiba[thread_no]['href'],
-                        code = akiba[thread_no]['code'],
-                        main_image = akiba[thread_no]['main_image'],
-                        etc_images = akiba[thread_no]['etc_images'],
-                        text = akiba[thread_no]['text'],
-                        torrents = akiba[thread_no]['torrents'],
-                        guess_quality = akiba[thread_no]['guess_quality'],
-                        tag = akiba[thread_no]['tag'],
-                        already_has = akiba[thread_no]['already_has']
-                        processing = 0
-                        )
-                        '''
+            # thread_no key는 없기에 db에 통째로 넣기 위해 임시로 막판에 추가
+            #akiba[thread_no]['thread_no'] = thread_no
+            entry['processing'] = '0'
+            Akiba.update(title = entry['title'], \
+                        title_ko = entry['title_ko'],\
+                        date = entry['date'],\
+                        code = entry['code'],\
+                        main_image = entry['main_image'],\
+                        etc_images = entry['etc_images'],\
+                        text = entry['text'],\
+                        torrents = entry['torrents'],\
+                        quality = entry['quality'],\
+                        size = entry['size'],\
+                        guess_quality = entry['guess_quality'],\
+                        already_has = entry['already_has'],\
+                        processing = entry['processing']
+                        ).where(Akiba.thread_no == thread_no).execute()
+
+            #Akiba.insert_many([entry]).execute()
+            #Akiba.insert_many(akiba[thread_no]).execute()
+            ''' 
+            Akiba.create(
+                    thread_no = akiba[thread_no]['thread_no'],
+                    title = akiba[thread_no]['title'],
+                    title_ko = akiba[thread_no]['title_ko'],
+                    date = akiba[thread_no]['date'],
+                    href = akiba[thread_no]['href'],
+                    code = akiba[thread_no]['code'],
+                    main_image = akiba[thread_no]['main_image'],
+                    etc_images = akiba[thread_no]['etc_images'],
+                    text = akiba[thread_no]['text'],
+                    torrents = akiba[thread_no]['torrents'],
+                    guess_quality = akiba[thread_no]['guess_quality'],
+                    tag = akiba[thread_no]['tag'],
+                    already_has = akiba[thread_no]['already_has']
+                    processing = 0
+                    )
+                    '''
+            Hanging.delete().where(Hanging.thread_no == thread_no).execute()
 
         print('db insert succeeded! ')
             
