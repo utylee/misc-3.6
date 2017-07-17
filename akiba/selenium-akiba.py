@@ -220,8 +220,11 @@ while True:
     # 페이지 내의 thread list들을 가진 목록을 가져옵니다
     print('fetching current page list items...')
     l = drv.find_elements_by_xpath("//ol/li[not(contains(@class, 'sticky'))]/div/div/h3/a[@class='PreviewTooltip']")
+    # 각 쓰레드의 마지막 포스트의 시간들을 가져옵니다. 이를 통해 이미 완료된 쓰레드임에도 변경이 필요한지 결정할 수 있습니다
+    date_l = drv.find_elements_by_xpath("//li/div/dl[@class = 'lastPostInfo']/dd/a/*[@class = 'DateTime']")
     li_urls = []
     #title = ""
+
 
     # Hanging중인 토렌트를 먼저 작업하기 위해 매페이지마다 처음에 껴 넣어놓습니다 
     print('\n\n try processing Hanging thread...\n\n')
@@ -236,12 +239,24 @@ while True:
                 continue
             else:
                 print('.hanging found! : added to list.\n\thref: {}'.format(q_href))
-                li_urls.append(q_href)
+                #li_urls.append(q_href)
+                li_urls.append((q_href, None))
 
+    # DateTime 도 loop로 같이 넘겨줘 매 쓰레드 로딩없이 작업여부를 판단할 수 있게끔 합니다
+    idate = 0
     for i in l:
         href = i.get_attribute('href')
+        # 일관되게 관리하기 위해 항상 title을 가져오게끔 변경하였습니다
+        date_s = date_l[idate].get_attribute('title')
+        #date_s = date_l[idate].get_attribute('data-time')
+        # 꽤 오랜 쓰레드일 경우 시간을 자세히 표기않고 간략하게 표현하느라 해당 attribute가 없는 경우가 있습니다
+        #if date_s is None:
+            #date_s = date_l[idate].get_attribute('title')
+
         #li_urls.append("{}/{}".format(ROOT, href))
-        li_urls.append(href)
+        #li_urls.append(href)
+        li_urls.append((href, date_s))
+        idate = idate + 1
 
         '''
         # entry 초기화
@@ -289,14 +304,14 @@ while True:
 
         # thread_no 를 파싱해 옵니다
         print('\n\n . 현재 쓰레드 li_urls(cur):{}'.format(l))
-        m = re.search('\.(\d{7})/*', l)
+        m = re.search('\.(\d{7})/*', l[0])
         thread_no = m.group(1) 
         print('\n.thread_no : {}'.format(thread_no))
 
         entry['etc_images'] = []
         entry['torrents'] = []
         entry['thread_no'] = thread_no
-        href = l
+        href = l[0]
         entry['href'] = href
 
         # 가장 먼저 db에서 정보를 가져와 processing 중인지를 판단합니다.
@@ -342,11 +357,34 @@ while True:
                         c_flag = 0
                         break
 
+                # 완료 플래그가 설정되어 있더라도, date가 변경이 있으면 플래그를 다시 재설정하고 재작업을 해야합니다
                 elif has == '1':
-                    print('================\n 이전에 완료했던 쓰레드입니다. pass 합니다')
-                    print('================\n')
-                    c_flag = 1
-                    break
+                    with db.get_conn():
+                        db_date = query.date
+                    if db_date == l[1]:
+                        print('================\n 이미 완료된 쓰레드입니다. pass 합니다')
+                        print('================\n')
+                        c_flag = 1
+                        break
+                    # 현 쓰레드의 date가 db의 값과 달라졌을 경우, 패스하지 않고 그대로 재진행합니다
+                    else:
+                        print('\n\n* * * * * * * * *')
+                        print('\n새글이지만 db에 이전글이 있는 경우입니다')
+                        print('포스트가 새로 덧붙여졌을 수 있습니다. 혹은 시간 저장에 오류가 있었을 수도 있습니다')
+                        print('작업을 이어서 진행하겠습니다')
+                        print('* * * * * * * * *\n\n')
+                        # Akiba.processing을 1로 바꾸어 놓고 Hanging에도 추가를 별도로 특별히 해주어야 하는 경우입니다
+                        with db.get_conn():
+                            query.processing = '1'
+                            query.save()
+                        d = {'thread_no': thread_no, 'title': None, 'href': href, 'processing': '1', 'pid': os.getpid()}
+
+                        with db.atomic():
+                            Hanging.insert_many([d]).execute()
+
+                        c_flag = 0
+                        break
+
                 else:
                     with db.get_conn():
                         query.processing = '1'
@@ -366,9 +404,10 @@ while True:
             with db.atomic():
                 Akiba.insert_many([entry]).execute()
 
+
         # 해당 쓰레드를 로딩합니다
         print('\n\n.loading current thread')
-        drv.get(l)
+        drv.get(l[0])
 
         # title attribute
         title = drv.find_element_by_xpath('//div[@class="titleBar"]/h1').get_attribute('innerHTML')
@@ -430,10 +469,11 @@ while True:
         #akiba[thread_no]['etc_images'] = []
         #akiba[thread_no]['torrents'] = []
 
-        print('{} thread url : {}'.format(thread_no, l))
+        print('\n{} thread url : {}'.format(thread_no, l[0]))
         print('\nfetching...')
 
         # date 찾기
+        '''
         l = drv.find_element_by_xpath("//*[@class='DateTime']")
         m = l.get_attribute('data-time')
         # 꽤 오랜 쓰레드일 경우 시간을 자세히 표기않고 간략하게 표현하느라 해당 attribute가 없는 경우가 있습니다
@@ -441,11 +481,14 @@ while True:
             m = l.get_attribute('title')
         #akiba[thread_no]['date'] = m
         entry['date'] = m
+        '''
+        entry['date'] = l[1]
 
         # text 찾기
-        l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
-        t = l.get_attribute('innerHTML')
+        msg_l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
+        t = msg_l.get_attribute('innerHTML')
         print('.text:\n{}'.format(t))
+
 
         # main_image 저장 및 지정 추가 image는 etc_images 에 넣는 프로세스
         im = drv.find_elements_by_xpath("//blockquote[starts-with(@class, 'messageText')]/*/*/img\
@@ -704,7 +747,7 @@ while True:
     if next_page_link is None:
         break
 
-    print('starting page-{}'.format(next_page_num))
+    print('\n\n.starting page-{}\n.loading current page'.format(next_page_num))
     print(next_page_link_url)
     drv.get(next_page_link_url)
     
