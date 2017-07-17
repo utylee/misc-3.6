@@ -69,7 +69,8 @@ class Akiba(Model):
 
 # 작업중인 thread 가 작업중 종료되었을 경우를 대비한 관리 db입니다
 class Hanging(Model):
-    thread_no = CharField(null = True, unique=True)
+    thread_no = CharField(null = True)         # 동시성 제고를 위해 이 테이블에서는 thread_no를 유니크로 노 설정
+    #thread_no = CharField(null = True, unique=True)
     title = CharField(null = True)                          # 제목과 쓰레드 주소도 저장해 놓고 추후 재작업할 수 있게 합니다
     href = CharField(null = True)                           # 제목과 쓰레드 주소도 저장해 놓고 추후 재작업할 수 있게 합니다
     code = CharField(null = True)
@@ -280,6 +281,7 @@ while True:
     # 페이지내의 thread별 반복 프로세스
     print('\n\nvisit each threads...')
     for l in li_urls:        # l 은 href가 각각들어있습니다
+        download_err_num = 0
 
         # entry 초기화 후 
         code = title = thread_no = href = None 
@@ -490,9 +492,11 @@ while True:
                     print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
                     print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
                     download_err = True
-                    break
-        if download_err:
-            continue
+                    download_err_num = download_err_num + 1
+                    #일단 작업은 그대로 진행하게끔 변경합니다
+                    #break
+        #if download_err:
+            #continue
 
         '''
         # main_image 저장 및 지정 추가 image는 etc_images 에 넣는 프로세스
@@ -554,7 +558,7 @@ while True:
                 dir1 = REMOTE + 'static/torrents'
             # 혹시 zip이나 다른 확장자일 경우를 대비해 마련해 놓습니다. 뭔가 zip같은 게 나왔던 기억이 있습니다
             else:
-                m = re.search('(\w+)\.\d{7}/',href)  # 잘 못찾아내는 감이 있어서 좀 더 세밀하게 지정해줘봅니다
+                m = re.search('(\w+)\.\d{3-8}/',href)  # 잘 못찾아내는 감이 있어서 좀 더 세밀하게 지정해줘봅니다
                 ext = m.group(1)
                 f = re.search('attachments/(.*\.\d+)', href).group(1) + '.' + ext
                 entry['etc_images'].append(f)
@@ -563,6 +567,9 @@ while True:
             # 해당 파일 다운로드
             try:
                 response = session.get('{}/{}'.format(ROOT, href))
+                filename = "{}/{}".format(dir1, f)
+                with open(filename, "wb") as w:
+                    w.write(response.content)
             except:
                 print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
                 print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
@@ -570,16 +577,12 @@ while True:
                 print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
                 print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
                 download_err = True
-                break
-            #print(response.content)
-            #filename = "{}/{}.{}".format(LOCAL, href[8:], ext)
-            #filename = "{}/{}.{}".format(dir1, f, ext)
-            filename = "{}/{}".format(dir1, f)
-            with open(filename, "wb") as w:
-                w.write(response.content)
+                # 일단 작업은 끝까지 진행시켜 봅니다
+                download_err_num = download_err_num + 1
+                #break
 
-        if download_err:
-            continue
+        #if download_err:
+            #continue
 
         # 본문에 메인 이미지설정이 없어서 main image가 비어있는 경우에 대한 특별 관리입니다
         #if akiba[thread_no]['main_image'] is None:
@@ -639,15 +642,19 @@ while True:
         '''
 
         # Akiba 테이블에 완성된 entry삽입, 또한 Hanging 테이블에서 해당 thread_no 엔트리는 삭제
+
+        # thread_no key는 없기에 db에 통째로 넣기 위해 임시로 막판에 추가
+        #akiba[thread_no]['thread_no'] = thread_no
+        if download_err_num:
+            entry['processing'] = '1'
+        else:
+            entry['processing'] = '0'
+
         #with db_con:
         #with db.transaction():
-        with db.get_conn():
+        #with db.get_conn():
         #with db.connect():
-            #with db.atomic():
-
-            # thread_no key는 없기에 db에 통째로 넣기 위해 임시로 막판에 추가
-            #akiba[thread_no]['thread_no'] = thread_no
-            entry['processing'] = '0'
+        with db.atomic():
             Akiba.update(title = entry['title'], \
                         title_ko = entry['title_ko'],\
                         date = entry['date'],\
@@ -683,9 +690,11 @@ while True:
                     processing = 0
                     )
                     '''
-            Hanging.delete().where(Hanging.thread_no == thread_no).execute()
+        if download_err_num == 0:
+            with db.get_conn():
+                Hanging.delete().where(Hanging.thread_no == thread_no).execute()
 
-        print('db insert succeeded! ')
+        print('\ndb processes succeeded! ')
             
     #print(akiba)
 
