@@ -401,8 +401,16 @@ while True:
 
             entry['processing'] = '1' 
             print('\n삽입전 entry:\n{}'.format(entry))
-            with db.atomic():
-                Akiba.insert_many([entry]).execute()
+
+            # 거의 동시에 두 프로세스가 모두 통과되어 생성 프로세스에 진입하는 경우가 발견되었습니다
+            # 두번째 프로세스는 unique 키 삽입 에러가 발생하게 되므로 일단 통과시키되,
+            # err_num 을 표시해 Hanging 테이블에 흔적을 남기게끔 합니다
+            # 추후 실행시 다시 챙길 수 있도록..
+            try:
+                with db.atomic():
+                    Akiba.insert_many([entry]).execute()
+            except:
+                download_err_num = download_err_num + 1
 
 
         # 해당 쓰레드를 로딩합니다
