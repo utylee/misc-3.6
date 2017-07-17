@@ -70,6 +70,9 @@ class Akiba(Model):
 # 작업중인 thread 가 작업중 종료되었을 경우를 대비한 관리 db입니다
 class Hanging(Model):
     thread_no = CharField(null = True, unique=True)
+    title = CharField(null = True)                          # 제목과 쓰레드 주소도 저장해 놓고 추후 재작업할 수 있게 합니다
+    href = CharField(null = True)                           # 제목과 쓰레드 주소도 저장해 놓고 추후 재작업할 수 있게 합니다
+    code = CharField(null = True)
     processing = CharField(null = True)
     pid = CharField(null = True)                            #해당 쓰레드를 작업중인 프로세스의 pid를 가져옵니다
 
@@ -89,6 +92,11 @@ try:
 except:
     pass
 
+try:
+    with db.get_conn():
+        db.create_tables([Hanging])
+except:
+    pass
 
 '''
 with db.get_conn():
@@ -152,6 +160,7 @@ l.click()
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 
 
+
 # Jav torrent 클릭
 l = drv.find_element_by_xpath("//a[.='JAV Torrents']")
 print('clicking JAV Torrents')
@@ -212,6 +221,21 @@ while True:
     l = drv.find_elements_by_xpath("//ol/li[not(contains(@class, 'sticky'))]/div/div/h3/a[@class='PreviewTooltip']")
     li_urls = []
     #title = ""
+
+    # Hanging중인 토렌트를 먼저 작업하기 위해 매페이지마다 처음에 껴 넣어놓습니다 
+    print('\n\n try processing Hanging thread...\n\n')
+    with db.get_conn():
+        entrys = Hanging.select().where(Hanging.processing == '1')
+    if len(entrys):
+        for query in entrys:
+            with db.get_conn():
+                q_pid = query.pid
+                q_href = query.href
+            if q_pid in get_akiba_proc_list():
+                continue
+            else:
+                print('.hanging found! : added to list.\n\thref: {}'.format(q_href))
+                li_urls.append(q_href)
 
     for i in l:
         href = i.get_attribute('href')
@@ -283,55 +307,62 @@ while True:
         #with db.connect():
             #with db.atomic():
             entrys = Akiba.select().where(Akiba.thread_no == thread_no)
-            # 해당 thread_no 가 존재할 경우, processing 과 already의 설정을 보고 pass할지를 결정합니다
-            if len(entrys):
-                for query in entrys:
+        # 해당 thread_no 가 존재할 경우, processing 과 already의 설정을 보고 pass할지를 결정합니다
+        if len(entrys):
+            for query in entrys:
+                with db.get_conn():
                     processing = query.processing 
                     has = query.already_has
-                    if processing == '1':
+                if processing == '1':
+                    with db.get_conn():
                         hang_query = Hanging.select().where(Hanging.thread_no == thread_no).get()
                         # 다른 프로세스가 현재 작업중인 게 맞을 경우,
                         hang_id = hang_query.pid
-                        akiba_proc_list = get_akiba_proc_list()
-                        print('.proc:\n\tdb:{}, akiba:{}, this:{}'.format(hang_id, akiba_proc_list, os.getpid()))
-                        if hang_id in akiba_proc_list:
-                            print('................\n이미 다른 프로세스가 작업중입니다. pass 합니다')
-                            print('................\n')
-                            c_flag = 1
-                            break
-                        # akiba pid목록에 없는 pid가 들어 있을 경우
-                        else:
-                            print('vvvvvvvvvvvvvvvvvv\n')
-                            print('vvvvvvvvvvvvvvvvvv\n')
-                            print('vvvvvvvvvvvvvvvvvv\n')
-                            print('\n작업 중 종료가 되었던 것 같습니다. 작업을 이어서 진행하겠습니다')
-                            print('vvvvvvvvvvvvvvvvvv\n')
-                            print('vvvvvvvvvvvvvvvvvv\n')
-                            print('vvvvvvvvvvvvvvvvvv\n')
-                            hang_query.pid = '{}'.format(os.getpid())
-                            hang_query.save()
-                            c_flag = 0
-                            break
-
-                    elif has == '1':
-                        print('================\n 이전에 완료했던 쓰레드입니다. pass 합니다')
-                        print('================\n')
+                    akiba_proc_list = get_akiba_proc_list()
+                    print('.proc:\n\tdb:{}, akiba:{}, this:{}'.format(hang_id, akiba_proc_list, os.getpid()))
+                    if hang_id in akiba_proc_list:
+                        print('................\n이미 다른 프로세스가 작업중입니다. pass 합니다')
+                        print('................\n')
                         c_flag = 1
                         break
+                    # akiba pid목록에 없는 pid가 들어 있을 경우
                     else:
+                        print('vvvvvvvvvvvvvvvvvv\n')
+                        print('vvvvvvvvvvvvvvvvvv\n')
+                        print('vvvvvvvvvvvvvvvvvv\n')
+                        print('\n작업 중 종료가 되었던 것 같습니다. 작업을 이어서 진행하겠습니다')
+                        print('vvvvvvvvvvvvvvvvvv\n')
+                        print('vvvvvvvvvvvvvvvvvv\n')
+                        print('vvvvvvvvvvvvvvvvvv\n')
+                        with db.get_conn():
+                            hang_query.pid = '{}'.format(os.getpid())
+                            hang_query.save()
+                        c_flag = 0
+                        break
+
+                elif has == '1':
+                    print('================\n 이전에 완료했던 쓰레드입니다. pass 합니다')
+                    print('================\n')
+                    c_flag = 1
+                    break
+                else:
+                    with db.get_conn():
                         query.processing = '1'
                         query.save()
-                if c_flag:
-                    continue
+            if c_flag:
+                continue
 
-            # 해당 thread_no 의 entry가 존재하지 않을 경우, processing에 1을 넣은 채 entry를 생성합니다
-            # 또한 hanging 테이블에도 해당 entry를 삽입합니다
-            else:
-                entry['processing'] = '1' 
-                print('\n삽입전 entry:\n{}'.format(entry))
-                Akiba.insert_many([entry]).execute()
-                d = {'thread_no': thread_no, 'processing': '1', 'pid': os.getpid()}
+        # 해당 thread_no 의 entry가 존재하지 않을 경우, processing에 1을 넣은 채 entry를 생성합니다
+        # 또한 hanging 테이블에도 해당 entry를 삽입합니다
+        else:
+            d = {'thread_no': thread_no, 'title': None, 'href': href, 'processing': '1', 'pid': os.getpid()}
+            with db.atomic():
                 Hanging.insert_many([d]).execute()
+
+            entry['processing'] = '1' 
+            print('\n삽입전 entry:\n{}'.format(entry))
+            with db.atomic():
+                Akiba.insert_many([entry]).execute()
 
         # 해당 쓰레드를 로딩합니다
         print('\n\n.loading current thread')
@@ -341,12 +372,16 @@ while True:
         title = drv.find_element_by_xpath('//div[@class="titleBar"]/h1').get_attribute('innerHTML')
         entry['title'] = title
         print('title : {}'.format(title))
+        with db.get_conn():
+            Hanging.update(title = title).where(Hanging.thread_no == thread_no).execute()
 
         # code atrribute
         m = re.search('\[(.*)\]', title) 
         if m is not None: code = m.group(1)
         entry['code'] = code
         print('code : {}'.format(code))
+        with db.get_conn():
+            Hanging.update(code = code).where(Hanging.thread_no == thread_no).execute()
 
         # title_ko attribute
         #debug시 시간이 너무 소요돼서 일단 이쪽으로 빼놓음
@@ -519,7 +554,7 @@ while True:
                 dir1 = REMOTE + 'static/torrents'
             # 혹시 zip이나 다른 확장자일 경우를 대비해 마련해 놓습니다. 뭔가 zip같은 게 나왔던 기억이 있습니다
             else:
-                m = re.search('(w+)\.\d+',href) 
+                m = re.search('(\w+)\.\d{7}/',href)  # 잘 못찾아내는 감이 있어서 좀 더 세밀하게 지정해줘봅니다
                 ext = m.group(1)
                 f = re.search('attachments/(.*\.\d+)', href).group(1) + '.' + ext
                 entry['etc_images'].append(f)
