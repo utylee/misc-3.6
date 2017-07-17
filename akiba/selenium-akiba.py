@@ -558,7 +558,7 @@ while True:
                 dir1 = REMOTE + 'static/torrents'
             # 혹시 zip이나 다른 확장자일 경우를 대비해 마련해 놓습니다. 뭔가 zip같은 게 나왔던 기억이 있습니다
             else:
-                m = re.search('(\w+)\.\d{3-8}/',href)  # 잘 못찾아내는 감이 있어서 좀 더 세밀하게 지정해줘봅니다
+                m = re.search('(\w+)\.\d{3,8}/',href)  # 잘 못찾아내는 감이 있어서 좀 더 세밀하게 지정해줘봅니다
                 ext = m.group(1)
                 f = re.search('attachments/(.*\.\d+)', href).group(1) + '.' + ext
                 entry['etc_images'].append(f)
