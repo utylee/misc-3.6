@@ -224,6 +224,11 @@ while True:
                 #li_urls.append(q_href)
                 li_urls.append((q_href, None))
 
+                # 또한 processing 이 0으로 변경된 경우의 오류를 방지하기 위해 각 akiba의 processing도 1로 재설정 해줍니다
+                with db.get_conn():
+                    #t_thread_no = query.thread_no
+                    Akiba.update(processing = '1').where(Akiba.thread_no == query.thread_no).execute()
+
     # DateTime 도 loop로 같이 넘겨줘 매 쓰레드 로딩없이 작업여부를 판단할 수 있게끔 합니다
     idate = 0
     for i in l:
