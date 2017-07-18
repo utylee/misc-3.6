@@ -182,24 +182,6 @@ cookies = drv.get_cookies()
 for c in cookies:
     session.cookies.set(c['name'], c['value'])
 
-#o = drv.find_elements_by_xpath("//li[@class='discussionListItem visible*'][not(@class='*sticky ')]")
-#o = drv.find_elements_by_xpath("//li[contains(@class, 'discussionListItem visible')]")
-#l = drv.find_element_by_xpath("//a[@class='PreviewTooltip'][contains(@href, '1747531')]")
-
-'''
-page_num = 1
-next_page_link = drv.find_element_by_xpath("//div[@class='PageNav']/nav/a[@class='text']")
-print('next_page_link.drv : {}'.format(next_page_link))
-if next_page_link is not None:
-    n = next_page_link.get_attribute('outerHTML') 
-    print(n)
-    next_page_link_is = re.search('Next', n) 
-
-    m = re.search('href=\"(.*/page\-(\d+))\"', n)
-    next_page_link_url = '{}/{}'.format(ROOT, m.group(1))
-    next_page_num = m.group(2)
-    print('nexturl: {}, nextnum : {}'.format(next_page_link_url, next_page_num))
-    '''
 
 
 # 페이지별 반복 프로세스
@@ -258,39 +240,6 @@ while True:
         li_urls.append((href, date_s))
         idate = idate + 1
 
-        '''
-        # entry 초기화
-        code = title = thread_no = href = None 
-        entry = dict.fromkeys(key for key in keys)
-
-        # thread_no 파싱
-        #text = i.get_attribute('outerHTML')
-        href = i.get_attribute('href')
-        #print(text)
-        #m = re.search('href=\"(.*)\" title=', text)
-        #href = m.group(1)
-        #m = re.search('\.(.*)/+', href)
-        m = re.search('\.(\d{7})/', href)
-        thread_no = m.group(1)
-
-        # title 과 code 파싱, 
-        title = i.get_attribute('innerHTML')
-        #m = re.search('\">(.*)</a>', text)
-        #if m is not None: title = m.group(1)
-        m = re.search('\[(.*)\]', title) 
-        if m is not None: code = m.group(1)
-        '''
-        #li_urls.append("{}/{}".format(ROOT, href))
-        '''
-        #일단 loop 내부에서 지정하기로 하고 지워놓습니다
-        print("title: {}".format(title))
-        entry['thread_no'] = thread_no
-        entry['href'] = href
-        entry['title'] = title
-        #entry['title_ko'] = translate(title, 'ko')
-        entry['code'] = code
-        akiba[thread_no] = entry
-        '''
     print(li_urls)
 
     # 페이지내의 thread별 반복 프로세스
@@ -443,35 +392,6 @@ while True:
             print(' !!! translate error. Passing ')
             pass
 
-        '''
-        # 해당 thread_no 가 이미 과거에 완료한 항목일 경우 패스합니다
-        #with db.transaction():
-        #with db_con:
-        with db.get_conn():
-            with db.atomic():
-                has = 0
-                qresult = Akiba.select().where(Akiba.thread_no == thread_no)
-                print(qresult)
-                for query in qresult:
-                    has = query.already_has
-                    procesesing = query.processing
-                    print('{}:\nalready_has is {}\nprocessing is {}'.format(\
-                                    query.thread_no, query.already_has, query.processing))
-                if (has == '1') or (processing =='1') :
-                    print('\n\n <<< ---- will be passed ---- >> \n')
-                    continue
-
-                # 혹은 processing 으로 설정된 경우도 패스합니다
-                processing = 0
-                qresult = Akiba.select().where(Akiba.thread_no == thread_no)
-                print(qresult)
-                for query in qresult:
-                    has = query.already_has
-                    print('{}.already_has is {}'.format(query.thread_no, query.already_has))
-                if has == '1':
-                    print('\n\n <<< will be passed >> \n')
-                    continue
-                    '''
         #if akiba[thread_no]['already_has'] == '1':
 
         #akiba[thread_no]['etc_images'] = []
@@ -679,10 +599,20 @@ while True:
             #if len(akiba[thread_no]['etc_images']):
                 #akiba[thread_no]['main_image'] = akiba[thread_no]['etc_images'][0]
 
+
+
+
         # title, thread_no, (main_image?), torrent 가 있으면 ok 사인을 표시해 놓습니다
         if (entry['title'] is not None) and \
             (entry['torrents'] is not None):
             entry['already_has'] = 1
+
+        # download 에러등의 exception 이 발생했을 경우, processing 플래그를 그대로 1로 설정해 놓습니다
+        if download_err_num:
+            entry['processing'] = '1'
+        else:
+            entry['processing'] = '0'
+
         print(entry)
         '''
         if (akiba[thread_no]['title'] is not None) and \
@@ -694,12 +624,6 @@ while True:
 
         # Akiba 테이블에 완성된 entry삽입, 또한 Hanging 테이블에서 해당 thread_no 엔트리는 삭제
 
-        # thread_no key는 없기에 db에 통째로 넣기 위해 임시로 막판에 추가
-        #akiba[thread_no]['thread_no'] = thread_no
-        if download_err_num:
-            entry['processing'] = '1'
-        else:
-            entry['processing'] = '0'
 
         #with db_con:
         #with db.transaction():
@@ -721,29 +645,9 @@ while True:
                         processing = entry['processing']
                         ).where(Akiba.thread_no == thread_no).execute()
 
-            #Akiba.insert_many([entry]).execute()
-            #Akiba.insert_many(akiba[thread_no]).execute()
-            ''' 
-            Akiba.create(
-                    thread_no = akiba[thread_no]['thread_no'],
-                    title = akiba[thread_no]['title'],
-                    title_ko = akiba[thread_no]['title_ko'],
-                    date = akiba[thread_no]['date'],
-                    href = akiba[thread_no]['href'],
-                    code = akiba[thread_no]['code'],
-                    main_image = akiba[thread_no]['main_image'],
-                    etc_images = akiba[thread_no]['etc_images'],
-                    text = akiba[thread_no]['text'],
-                    torrents = akiba[thread_no]['torrents'],
-                    guess_quality = akiba[thread_no]['guess_quality'],
-                    tag = akiba[thread_no]['tag'],
-                    already_has = akiba[thread_no]['already_has']
-                    processing = 0
-                    )
-                    '''
         if download_err_num == 0:
             with db.get_conn():
-                Hanging.delete().where(Hanging.thread_no == thread_no).execute()
+                Hanging.delete().where(Hanging.thread_no == thread_no, Hanging.pid == os.getpid()).execute()
 
         print('\ndb processes succeeded! ')
             
