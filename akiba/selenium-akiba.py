@@ -69,8 +69,8 @@ class Akiba(Model):
 
 # 작업중인 thread 가 작업중 종료되었을 경우를 대비한 관리 db입니다
 class Hanging(Model):
-    #thread_no = CharField(null = True)         # 동시성 제고를 위해 이 테이블에서는 thread_no를 유니크로 노 설정
-    thread_no = CharField(null = True, unique=True)
+    thread_no = CharField(null = True)         # 동시성 제고를 위해 이 테이블에서는 thread_no를 유니크로 노 설정
+    #thread_no = CharField(null = True, unique=True)
     title = CharField(null = True)                          # 제목과 쓰레드 주소도 저장해 놓고 추후 재작업할 수 있게 합니다
     href = CharField(null = True)                           # 제목과 쓰레드 주소도 저장해 놓고 추후 재작업할 수 있게 합니다
     code = CharField(null = True)
