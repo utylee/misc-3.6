@@ -258,7 +258,8 @@ while True:
 
         # thread_no 를 파싱해 옵니다
         print('\n\n . 현재 쓰레드 li_urls(cur):{}'.format(l))
-        m = re.search('\.(\d{7})/*', l[0])
+        m = re.search('threads/.*\.*(\d{7})/', l[0])
+        # thread_no에서 에러가 나면 당장은 저장할 방법이 없기에 확인하기 위해 try로 감싸지 않습니다. 
         thread_no = m.group(1) 
         print('\n.thread_no : {}'.format(thread_no))
 
@@ -285,10 +286,21 @@ while True:
                     processing = query.processing 
                     has = query.already_has
                 if processing == '1':
-                    with db.get_conn():
-                        hang_query = Hanging.select().where(Hanging.thread_no == thread_no).get()
+                    # 간혹 hanging 테이블에 entry 생성이전에 다른애가 진입하는 경우가 있는 것 같습니다
+                    # 그럴경우 hanging 테이블에 여기서 pid만 변경해서 임시로 생성후 강제종료된 hanging으로 가정하고 진행합니다
+                    try:
+                        with db.get_conn():
+                            hang_query = Hanging.select().where(Hanging.thread_no == thread_no).get()
+                    except:
+                        # pid 에 '0'을 넣어주어 pass되지 않도록 합니다
+                        d = {'thread_no': thread_no, 'title': None, 'href': href, 'processing': '1', 'pid': '0'}
+                        with db.atomic():
+                            Hanging.insert_many([d]).execute()
+                        with db.get_conn():
+                            hang_query = Hanging.select().where(Hanging.thread_no == thread_no).get()
+
                         # 다른 프로세스가 현재 작업중인 게 맞을 경우,
-                        hang_id = hang_query.pid
+                    hang_id = hang_query.pid
                     akiba_proc_list = get_akiba_proc_list()
                     print('.proc:\n\tdb:{}, akiba:{}, this:{}'.format(hang_id, akiba_proc_list, os.getpid()))
                     if hang_id in akiba_proc_list:
@@ -415,7 +427,14 @@ while True:
         #akiba[thread_no]['date'] = m
         entry['date'] = m
         '''
-        entry['date'] = l[1]
+
+        # None일 경우 hanging 목록이라 그런거라서 본문중 가장 마지막 날짜를가져옵니다 
+        if l[1]:
+            entry['date'] = l[1]
+        else:
+            l_date = drv.find_elements_by_xpath("//*[@class='DateTime']")
+            entry['date'] = l_date[len(l_date) - 1].get_attribute('title')
+
 
         # text 찾기
         msg_l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
