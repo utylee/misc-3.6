@@ -99,17 +99,6 @@ try:
 except:
     pass
 
-'''
-with db.get_conn():
-    hanging_list = []
-    entrys = Hanging.select().get()
-    if len(entrys):
-        for query in entrys:
-            hanging_list.append(query.thread_no)
-    # hanging 테이블로 부터 processing 이 1로 설정된 Akiba 테이블 내의 thread_no 들을 불러옵니다
-    h_thread_no = Akiba.select().where(Akiba.thread_no == 
-    '''
-
 
 
 # google translate 를 위한 header
@@ -493,26 +482,6 @@ while True:
         #if download_err:
             #continue
 
-        '''
-        # main_image 저장 및 지정 추가 image는 etc_images 에 넣는 프로세스
-        href = l.get_attribute('src')
-        print('href : ' + href)
-        #m = re.search('<img.*src=\"(.*\.\d+)/*\"', t)
-        #if m is not None : 
-        if href is not None : 
-            print('came in href')
-            #href = m.group(1)
-            f = re.search('attachments/(.*jpg\.\d+)/*', href).group(1) + '.jpg'
-            print(f)
-            akiba[thread_no]['main_image'] = f
-            dir1 = 'static/images'
-            #response = session.get('{}/{}'.format(ROOT, href))
-            response = session.get(href)
-            filename = "{}/{}".format(dir1, f)
-            print('downloading main images...')
-            with open(filename, "wb") as w:
-                w.write(response.content)
-        '''
 
         # code 저장
         o = re.search('alt=\"(\w+\-*\d+)\.*\"', t)
@@ -583,47 +552,11 @@ while True:
         #if akiba[thread_no]['main_image'] is None:
         if entry['main_image'] is None:
             #해당 프로세스를 이미 main_image 처리중 추가해 놓았습니다
-            '''
-            #첨부 이미지가 하나도 없는 경우, 본문 내 img 태그들 주소를 검색해 모두 다운로드하고 db에 연결합니다
-            if not len(entry['etc_images']):
-            #if not len(akiba[thread_no]['etc_images']):
-                ele_images = drv.find_elements_by_xpath("//img[starts-with(@class, 'bbCodeImage')]")     
-                for e in ele_images:
-                    if e is not None:
-                        src = e.get_attribute('outerHTML')
-                        print(src)
-                        #m = re.search('src=\"(.*/(.+\.w+))\"', src)
-                        #if m is not None:
-                            #url = m.group(1)
-                            #f = m.group(2)
-                        url = e.get_attribute('src')
-                        print(url)
-                        f = url.split('/')[-1]
-                        print(f)
-                        
-                        print("url:{}, f:{}".format(url, f))
-                        print("url[:4]:{}".format(url[:4].lower()))
-
-                        dir1 = LOCAL + 'static/images'
-                        if (url[:4].lower() == 'http') and (url is not None) and (f is not None):
-                            print('came in')
-                            response = session.get('{}'.format(url))
-                            #print(response.content)
-                            #filename = "{}/{}.{}".format(dir1, f, ext)
-                            f = "{}-{}".format(thread_no, f)
-                            akiba[thread_no]['etc_images'].append(f)
-                            filename = "{}/{}".format(dir1, f)
-                            print('saving from {} to {}'.format(url, filename))
-                            with open(filename, "wb") as w:
-                                w.write(response.content)
-            '''
             # 첨부 이미지가 있는 경우 첨부이미지 첫번째를 메인으로 사용합니다
             if len(entry['etc_images']):
                 entry['main_image'] = entry['etc_images'][0]
             #if len(akiba[thread_no]['etc_images']):
                 #akiba[thread_no]['main_image'] = akiba[thread_no]['etc_images'][0]
-
-
 
 
         # title, thread_no, (main_image?), torrent 가 있으면 ok 사인을 표시해 놓습니다
