@@ -584,9 +584,9 @@ while True:
 
         #with db_con:
         #with db.transaction():
-        #with db.get_conn():
+        with db.get_conn():
         #with db.connect():
-        with db.atomic():
+        #with db.atomic():
             Akiba.update(title = entry['title'], \
                         title_ko = entry['title_ko'],\
                         date = entry['date'],\
