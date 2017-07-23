@@ -3,7 +3,8 @@ import asyncio
 import re
 from trans import *
 
-FILE_NAME = '/home/utylee/utylee/saul.txt'
+FILE_NAME = '/home/pi/saul.txt'
+TARGET_FILE = '/home/pi/media/3001/00-MediaWorld-3001/03-미드.종방/05-BetterCallSaul/S03/Better.Call.Saul.S03E10.720p.HDTV.x264-AVS[rarbg]/Better.Call.Saul.S03E10.720p.HDTV.x264-AVS.srt'
 
 
 
@@ -25,7 +26,8 @@ async def main():
 	with open(FILE_NAME, 'r') as f:
 		lines = f.readlines()
 		
-	with open(FILE_NAME + '.translate', 'w') as w:
+	#with open(FILE_NAME + '.translate', 'w') as w:
+	with open(TARGET_FILE, 'w') as w:
 
 		cur_order = 1
 		text = ''
