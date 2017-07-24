@@ -88,13 +88,15 @@ class Hanging(Model):
 
 #이미 db table이 생성되었을 경우, 에러가 날 때를 대비해 try 합니다
 try:
-    with db.get_conn():
+    #with db.get_conn():
+    with db.atomic():
         db.create_tables([Akiba, Hanging])
 except:
     pass
 
 try:
-    with db.get_conn():
+    #with db.get_conn():
+    with db.atomic():
         db.create_tables([Hanging])
 except:
     pass
@@ -199,11 +201,13 @@ while True:
 
     # Hanging중인 토렌트를 먼저 작업하기 위해 매페이지마다 처음에 껴 넣어놓습니다 
     print('\n\n try processing Hanging thread...\n\n')
-    with db.get_conn():
+    #with db.get_conn():
+    with db.atomic():
         entrys = Hanging.select().where(Hanging.processing == '1')
     if len(entrys):
         for query in entrys:
-            with db.get_conn():
+            #with db.get_conn():
+            with db.atomic():
                 q_pid = query.pid
                 q_href = query.href
             if q_pid in get_akiba_proc_list():
@@ -214,7 +218,8 @@ while True:
                 li_urls.append((q_href, None))
 
                 # 또한 processing 이 0으로 변경된 경우의 오류를 방지하기 위해 각 akiba의 processing도 1로 재설정 해줍니다
-                with db.get_conn():
+                #with db.get_conn():
+                with db.atomic():
                     #t_thread_no = query.thread_no
                     Akiba.update(processing = '1').where(Akiba.thread_no == query.thread_no).execute()
 
@@ -264,28 +269,32 @@ while True:
         processing = '0'
         has = '0'
         c_flag = 0
-        with db.get_conn():
+        #with db.get_conn():
+        with db.atomic():
         #with db.connect():
             #with db.atomic():
             entrys = Akiba.select().where(Akiba.thread_no == thread_no)
         # 해당 thread_no 가 존재할 경우, processing 과 already의 설정을 보고 pass할지를 결정합니다
         if len(entrys):
             for query in entrys:
-                with db.get_conn():
+                #with db.get_conn():
+                with db.atomic():
                     processing = query.processing 
                     has = query.already_has
                 if processing == '1':
                     # 간혹 hanging 테이블에 entry 생성이전에 다른애가 진입하는 경우가 있는 것 같습니다
                     # 그럴경우 hanging 테이블에 여기서 pid만 변경해서 임시로 생성후 강제종료된 hanging으로 가정하고 진행합니다
                     try:
-                        with db.get_conn():
+                        #with db.get_conn():
+                        with db.atomic():
                             hang_query = Hanging.select().where(Hanging.thread_no == thread_no).get()
                     except:
                         # pid 에 '0'을 넣어주어 pass되지 않도록 합니다
                         d = {'thread_no': thread_no, 'title': None, 'href': href, 'processing': '1', 'pid': '0'}
                         with db.atomic():
                             Hanging.insert_many([d]).execute()
-                        with db.get_conn():
+                        #with db.get_conn():
+                        with db.atomic():
                             hang_query = Hanging.select().where(Hanging.thread_no == thread_no).get()
 
                         # 다른 프로세스가 현재 작업중인 게 맞을 경우,
@@ -306,7 +315,8 @@ while True:
                         print('vvvvvvvvvvvvvvvvvv\n')
                         print('vvvvvvvvvvvvvvvvvv\n')
                         print('vvvvvvvvvvvvvvvvvv\n')
-                        with db.get_conn():
+                        #with db.get_conn():
+                        with db.atomic():
                             hang_query.pid = '{}'.format(os.getpid())
                             hang_query.save()
                         c_flag = 0
@@ -314,7 +324,8 @@ while True:
 
                 # 완료 플래그가 설정되어 있더라도, date가 변경이 있으면 플래그를 다시 재설정하고 재작업을 해야합니다
                 elif has == '1':
-                    with db.get_conn():
+                    #with db.get_conn():
+                    with db.atomic():
                         db_date = query.date
                     if db_date == l[1]:
                         print('================\n 이미 완료된 쓰레드입니다. pass 합니다')
@@ -329,7 +340,8 @@ while True:
                         print('작업을 이어서 진행하겠습니다')
                         print('* * * * * * * * *\n\n')
                         # Akiba.processing을 1로 바꾸어 놓고 Hanging에도 추가를 별도로 특별히 해주어야 하는 경우입니다
-                        with db.get_conn():
+                        #with db.get_conn():
+                        with db.atomic():
                             query.processing = '1'
                             query.save()
                         d = {'thread_no': thread_no, 'title': None, 'href': href, 'processing': '1', 'pid': os.getpid()}
@@ -341,7 +353,8 @@ while True:
                         break
 
                 else:
-                    with db.get_conn():
+                    #with db.get_conn():
+                    with db.atomic():
                         query.processing = '1'
                         query.save()
             if c_flag:
@@ -376,7 +389,8 @@ while True:
         title = drv.find_element_by_xpath('//div[@class="titleBar"]/h1').get_attribute('innerHTML')
         entry['title'] = title
         print('title : {}'.format(title))
-        with db.get_conn():
+        #with db.get_conn():
+        with db.atomic():
             Hanging.update(title = title).where(Hanging.thread_no == thread_no).execute()
 
         # code atrribute
@@ -384,7 +398,8 @@ while True:
         if m is not None: code = m.group(1)
         entry['code'] = code
         print('code : {}'.format(code))
-        with db.get_conn():
+        #with db.get_conn():
+        with db.atomic():
             Hanging.update(code = code).where(Hanging.thread_no == thread_no).execute()
 
         # title_ko attribute
@@ -584,9 +599,9 @@ while True:
 
         #with db_con:
         #with db.transaction():
-        with db.get_conn():
+        #with db.get_conn():
         #with db.connect():
-        #with db.atomic():
+        with db.atomic():
             Akiba.update(title = entry['title'], \
                         title_ko = entry['title_ko'],\
                         date = entry['date'],\
@@ -603,7 +618,8 @@ while True:
                         ).where(Akiba.thread_no == thread_no).execute()
 
         if download_err_num == 0:
-            with db.get_conn():
+            #with db.get_conn():
+            with db.atomic():
                 Hanging.delete().where(Hanging.thread_no == thread_no, Hanging.pid == os.getpid()).execute()
 
         print('\ndb processes succeeded! ')
