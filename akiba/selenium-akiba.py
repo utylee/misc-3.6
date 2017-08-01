@@ -122,7 +122,8 @@ drv = webdriver.PhantomJS("/usr/local/bin/phantomjs")
 drv.set_window_size(1024, 768)
 
 #접속
-print('connecting...')
+now = datetime.datetime.now().strftime('%m%d-%H:%M:%S')
+print('<{}> : connecting...'.format(now))
 drv.get(URL)
 
 #로그인
@@ -160,6 +161,8 @@ l.click()
 
 #start_page_num 이 지정되어 있다면 해당 페이지로 다시 로딩
 url = '{}/page-{}'.format(drv.current_url, start_page_num) 
+now = datetime.datetime.now().strftime('%m%d-%H:%M:%S')
+print(now)
 print(' >>>>>>>>>>>> \n starting from page - {}\n.url:{}'.format(start_page_num, url))
 drv.get(url)
 print('.fetched page')
@@ -419,7 +422,8 @@ while True:
 
 
         # 해당 쓰레드를 로딩합니다
-        print('\n\n.loading current thread')
+        now = datetime.datetime.now().strftime('%m%d-%H:%M:%S')
+        print('\n\n<{}> : .loading current thread'.format(now))
         drv.get(l[0])
 
         # title attribute
@@ -744,7 +748,8 @@ while True:
         break
 
     print('\n\n.starting page-{}\n.loading current page'.format(next_page_num))
-    print(next_page_link_url)
+    now = datetime.datetime.now().strftime('%m%d-%H:%M:%S')
+    print('<{}> : {}'.format(now, next_page_link_url))
 
 
     # clear the phantomjs cache 
