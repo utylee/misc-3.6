@@ -1,4 +1,5 @@
 import sys, os
+import datetime
 from selenium import webdriver
 import time, re
 import requests
@@ -44,7 +45,7 @@ entry = dict.fromkeys(key for key in keys)
 akiba = {}                          # {'글번호': 'entry dict'}
 
 
-db = APSWDatabase( LOCAL + 'akiba.db', timeout=3000)
+db = APSWDatabase( LOCAL + 'akiba.db', timeout=30000)
 class Akiba(Model):
     #thread_no = CharField(primary_key=True)         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
     thread_no = CharField(null = True, unique = True)           # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
@@ -100,7 +101,6 @@ try:
         db.create_tables([Hanging])
 except:
     pass
-
 
 
 # google translate 를 위한 header
@@ -160,8 +160,9 @@ l.click()
 
 #start_page_num 이 지정되어 있다면 해당 페이지로 다시 로딩
 url = '{}/page-{}'.format(drv.current_url, start_page_num) 
-print(' >>>>>>>>>>>> \n starting from page - {}'.format(start_page_num))
+print(' >>>>>>>>>>>> \n starting from page - {}\n.url:{}'.format(start_page_num, url))
 drv.get(url)
+print('.fetched page')
 
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 #t = drv.page_source
@@ -202,8 +203,12 @@ while True:
     # Hanging중인 토렌트를 먼저 작업하기 위해 매페이지마다 처음에 껴 넣어놓습니다 
     print('\n\n try processing Hanging thread...\n\n')
     #with db.get_conn():
+    ct1 = datetime.datetime.now()
     with db.atomic():
         entrys = Hanging.select().where(Hanging.processing == '1')
+    ct2 = datetime.datetime.now()
+    delta = ct2 - ct1
+    print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
     if len(entrys):
         for query in entrys:
             #with db.get_conn():
@@ -219,9 +224,13 @@ while True:
 
                 # 또한 processing 이 0으로 변경된 경우의 오류를 방지하기 위해 각 akiba의 processing도 1로 재설정 해줍니다
                 #with db.get_conn():
+                ct1 = datetime.datetime.now()
                 with db.atomic():
                     #t_thread_no = query.thread_no
                     Akiba.update(processing = '1').where(Akiba.thread_no == query.thread_no).execute()
+                ct2 = datetime.datetime.now()
+                delta = ct2 - ct1
+                print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
 
     # DateTime 도 loop로 같이 넘겨줘 매 쓰레드 로딩없이 작업여부를 판단할 수 있게끔 합니다
     idate = 0
@@ -291,8 +300,12 @@ while True:
                     except:
                         # pid 에 '0'을 넣어주어 pass되지 않도록 합니다
                         d = {'thread_no': thread_no, 'title': None, 'href': href, 'processing': '1', 'pid': '0'}
+                        ct1 = datetime.datetime.now()
                         with db.atomic():
                             Hanging.insert_many([d]).execute()
+                        ct2 = datetime.datetime.now()
+                        delta = ct2 - ct1
+                        print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
                         #with db.get_conn():
                         with db.atomic():
                             hang_query = Hanging.select().where(Hanging.thread_no == thread_no).get()
@@ -316,9 +329,13 @@ while True:
                         print('vvvvvvvvvvvvvvvvvv\n')
                         print('vvvvvvvvvvvvvvvvvv\n')
                         #with db.get_conn():
+                        ct1 = datetime.datetime.now()
                         with db.atomic():
                             hang_query.pid = '{}'.format(os.getpid())
                             hang_query.save()
+                        ct2 = datetime.datetime.now()
+                        delta = ct2 - ct1
+                        print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
                         c_flag = 0
                         break
 
@@ -341,22 +358,34 @@ while True:
                         print('* * * * * * * * *\n\n')
                         # Akiba.processing을 1로 바꾸어 놓고 Hanging에도 추가를 별도로 특별히 해주어야 하는 경우입니다
                         #with db.get_conn():
+                        ct1 = datetime.datetime.now()
                         with db.atomic():
                             query.processing = '1'
                             query.save()
+                        ct2 = datetime.datetime.now()
+                        delta = ct2 - ct1
+                        print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
                         d = {'thread_no': thread_no, 'title': None, 'href': href, 'processing': '1', 'pid': os.getpid()}
 
+                        ct1 = datetime.datetime.now()
                         with db.atomic():
                             Hanging.insert_many([d]).execute()
+                        ct2 = datetime.datetime.now()
+                        delta = ct2 - ct1
+                        print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
 
                         c_flag = 0
                         break
 
                 else:
+                    ct1 = datetime.datetime.now()
                     #with db.get_conn():
                     with db.atomic():
                         query.processing = '1'
                         query.save()
+                    ct2 = datetime.datetime.now()
+                    delta = ct2 - ct1
+                    print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
             if c_flag:
                 continue
 
@@ -364,8 +393,12 @@ while True:
         # 또한 hanging 테이블에도 해당 entry를 삽입합니다
         else:
             d = {'thread_no': thread_no, 'title': None, 'href': href, 'processing': '1', 'pid': os.getpid()}
+            ct1 = datetime.datetime.now()
             with db.atomic():
                 Hanging.insert_many([d]).execute()
+            ct2 = datetime.datetime.now()
+            delta = ct2 - ct1
+            print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
 
             entry['processing'] = '1' 
             print('\n삽입전 entry:\n{}'.format(entry))
@@ -375,8 +408,12 @@ while True:
             # err_num 을 표시해 Hanging 테이블에 흔적을 남기게끔 합니다
             # 추후 실행시 다시 챙길 수 있도록..
             try:
+                ct1 = datetime.datetime.now()
                 with db.atomic():
                     Akiba.insert_many([entry]).execute()
+                ct2 = datetime.datetime.now()
+                delta = ct2 - ct1
+                print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
             except:
                 download_err_num = download_err_num + 1
 
@@ -386,21 +423,34 @@ while True:
         drv.get(l[0])
 
         # title attribute
-        title = drv.find_element_by_xpath('//div[@class="titleBar"]/h1').get_attribute('innerHTML')
-        entry['title'] = title
+        # title bar 항목이 없는 쓰레드도 발견되었습니다. akiba 예전 db를 자기들이 복구하면서 생긴 문제들일까요?
+        try:
+            title = drv.find_element_by_xpath('//div[@class="titleBar"]/h1').get_attribute('innerHTML')
+            entry['title'] = title
+        except:
+            entry['title'] = 'error while get xpath:titleBar'
+
         print('title : {}'.format(title))
+        ct1 = datetime.datetime.now()
         #with db.get_conn():
         with db.atomic():
             Hanging.update(title = title).where(Hanging.thread_no == thread_no).execute()
+        ct2 = datetime.datetime.now()
+        delta = ct2 - ct1
+        print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
 
         # code atrribute
         m = re.search('\[(.*)\]', title) 
         if m is not None: code = m.group(1)
         entry['code'] = code
         print('code : {}'.format(code))
+        ct1 = datetime.datetime.now()
         #with db.get_conn():
         with db.atomic():
             Hanging.update(code = code).where(Hanging.thread_no == thread_no).execute()
+        ct2 = datetime.datetime.now()
+        delta = ct2 - ct1
+        print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
 
         # title_ko attribute
         #debug시 시간이 너무 소요돼서 일단 이쪽으로 빼놓음
@@ -441,8 +491,14 @@ while True:
 
 
         # text 찾기
-        msg_l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
-        t = msg_l.get_attribute('innerHTML')
+        # text가 없는 오류 글도 있어서 에러가 발생했습니다
+        try:
+            msg_l = drv.find_element_by_xpath("//blockquote[starts-with(@class, 'messageText')]")
+            t = msg_l.get_attribute('innerHTML')
+        except:
+            print('.messageText get exception')
+            t = 'no text'
+
         print('.text:\n{}'.format(t))
 
 
@@ -479,20 +535,48 @@ while True:
                     #akiba[thread_no]['etc_images'].append(f) 
                     entry['etc_images'].append(f) 
                     print('downloading etc images...')
+
+
+
                 # 현재 image 다운로드
+                # 썸네일 등 이미지 주소가 바로 다운로드가 안된다던가 주소가 없어졌다던가 하는 경우가 잇는 것 같습니다
                 try:
                     response = session.get(href)
-                    with open(filename, "wb") as w:
-                        w.write(response.content)
                 except:
-                    print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
-                    print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
-                    print('.exception while downloading!!! \n proceed to next Thread') 
-                    print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
-                    print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                    print('except on downloading images')
+
+                r_ok = 0
+                write_filename = filename
+                for re_try in range(1,10):
+                    try:
+                        #write_filename = "{}/{}".format(dir1, f)
+                        print('({})filename : {}'.format(re_try, write_filename))
+                        with open(write_filename, "wb") as w:
+                            w.write(response.content)
+                        r_ok = 1
+                        break
+                        
+                    except:
+                        write_filename = filename + str(re_try)
+
+                if r_ok != 1:
                     download_err = True
                     download_err_num = download_err_num + 1
-                    #일단 작업은 그대로 진행하게끔 변경합니다
+
+
+                #try:
+                    #with open(filename, "wb") as w:
+                        #w.write(response.content)
+                #except:
+                    #print('file saving exception')
+                    ##print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                    ##print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                    ##print('.exception while downloading!!! \n proceed to next Thread') 
+                    ##print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                    ##print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                    #download_err = True
+                    #download_err_num = download_err_num + 1
+                    ##일단 작업은 그대로 진행하게끔 변경합니다
                     #break
         #if download_err:
             #continue
@@ -519,8 +603,8 @@ while True:
             outer = a.get_attribute('outerHTML')
             m1 = re.search('href=\"(.*\.\d+/*)\"', outer)
             href = m1.group(1)
-            print(outer)
-            print(href)
+            print('outer: {}'.format(outer))
+            print('href: {}'.format(href))
 
             if re.search('jpg\.\d+',href) is not None:
                 ext = 'jpg'
@@ -546,18 +630,41 @@ while True:
             # 해당 파일 다운로드
             try:
                 response = session.get('{}/{}'.format(ROOT, href))
-                filename = "{}/{}".format(dir1, f)
-                with open(filename, "wb") as w:
-                    w.write(response.content)
+                print(len(response.content))
             except:
-                print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
-                print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
-                print('.exception while downloading!!! \n proceed to next Thread') 
-                print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
-                print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                print('exception on downloading!!')
+
+            #try:
+            filename = "{}/{}".format(dir1, f)
+            r_ok = 0
+            write_filename = filename
+            for re_try in range(1,10):
+                try:
+                    #write_filename = "{}/{}".format(dir1, f)
+                    print('filename : {}'.format(write_filename))
+                    with open(write_filename, "wb") as w:
+                        w.write(response.content)
+                    r_ok = 1
+                    break
+                    
+                except:
+                    write_filename = filename + str(re_try)
+
+            if r_ok != 1:
                 download_err = True
-                # 일단 작업은 끝까지 진행시켜 봅니다
+                #일단 작업은 끝까지 진행시켜 봅니다
                 download_err_num = download_err_num + 1
+
+            #except:
+                #print('exception on Saving!')
+                #print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                #print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                #print('.exception while downloading!!! \n proceed to next Thread') 
+                #print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                #print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ')
+                #download_err = True
+                # 일단 작업은 끝까지 진행시켜 봅니다
+                #download_err_num = download_err_num + 1
                 #break
 
         #if download_err:
@@ -601,6 +708,7 @@ while True:
         #with db.transaction():
         #with db.get_conn():
         #with db.connect():
+        ct1 = datetime.datetime.now()
         with db.atomic():
             Akiba.update(title = entry['title'], \
                         title_ko = entry['title_ko'],\
@@ -616,6 +724,9 @@ while True:
                         already_has = entry['already_has'],\
                         processing = entry['processing']
                         ).where(Akiba.thread_no == thread_no).execute()
+        ct2 = datetime.datetime.now()
+        delta = ct2 - ct1
+        print('### database processing time : {}.{}'.format(delta.seconds, delta.microseconds))
 
         if download_err_num == 0:
             #with db.get_conn():
@@ -634,6 +745,10 @@ while True:
 
     print('\n\n.starting page-{}\n.loading current page'.format(next_page_num))
     print(next_page_link_url)
+
+
+    # clear the phantomjs cache 
+    drv.execute_script('localStorage.clear();')
     drv.get(next_page_link_url)
     
 print('!!!!!!!!!!!!!!!!  Come to last page. completed!!!!!!!!!!!!!!!!!')
