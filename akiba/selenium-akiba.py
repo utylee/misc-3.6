@@ -45,7 +45,7 @@ entry = dict.fromkeys(key for key in keys)
 akiba = {}                          # {'글번호': 'entry dict'}
 
 
-db = APSWDatabase( LOCAL + 'akiba.db', timeout=30000)
+db = APSWDatabase( LOCAL + 'akiba.db', timeout=300000)
 class Akiba(Model):
     #thread_no = CharField(primary_key=True)         # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
     thread_no = CharField(null = True, unique = True)           # 쓰레드 넘버입니다 href 제일 마지막 부분 숫자 아닌가 추측합니다
@@ -182,7 +182,19 @@ for c in cookies:
 # 페이지별 반복 프로세스
 while True:
     # 다음페이지주소를 미리 얻어놓습니다
-    next_page_link = drv.find_element_by_xpath("//div[@class='PageNav']/nav/a[@class='text'][contains(text(), 'Next')]")
+    # 가끔 webdriver가 exception을 내는 경우가 있어 try 로 2회 정도 반복도 필요한 것 같습니다
+    r_ok = 0
+    for i in range(0,2):
+        try:
+            next_page_link = drv.find_element_by_xpath("//div[@class='PageNav']/nav/a[@class='text'][contains(text(), 'Next')]")
+            r_ok = 1
+            break
+        except:
+            print('!! find_element_exception!! retrying..')
+    if r_ok == 0:
+        print(' error on finding next link ')
+        break
+
     print('\n\nnext_page_link : {}'.format(next_page_link))
     if next_page_link is not None:
         n = next_page_link.get_attribute('outerHTML') 
@@ -241,6 +253,7 @@ while True:
         href = i.get_attribute('href')
         # 일관되게 관리하기 위해 항상 title을 가져오게끔 변경하였습니다
         date_s = date_l[idate].get_attribute('title')
+        conv_date = datetime.datetime.strptime(date_s, '%b %d, %Y at %I:%M %p').strftime('%Y-%m-%d %H:%M:%S')
         #date_s = date_l[idate].get_attribute('data-time')
         # 꽤 오랜 쓰레드일 경우 시간을 자세히 표기않고 간략하게 표현하느라 해당 attribute가 없는 경우가 있습니다
         #if date_s is None:
@@ -248,7 +261,8 @@ while True:
 
         #li_urls.append("{}/{}".format(ROOT, href))
         #li_urls.append(href)
-        li_urls.append((href, date_s))
+        #li_urls.append((href, date_s))
+        li_urls.append((href, conv_date))
         idate = idate + 1
 
     print(li_urls)
@@ -491,7 +505,8 @@ while True:
             entry['date'] = l[1]
         else:
             l_date = drv.find_elements_by_xpath("//*[@class='DateTime']")
-            entry['date'] = l_date[len(l_date) - 1].get_attribute('title')
+            temp_date = l_date[len(l_date) - 1].get_attribute('title')
+            entry['date'] = datetime.datetime.strptime(temp_date, '%b %d, %Y at %I:%M %p').strftime('%Y-%m-%d %H:%M:%S')
 
 
         # text 찾기
@@ -529,21 +544,23 @@ while True:
                 f = f + '.jpg'
                 #filename = LOCAL + 'static/images/' + f
                 filename = REMOTE + 'static/images/' + f
+                now = datetime.datetime.now().strftime('%m%d-%H:%M:%S')
                 if entry['main_image'] is None: 
                     entry['main_image'] = f
                 #if akiba[thread_no]['main_image'] is None: 
                     #akiba[thread_no]['main_image'] = f
-                    print('downloading main images...')
+                    print('[{}] : downloading main images...'.format(now))
                 # <img>가 여럿일 경우 두번째부터는 etc_images에 저장합니다
                 else:
                     #akiba[thread_no]['etc_images'].append(f) 
                     entry['etc_images'].append(f) 
-                    print('downloading etc images...')
+                    print('[{}] : downloading etc images...'.format(now))
 
 
 
                 # 현재 image 다운로드
                 # 썸네일 등 이미지 주소가 바로 다운로드가 안된다던가 주소가 없어졌다던가 하는 경우가 잇는 것 같습니다
+
                 try:
                     response = session.get(href)
                 except:
