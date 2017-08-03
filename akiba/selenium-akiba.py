@@ -210,7 +210,7 @@ while True:
     print('fetching current page list items...')
     l = drv.find_elements_by_xpath("//ol/li[not(contains(@class, 'sticky'))]/div/div/h3/a[@class='PreviewTooltip']")
     # 각 쓰레드의 마지막 포스트의 시간들을 가져옵니다. 이를 통해 이미 완료된 쓰레드임에도 변경이 필요한지 결정할 수 있습니다
-    date_l = drv.find_elements_by_xpath("//li/div/dl[@class = 'lastPostInfo']/dd/a/*[@class = 'DateTime']")
+    date_l = drv.find_elements_by_xpath("//li[not(contains(@class, 'sticky'))]/div/dl[@class = 'lastPostInfo']/dd/a/*[@class = 'DateTime']")
     li_urls = []
     #title = ""
 
