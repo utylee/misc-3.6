@@ -120,6 +120,7 @@ agent = {'User-Agent':
 
 drv = webdriver.PhantomJS("/usr/local/bin/phantomjs")
 drv.set_window_size(1024, 768)
+drv.set_page_load_timeout(600)
 
 #접속
 now = datetime.datetime.now().strftime('%m%d-%H:%M:%S')
@@ -164,8 +165,21 @@ url = '{}/page-{}'.format(drv.current_url, start_page_num)
 now = datetime.datetime.now().strftime('%m%d-%H:%M:%S')
 print(now)
 print(' >>>>>>>>>>>> \n starting from page - {}\n.url:{}'.format(start_page_num, url))
-drv.get(url)
+# webdriver get 이 먹통이 될 때가 가끔 있씁니다. 3회 시도를 해봅니다
+get_ok = 0
+for ii in range(0,3):
+    try:
+        drv.get(url)
+        get_ok = 1
+        break
+    # 1분 timeout을 설정했습니다
+    except:
+        print('.timeout occurred!')
+if get_ok == 0:
+    print('.cant load the site')
+    pass
 print('.fetched page')
+
 
 #drv.save_screenshot('/mnt/c/Users/utylee/out.png')
 #t = drv.page_source
@@ -438,7 +452,19 @@ while True:
         # 해당 쓰레드를 로딩합니다
         now = datetime.datetime.now().strftime('%m%d-%H:%M:%S')
         print('\n\n<{}> : .loading current thread'.format(now))
-        drv.get(l[0])
+
+        # webdriver get 이 먹통이 될 때가 가끔 있씁니다. 3회 시도를 해봅니다
+        get_ok = 0
+        for ii in range(0,3):
+            try:
+                drv.get(l[0])
+                get_ok = 1
+                break
+            # 1분 timeout을 설정했습니다
+            except:
+                print('.timeout occurred!')
+        if get_ok == 0:
+            break
 
         # title attribute
         # title bar 항목이 없는 쓰레드도 발견되었습니다. akiba 예전 db를 자기들이 복구하면서 생긴 문제들일까요?
@@ -771,7 +797,20 @@ while True:
 
     # clear the phantomjs cache 
     drv.execute_script('localStorage.clear();')
-    drv.get(next_page_link_url)
+    #drv.get(next_page_link_url)
+
+    # webdriver get 이 먹통이 될 때가 가끔 있씁니다. 3회 시도를 해봅니다
+    get_ok = 0
+    for ii in range(0,3):
+        try:
+            drv.get(next_page_link_url)
+            get_ok = 1
+            break
+        # 1분 timeout을 설정했습니다
+        except:
+            print('.timeout occurred!')
+    if get_ok == 0:
+        break
     
 print('!!!!!!!!!!!!!!!!  Come to last page. completed!!!!!!!!!!!!!!!!!')
     
