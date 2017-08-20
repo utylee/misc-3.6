@@ -20,7 +20,8 @@ $('.popover-dismiss').popover({
 			</li>
 			<li class="active"><a href="#">1</a></li>
 			{% for i in range(2, 10) %}
-			<li><a href="#">{{ i }}</a></li>
+			<li><a href="{{ video }}">{{ i }}</a></li>
+			<!-- <li><a href="{{ audio }}">{{ i }}</a></li> -->
 			{% endfor %}
 			<li>
 				<a href="#" aria-label="Next">
