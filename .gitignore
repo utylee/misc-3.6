@@ -4,3 +4,6 @@ akiba/static/images/*
 akiba/static/torrents/*
 akiba/ghostdriver.log
 akiba/akiba.db
+*.pyc
+*.zip
+*.tar

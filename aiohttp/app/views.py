@@ -7,6 +7,9 @@ from aiohttp_jinja2 import template
 
 import os
 
+from aiofiles import open as open_async
+from aiopg.sa import create_engine
+import sqlalchemy as sa
 
 #@template('index.jinja')
 @template('index.html')
@@ -23,38 +26,72 @@ async def index(request):
         'intro': "Success! you've setup a basic aiohttp app.",
     }
 
+
 async def src(request):
-    chunk_size = 4096
+    num = request.match_info.get('num', '0007')
+    print('came into /src')
+    print(f'{request.headers}')   
+    chunk_size = 40960
     REMOTE="/home/odroid/media/3001/00-MediaWorld-3001/55-etc/00-bible/"
-    location = REMOTE + '22.mp4'
+    location = REMOTE + '0000_11.mp3'
     rng = request.http_range
-    print(rng)
     size = os.path.getsize(location)
+    stop = rng.stop
+    if stop is None:
+        stop = size
+    to_send = min(stop - rng.start, size)
+    print(f'\trange:{rng}\n\tfilesize:{size}')
 
     if to_send < chunk_size:
-        # 그냥 response
-
+        # 한방 response
+        print('논-스트리밍 모드')
+        headers = {'Content-Type': 'audio/mp3', 'Accept-Ranges': 'Accept-Ranges: bytes'}
+        #headers['Content-Range'] = f'bytes {rng.start}-{stop - rng.start - 1}/{size}'
+        headers['Content-Range'] = f'bytes {rng.start}-{stop - 1}/{size}'
+        #headers['Content-Range'] = f'bytes {rng.start}-{rng.start + to_send - 1}/{size}'
+        async with open_async(location, 'rb') as f:
+            await f.seek(rng.start)
+            send = to_send
+            data = await f.read(send)
+        #print(data)
+        #print(headers)
+        return Response(body=data, status=200, headers=headers)
+    else:
         # 스트리밍 모드
-    with open(location, 'rb') as f:
-        f.seek(rng.start)
-        send = min(chunk_size, rng.stop-rng.start)
-        #data = f.read(rng.stop-rng.start)
-        data = f.read(send)
+        print('스트리밍 모드')
+        headers = {'Content-Type': 'audio/mp3', 'Accept-Ranges': 'Accept-Ranges: bytes'}
+        #headers['Content-Range'] = f'bytes {rng.start}-{stop - rng.start - 1}/{size}'
+        headers['Content-Range'] = f'bytes {rng.start}-{stop - 1}/{size}'
+        #headers['Content-Range'] = f'bytes {rng.start}-{rng.start + to_send - 1}/{size}'
+        resp = StreamResponse(headers=headers, status=206)
+        await resp.prepare(request)
+        print(resp)
+        async with open_async(location, 'rb') as f:
+            print(f'seek to {rng.start}')
+            await f.seek(rng.start)
+            #data = f.read(rng.stop-rng.start)
+            to_send = stop - rng.start
+            while to_send:
+                send = min(chunk_size, to_send)
+                data = await f.read(send)
+            
+                resp.write(data)
+                await resp.drain()
 
-    print(len(data))
-    #print(data)
-    #return FileResponse(REMOTE + '22.mp4', status=206)
-    headers = {'Content-Type': 'video/mp4', 'Accept-Ranges': 'Accept-Ranges: bytes'}
-    stop = min(chunk_size + rng.start - 1, rng.stop - 1)
-    headers['Content-Range'] = f'bytes {rng.start}-{stop}/{size}'
-    print(headers)
-    return Response(body=data, status=206, headers=headers)
+                to_send -= send
+            print('eof')
 
+        return resp
 
 @template('video.html')
 async def video(request):
     return {
             'title' : 'video streaming',
+    }
+@template('audio.html')
+async def audio(request):
+    return {
+            'title' : 'audio streaming',
     }
 
 
