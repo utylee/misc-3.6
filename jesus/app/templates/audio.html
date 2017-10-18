@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block script %}
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1,user-scalable=0"/>
+
+	<!-- <link rel="stylesheet" href="{{ 'font-awesome-4.7.0/css/font-awesome.min.css'|static }}"> -->
+	<link rel="stylesheet" href="{{ 'plyr/plyr.css'|static }}">
+	<link rel="stylesheet" href="{{ 'plyr/add.css'|static }}">
+	<script src="{{ 'plyr/plyr_src.js'|static }}"></script>
+	<!-- <script src="{{ 'audiojs/audio.min.js'|static }}"></script> -->
+
+	<!-- <script>
+		audiojs.events.ready(function() {
+			var as = audiojs.createAll();
+		});
+	</script> -->
+	<script>
+		$(document).ready(function(){
+			$("footer").hide();
+			$("#btn_submit").click(function(){
+				//alert('aaa');
+				$("footer").show();
+				var val1 = $("#num1").val();
+				players[0].source({sources: [{src: '/src/' + val1, type: 'audio/mp3'}]});
+				//$("#audio_source").attr('src', "/play/" + val1);
+				//$("#img_source").attr('src', '/play/10');
+				//alert($("#num1").val());
+			});
+		});
+	</script>
+{% endblock %}
+
+
+{% block content %}
+<div class="container" style="height: 200px;">
+</div>
+<div class="container" >
+	<div class="row justify-content-center ">
+		<div class="w-20">
+			<div class="input-group" style="transform:scale(1.7);">
+				<input id="num1"  type="number" class="form-control" style="width:110px;background:#f9f9f9" placeholder="__ __ __ __" aria-label="숫자입력..." >
+				<span class="input-group-btn">
+					<button id="btn_submit"  class="btn btn-primary" type="button">
+						<i class="fa fa-check-square-o "></i>
+					</button>
+				</span>
+			</div>
+		</div> 
+	</div>
+	<div class="row justify-content-center" >
+		<div class="w-50">
+		<table class="table" style="width:1500px;">
+			<tr>
+				<td>apple</td><td>jobs</td>
+			</tr>
+			<tr>
+				<td>ms</td><td>gates</td>
+			</tr>
+		</table>
+		</div>
+	</div>
+</div>
+
+
+<br>
+<!-- <audio data-plyr='{ controls: "play-large"}'> -->
+<div class="actions">
+<!-- <button type="button" class="btn js-play">Play</button> -->
+<!-- <button type="button" class="btn js-stop">Stop</button> -->
+</div>
+
+<footer class="footer">
+<audio >
+	<source id="audio_source" src="/src/10" type="audio/mp3">
+</audio>
+</footer>
+
+<script>
+	var players = plyr.setup();
+	//players[0].play();
+	/*
+	// Get an element
+	function get(selector) {
+		return document.querySelector(selector);
+	}
+
+	function on(element, type, callback) {
+		if (!(element instanceof HTMLElement)) {
+			element = get(element);
+		}
+		element.addEventListener(type, callback, false);
+	}
+
+	// Loop through each instance
+	players.forEach(function(player) {
+		// Play
+		on('.js-play', 'click', function() { 
+			player.play();
+		});
+		// Stop
+		on('.js-stop', 'click', function() { 
+			player.stop();
+		});
+	});
+	//alert(players.length);
+	//players[0].stop();
+	*/
+</script>
+
+{% endblock %}
+
+
+
+
