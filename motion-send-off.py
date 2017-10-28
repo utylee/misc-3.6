@@ -22,7 +22,9 @@ async def update_img():
     l = sorted(glob.iglob('/home/pi/media/3001/21-motion2/2*jpg'), key=os.path.getctime)
     print(l[-4:])
     #urlopen('http://localhost:5000/message/1')
-    urlopen('http://192.168.0.210:5001/message/1')
+    #pi3 flask의 주소를 호출하여 이미지4개를 재배열  업데이트 명령을 전달합니다
+    with urlopen('http://192.168.0.210:5001/message/1') as f:
+        pass
 
 #102 PC로 알람과 show를 위한 메세지를 보냅니다
 async def push_pc_ended(message, loop):
