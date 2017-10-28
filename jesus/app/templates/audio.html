@@ -38,7 +38,7 @@
 	<div class="row justify-content-center ">
 		<div class="w-20">
 			<div class="input-group" style="transform:scale(1.7);">
-				<input id="num1"  type="number" class="form-control" style="width:110px;background:#f9f9f9" placeholder="__ __ __ __" aria-label="숫자입력..." >
+				<input id="num1"  type="number" class="form-control" style="width:110px;background:#f9f9f9" placeholder="__ __ __ __" aria-label="숫자입력..." onkeyup="updateInput()">
 				<span class="input-group-btn">
 					<button id="btn_submit"  class="btn btn-primary" type="button">
 						<i class="fa fa-check-square-o "></i>
@@ -47,7 +47,16 @@
 			</div>
 		</div> 
 	</div>
-	<div class="row justify-content-center" >
+	<div class="row justify-content-center">
+		<span >&nbsp; </span>
+	</div>
+	<div class="row justify-content-center">
+		<span >&nbsp; </span>
+	</div>
+	<div class="row justify-content-center">
+		<span id="printNum"></span>
+	</div>
+	<div class="row justify-content-center" style="display:none" >
 		<div class="w-50">
 		<table class="table" style="width:1500px;">
 			<tr>
@@ -105,6 +114,12 @@
 	//alert(players.length);
 	//players[0].stop();
 	*/
+	
+	function updateInput(){
+		var x = document.getElementById("num1").value;
+		document.getElementById("printNum").innerHTML = x;
+	}
+
 </script>
 
 {% endblock %}
