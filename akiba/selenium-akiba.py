@@ -18,9 +18,14 @@ REMOTE = '/home/pi/media/3001/30-flask/python/selenium/akiba/'
 username = 'seoru'
 password = 'akibaqnwk11'
 start_page_num = 1
+end_page_num = -1    #마지막 페이지를 의미
 #start_page_num = 50
+# 시작페이지/종료페이지를 설정합니다
 if len(sys.argv) > 1:
     start_page_num = int(sys.argv[1])
+    if int(sys.argv[2]) > 0:
+        end_page_num = int(sys.argv[2])
+
 #DEBUG = True
 DEBUG = False
 
@@ -217,7 +222,7 @@ while True:
 
         m = re.search('href=\"(.*/page\-(\d+))\"', n)
         next_page_link_url = '{}/{}'.format(ROOT, m.group(1))
-        next_page_num = m.group(2)
+        next_page_num = int(m.group(2))
         print('nexturl: {}, nextnum : {}'.format(next_page_link_url, next_page_num))
 
     # 페이지 내의 thread list들을 가진 목록을 가져옵니다
@@ -786,9 +791,12 @@ while True:
 
     print('\n\n\n\n\n\n\n\n\n################### ended current page ######################\n\n\n\n\n\n\n\n\n\n\n')
 
-    # 다음페이지 탐색
+    # 다음페이지 탐색, 다음페이지가 링크가 존재하지 않거나 end_page_num 설정값보다 커지면 중단.
     if next_page_link is None:
         break
+    elif end_page_num is not -1: # 무조건 마지막하는 설정값이 아닐 경우에
+        if next_page_num > end_page_num:
+            break
 
     print('\n\n.starting page-{}\n.loading current page'.format(next_page_num))
     now = datetime.datetime.now().strftime('%m%d-%H:%M:%S')
