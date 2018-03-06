@@ -63,7 +63,7 @@ async def proc(sanic, loop):
                             akiba.c.title_ko, 
                             akiba.c.torrents,
                             akiba.c.text,
-                            akiba.c.date]).limit(400).offset(0))
+                            akiba.c.date]).limit(800).offset(0))
     query = await result.fetchall()
     for i in query:
         print(i)
