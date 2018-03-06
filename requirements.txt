@@ -13,14 +13,17 @@ idna==2.5
 instapush==0.1.2
 itsdangerous==0.24
 Jinja2==2.9.6
+lxml==3.8.0
 Markdown==2.6.8
 MarkupSafe==1.0
 olefile==0.44
 peewee==2.10.1
 Pillow==4.2.0
+pushbullet.py==0.11.0
 pycurl==7.43.0
 pyscreenshot==0.4.2
 python-engineio==1.7.0
+python-magic==0.4.15
 python-socketio==1.8.0
 Represent==1.5.1
 requests==2.18.1
@@ -32,5 +35,6 @@ sqlalchemy-aio==0.11.0
 ujson==1.35
 urllib3==1.21.1
 uvloop==0.8.0
+websocket-client==0.47.0
 websockets==3.3
 Werkzeug==0.12.2
