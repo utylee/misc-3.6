@@ -1,6 +1,7 @@
 import asyncio
 from instapush import App
 from datetime import datetime
+from pushbullet import PushBullet
 
 # pi3 (210)로 모니터 turn on 신호를 보냅니다
 @asyncio.coroutine
@@ -44,12 +45,22 @@ async def instapushing():
     except:
         pass
 
+# pushbullet에 push명령을 내립니다
+async def pushbulleting():
+    try:
+        push = pb.push_note("^^", cur)
+
+    except:
+        pass
+
 
 app = App(appid = '595713a2a4c48ae3b8b70aa0', secret = '78fbc7d58e750b37773b3dbd13c967c5')
+pb = PushBullet("o.XnzDJuPVFyj0PuCpu5Ibxnzxy0rVqunh")
 #message = 'Hello World!'
 loop = asyncio.get_event_loop()
 message = 'moving'
 loop.run_until_complete(tcp_echo_client(message, loop))
-loop.run_until_complete(instapushing())
+#loop.run_until_complete(instapushing())
+loop.run_until_complete(pushbulleting())
 loop.run_until_complete(push_pc_started('coming', loop))
 loop.close()
