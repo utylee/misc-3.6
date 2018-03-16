@@ -48,7 +48,8 @@ async def instapushing():
 # pushbullet에 push명령을 내립니다
 async def pushbulleting():
     try:
-        push = pb.push_note("^^", cur)
+        cur = '9' + datetime.now().strftime('%H%M')
+        push = pb.push_note(cur, "^^")
 
     except:
         pass
