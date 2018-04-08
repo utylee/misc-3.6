@@ -59,9 +59,17 @@ app = App(appid = '595713a2a4c48ae3b8b70aa0', secret = '78fbc7d58e750b37773b3dbd
 pb = PushBullet("o.XnzDJuPVFyj0PuCpu5Ibxnzxy0rVqunh")
 #message = 'Hello World!'
 loop = asyncio.get_event_loop()
-message = 'moving'
-loop.run_until_complete(tcp_echo_client(message, loop))
+
+# pi3로 moving 메세지를 보냅니다
+# octorpint 및 klipper 펌웨어 사용으로 임시로 제거해놓습니다. firefox-esr과 octoprint의 chromium이 충돌하는지
+#문제가 생겨서리
+#message = 'moving'
+#loop.run_until_complete(tcp_echo_client(message, loop))
+
+# pushbullet에 이벤트를 보냅니다
 #loop.run_until_complete(instapushing())
 loop.run_until_complete(pushbulleting())
+
+# 102 데스크탑으로 coming 메세지를 보냅니다
 loop.run_until_complete(push_pc_started('coming', loop))
 loop.close()

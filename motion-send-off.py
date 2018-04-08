@@ -45,6 +45,7 @@ async def push_pc_ended(message, loop):
 loop = asyncio.get_event_loop()
 message = 'stop'
 loop.run_until_complete(update_img())
-loop.run_until_complete(tcp_echo_client(message, loop))
+# octorpint 및 klipper 펌웨어 사용으로 임시로 제거해놓습니다. firefox-esr과 octoprint의 chromium이 충돌하는지
+#loop.run_until_complete(tcp_echo_client(message, loop))
 loop.run_until_complete(push_pc_ended('ended', loop))
 loop.close()
