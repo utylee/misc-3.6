@@ -27,6 +27,7 @@ python-magic==0.4.15
 python-socketio==1.8.0
 Represent==1.5.1
 requests==2.18.1
+RPi.GPIO==0.6.3
 sanic==0.6.0
 selenium==3.4.3
 six==1.10.0
