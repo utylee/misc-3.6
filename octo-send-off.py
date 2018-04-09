@@ -4,7 +4,7 @@ import asyncio
 # octo (117)로 power off 신호를 보냅니다
 @asyncio.coroutine
 def tcp_echo_client(message, loop):
-    yield from asyncio.sleep(10)
+    #yield from asyncio.sleep(10)
     reader, writer = yield from asyncio.open_connection('192.168.0.117', 5000,
                                                         loop=loop)
 
