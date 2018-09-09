@@ -1,6 +1,7 @@
 import asyncio
 from instapush import App
 from datetime import datetime
+from pushbullet import PushBullet
 
 # pi3 (210)로 모니터 turn on 신호를 보냅니다
 @asyncio.coroutine
@@ -44,12 +45,31 @@ async def instapushing():
     except:
         pass
 
+# pushbullet에 push명령을 내립니다
+async def pushbulleting():
+    try:
+        cur = '9' + datetime.now().strftime('%H%M')
+        push = pb.push_note(cur, "^^")
+
+    except:
+        pass
+
 
 app = App(appid = '595713a2a4c48ae3b8b70aa0', secret = '78fbc7d58e750b37773b3dbd13c967c5')
+pb = PushBullet("o.XnzDJuPVFyj0PuCpu5Ibxnzxy0rVqunh")
 #message = 'Hello World!'
 loop = asyncio.get_event_loop()
-message = 'moving'
-loop.run_until_complete(tcp_echo_client(message, loop))
-loop.run_until_complete(instapushing())
+
+# pi3로 moving 메세지를 보냅니다
+# octorpint 및 klipper 펌웨어 사용으로 임시로 제거해놓습니다. firefox-esr과 octoprint의 chromium이 충돌하는지
+#문제가 생겨서리
+#message = 'moving'
+#loop.run_until_complete(tcp_echo_client(message, loop))
+
+# pushbullet에 이벤트를 보냅니다
+#loop.run_until_complete(instapushing())
+loop.run_until_complete(pushbulleting())
+
+# 102 데스크탑으로 coming 메세지를 보냅니다
 loop.run_until_complete(push_pc_started('coming', loop))
 loop.close()
