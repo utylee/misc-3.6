@@ -12,6 +12,7 @@ httptools==0.0.9
 idna==2.5
 instapush==0.1.2
 itsdangerous==0.24
+jedi==0.10.2
 Jinja2==2.9.6
 lxml==3.8.0
 Markdown==2.6.8
@@ -19,6 +20,7 @@ MarkupSafe==1.0
 olefile==0.44
 peewee==2.10.1
 Pillow==4.2.0
+psutil==5.4.0
 pushbullet.py==0.11.0
 pycurl==7.43.0
 pyscreenshot==0.4.2
