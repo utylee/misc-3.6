@@ -11,10 +11,22 @@ from .settings import Settings
 from .views import index, message_data, messages, video, src, audio
 from .table_jesus import jesus as tbl_jesus
 
+import socketio
+
 
 THIS_DIR = Path(__file__).parent
 BASE_DIR = THIS_DIR.parent
 
+sio = socketio.AsyncServer()
+
+@sio.on('connect', namespace='/audio_io')
+def connect(sid, environ):
+    print('connected ', sid)
+
+@sio.on('inputed', namespace='/audio_io')
+async def inputed(sid, environ):
+    print('inputed ', sid)
+    socketio.emit('update', {'data': 7}, namespace='/audio_io')
 
 @jinja2.contextfilter
 def reverse_url(context, name, **parts):
@@ -90,7 +102,6 @@ async def startup(app: web.Application):
     app['tbl'] = tbl_jesus
 
 
-
 async def cleanup(app: web.Application):
     app['pg_engine'].close()
     await app['pg_engine'].wait_closed()
@@ -114,6 +125,8 @@ def create_app(loop):
         settings=settings
     )
 
+    sio.attach(app)
+
     jinja2_loader = jinja2.FileSystemLoader(str(THIS_DIR / 'templates'))
     aiohttp_jinja2.setup(app, loader=jinja2_loader, app_key=JINJA2_APP_KEY)
     app[JINJA2_APP_KEY].filters.update(
@@ -126,3 +139,4 @@ def create_app(loop):
 
     setup_routes(app)
     return app
+

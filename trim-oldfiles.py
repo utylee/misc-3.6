@@ -13,6 +13,7 @@ policys = [
     ('/home/odroid/media/3001/21-motion2/*jpg', 15),
     ('/home/odroid/media/3001/20-motion/*jpg', 7),
     ('/home/odroid/media/3001/22-motion3/*avi', 2),
+    ('/home/odroid/media/3002/99-data/91-transmission-watch/*added', 200)
 
     ]
 

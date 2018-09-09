@@ -15,17 +15,32 @@
 		});
 	</script> -->
 	<script>
+		//$(window).on( "load", function() { ... })	
 		$(document).ready(function(){
+			var updateInput = function () {
+					var x = document.getElementById("num1").value;
+					document.getElementById("printNum").innerHTML = x;
+			}
 			$("footer").hide();
+
+			var namespace = '/audio_io';
+			var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port     + namespace);
+
+			socket.on('update', function(msg) {
+				document.getElementById("update_span").innerHTML = msg;
+			});
+
 			$("#btn_submit").click(function(){
 				//alert('aaa');
 				$("footer").show();
 				var val1 = $("#num1").val();
 				players[0].source({sources: [{src: '/src/' + val1, type: 'audio/mp3'}]});
+				players[0].play();
 				//$("#audio_source").attr('src', "/play/" + val1);
 				//$("#img_source").attr('src', '/play/10');
 				//alert($("#num1").val());
 			});
+	}
 		});
 	</script>
 {% endblock %}
@@ -55,6 +70,7 @@
 	</div>
 	<div class="row justify-content-center">
 		<span id="printNum"></span>
+	</div>
 	</div>
 	<div class="row justify-content-center" style="display:none" >
 		<div class="w-50">
@@ -115,10 +131,14 @@
 	//players[0].stop();
 	*/
 	
+	/*
 	function updateInput(){
 		var x = document.getElementById("num1").value;
 		document.getElementById("printNum").innerHTML = x;
+		socket.emit('inputed', {my: 'data'});
+
 	}
+	*/
 
 </script>
 
