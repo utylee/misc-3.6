@@ -28,15 +28,18 @@ def sim_myself():
     
     for i in range(0,30):
         line = lines[i]
-        m = re.search('DPS Ranking', line)
+        #m = re.search('DPS Ranking', line)
+        m = re.search('Player: ', line)
         
         if m:
             #print('line [{}] : {}'.format(i, m.group()))
+            print('\n{}'.format(line))
             target_num = i
             break
     
     #찾은 다음열에 원하는 값이 들어있습니다.
-    print('\n{}'.format(lines[i+1]))
+    #print('\n{}\n\n{}'.format(lines[i], lines[i+1]))
+    print('\n{}\n'.format(lines[i+1]))
     
     #print(new_lines)
     
@@ -77,15 +80,19 @@ def sim_him(him):
     
     for i in range(0,30):
         line = lines[i]
-        m = re.search('DPS Ranking', line)
+        #print(line)
+        #m = re.search('DPS Ranking', line)
+        m = re.search('Player: ', line)
         
         if m:
             #print('line [{}] : {}'.format(i, m.group()))
+            print('\n{}'.format(line))
             target_num = i
             break
     
     #찾은 다음열에 원하는 값이 들어있습니다.
-    print('\n{}\n{}'.format(him, lines[i+1]))
+    #print('\n{}\n\n{}'.format(line[i-1], lines[i+1]))
+    print('\n{}\n'.format(lines[i+1]))
     
 
 def get_eng_name(r):
@@ -106,7 +113,7 @@ def get_eng_name(r):
     elif (r == '말퓨리온'):
         name = 'malfurion'
     elif (r == '불타는군단'):
-        name = 'burninglegion'
+        name = 'burning-legion'
     elif (r == '세나리우스'):
         name = 'cenarius'
     elif (r == '스톰레이지'):
