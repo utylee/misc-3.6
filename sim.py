@@ -1,3 +1,4 @@
+import asyncio
 import pyperclip
 import subprocess
 import re
@@ -58,8 +59,8 @@ def sim_him(him):
 
     # 다른서버일 경우(쉼표있을 경우)
     if (r):
-        eng = get_eng_name(r.group(1))
-        cmd = 'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc armory=kr,{},{}'.format(eng, r.group(2))
+        eng = get_eng_name(r.group(2))
+        cmd = 'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc armory=kr,{},{}'.format(eng, r.group(1))
     # 동일 아즈샤라 서버일 경우
     else:
         cmd = 'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc armory=kr,azshara,{}'.format(him)
@@ -107,7 +108,7 @@ def get_eng_name(r):
     elif (r == '달라란'):
         name = 'dalaran'
     elif (r == '듀로탄'):
-        name = 'duratan'
+        name = 'durotan'
     elif (r == '렉사르'):
         name = 'rexxar'
     elif (r == '말퓨리온'):
@@ -138,6 +139,7 @@ def get_eng_name(r):
 
     
     
+'''
 if __name__ == "__main__":
 
     
@@ -151,11 +153,21 @@ if __name__ == "__main__":
         pass
 
 '''
+
+async def main():
+    # 파라미터가 변수로 입력되면 그 변수를 넣어주고 그 사람의 전장정보실 정보를 이용해 심크를 돌립니다
     try:
-        if (sys.argv[1]):
+        if (len(sys.argv) > 1):
+            sim_him(sys.argv[1])
+        else:
+            sim_myself()
     except:
         pass
-        '''
+
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(main())
+loop.close()
 
 
 
