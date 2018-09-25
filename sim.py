@@ -3,6 +3,7 @@ import pyperclip
 import subprocess
 import re
 import sys
+import requests
 
 
 def sim_myself(r):
@@ -19,13 +20,12 @@ def sim_myself(r):
     # bytes 값을 스트링으로 변환합니다
     result = result.decode()
 
+    print('\n*****************************************************************')
     # 풀 출력
     if(r == 1):
-        print('1')
         print(result)
    
     else:
-        print('2')
         # DPS에 해당하는 숫자열을 가져와서 표시합니다
         lines = result.split('\n', 31)      # 굳이 전체를 다 파싱하진 않고 31열까지만 파싱합니다
         
@@ -66,11 +66,24 @@ def sim_him(him):
     # 다른서버일 경우(쉼표있을 경우)
     if (r):
         eng = get_eng_name(r.group(2))
+        # 레벨곽 무기레벨을 가져오기 위해 따로 wow 페이지에서 긁어옵니다.
+        htm = requests.get('https://worldofwarcraft.com/ko-kr/character/{}/{}'.format(eng, r.group(1)))
+        txt = re.search('.*meta\sname=\"description\"\scontent=\"(.*)\"/><meta\sproperty=\"fb', htm.text)
+        desc = txt.group(1)
         cmd = 'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc armory=kr,{},{}'.format(eng, r.group(1))
     # 동일 아즈샤라 서버일 경우
     else:
+        htm = requests.get('https://worldofwarcraft.com/ko-kr/character/azshara/{}'.format(him))
+        txt = re.search('.*meta\sname=\"description\"\scontent=\"(.*)\"/><meta\sproperty=\"fb', htm.text)
+        desc = txt.group(1)
         cmd = 'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc armory=kr,azshara,{}'.format(him)
-    
+    ''' 
+    with open("/home/utylee/temp/simc/engine/web.simc", "w") as f:
+        f.write(txt)
+    '''
+
+    print('\n*****************************************************************')
+    print(desc)
     # simc를 돌립니다
     result = subprocess.check_output(\
             cmd, shell=True)
@@ -93,12 +106,14 @@ def sim_him(him):
         
         if m:
             #print('line [{}] : {}'.format(i, m.group()))
-            print('\n{}'.format(line))
+            #print('\n{}'.format(line))
             target_num = i
             break
     
     #찾은 다음열에 원하는 값이 들어있습니다.
+    # 추가로 wow웹에서 가져온 레벨과 무기레벨 등의 description도 표시합니다
     #print('\n{}\n\n{}'.format(line[i-1], lines[i+1]))
+    #print('{}\n{}\n'.format(desc, lines[i+1]))
     print('\n{}\n'.format(lines[i+1]))
     
 
@@ -172,6 +187,8 @@ async def main():
             sim_myself(0)
     except:
         pass
+    print('*****************************************************************\n')
+
 
 
 loop = asyncio.get_event_loop()
