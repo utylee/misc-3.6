@@ -6,6 +6,7 @@ import asyncio
 @asyncio.coroutine
 def handle(reader, writer):
     data = yield from reader.read(100)
+    print(data.decode())
 
 loop = asyncio.get_event_loop()
 coro = asyncio.start_server(handle, '127.0.0.1', 8888, loop=loop) 
