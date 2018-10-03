@@ -30,6 +30,9 @@ async def proc():
         c.perform()
         c.close()
 
+    print('다운로드 완료!')
+
+    print('\n파싱을 시작합니다')
     with open("auction.json", "r") as f:
         js = json.load(f)
         #print(js['auctions'])
