@@ -30,9 +30,9 @@ async def proc():
         c.perform()
         c.close()
 
-    print('다운로드 완료!')
+    print('.다운로드 완료!')
 
-    print('\n파싱을 시작합니다')
+    print('.파싱을 시작합니다')
     with open("auction.json", "r") as f:
         js = json.load(f)
         #print(js['auctions'])
@@ -71,7 +71,7 @@ async def proc():
 
             sum += price
 
-    print("** 총 {}개의 하늘골렘이 올라와 있습니다".format(i))
+    print("\n** 총 {}개의 하늘골렘이 올라와 있습니다".format(i))
     print("최소/최대가격은 각각 {} / {} 골드입니다".format(int(min/10000), int(max/10000)))
     print("평균가격은 {}골드입니다".format(int((sum/i)/10000)))
     print("{}".format(set(sellers)))
