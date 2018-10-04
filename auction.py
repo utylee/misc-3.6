@@ -39,6 +39,7 @@ async def proc():
 
     # 저장된 파일을 읽은 후 한줄씩 탐색합니다
     golems = []
+    sellers = []
     i = 0
     price = 0
     min = 0
@@ -53,6 +54,7 @@ async def proc():
             #print(l)
             #print(d)
             i += 1
+            sellers.append(l['owner'])
             price = l['buyout']
 
             if min == 0:
@@ -71,7 +73,8 @@ async def proc():
 
     print("** 총 {}개의 하늘골렘이 올라와 있습니다".format(i))
     print("최소/최대가격은 각각 {} / {} 골드입니다".format(int(min/10000), int(max/10000)))
-    print("평균은 {}골드입니다".format(int((sum/i)/10000)))
+    print("평균가격은 {}골드입니다".format(int((sum/i)/10000)))
+    print("{}".format(set(sellers)))
 
     print("\n")
 
