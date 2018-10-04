@@ -43,6 +43,8 @@ async def proc():
     price = 0
     min = 0
     max = 0
+    avg = 0
+    sum = 0
 
     for l in js['auctions']:
         #하늘골렘 아이템의 리스트를 작성합니다
@@ -51,21 +53,26 @@ async def proc():
             #print(l)
             #print(d)
             i += 1
+            price = l['buyout']
 
             if min == 0:
-                min = int(l['buyout'])
+                min = int(price)
             else:
-                if int(l['buyout']) < min:
-                    min = int(l['buyout']) 
+                if int(price) < min:
+                    min = int(price) 
 
             if max == 0:
-                max = int(l['buyout'])
+                max = int(price)
             else:
-                if int(l['buyout']) > max:
-                    max = int(l['buyout']) 
+                if int(price) > max:
+                    max = int(price) 
+
+            sum += price
 
     print("** 총 {}개의 하늘골렘이 올라와 있습니다".format(i))
     print("최소/최대가격은 각각 {} / {} 골드입니다".format(int(min/10000), int(max/10000)))
+    print("평균은 {}골드입니다".format(int((sum/i)/10000)))
+
     print("\n")
 
 
