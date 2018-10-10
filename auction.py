@@ -7,6 +7,8 @@ import pycurl
 myapi = 'm5u8gdp6qmhbjkhbht3ax9byp62wench'
 server = '아즈샤라'
 locale = 'ko_KR'
+name_list = ['부자인생', '부자인셍', '부쟈인생', '부쟈인섕','부자인솅','부자인생의소환수','부자인셈']
+my_item = []
 
 async def proc():
     #battle dev api 로서 api key를 사용해 일단 json 주소를 전송받습니다
@@ -71,12 +73,27 @@ async def proc():
 
             sum += price
 
+        # 내가 경매에 부친 물건이 있는지 표시합니다
+        if l['owner'] in name_list:
+            #print('헤헤헤')
+            mine = []
+            mine.append(get_item(l['item']))
+            mine.append(l['owner'])
+            mine.append(int(l['buyout']/10000))
+            #print(get_item(l['item']))
+            my_item.append(mine)
+
+
     print("\n** 총 {}개의 하늘골렘이 올라와 있습니다".format(i))
     print("최소/최대가격은 각각 {} / {} 골드입니다".format(int(min/10000), int(max/10000)))
     print("평균가격은 {}골드입니다".format(int((sum/i)/10000)))
     print("{}".format(set(sellers)))
 
-    print("\n")
+    if len(my_item) > 0:
+        print('------------------------------------------------')
+        print('** 내아이템들:')
+        for l in my_item:
+            print(l)
 
 
 
@@ -84,7 +101,8 @@ def get_item(id):
     #https://kr.api.battle.net/wow/item/18803?locale=ko_KR&apikey=m5u8gdp6qmhbjkhbht3ax9byp62wench
     r = requests.get('https://kr.api.battle.net/wow/item/{}?locale={}&apikey={}'.format(id, locale, myapi))
     js = json.loads(r.text)
-    print(js['name'])
+    #print(js['name'])
+    return js['name']
 
 
 
