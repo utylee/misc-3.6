@@ -89,6 +89,8 @@ def translate(to_translate, to_language="auto", from_language="auto"):
 
 
 if __name__ == "__main__":
-    if (sys.argv[1]):
-        print(translate(sys.argv[1], to_language = "ko"))
+    if (sys.argv[1]) and (sys.argv[2]):
+        # 한/영 모두 번역을 지원하도록 변경
+        print(translate(sys.argv[2], to_language = sys.argv[1]))
+        #print(translate(sys.argv[1], to_language = "ko"))
         #print(translate(sys.argv[1]))

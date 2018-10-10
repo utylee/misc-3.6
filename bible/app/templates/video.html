@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<video id='video1'  controls autoplay>
+	<!-- <source src="{{ play }}" type="video/mp4"> -->
+	<source src="{{ 'sample'|url }}" type="video/mp4">
+browser don't support mp4 files
+</video>
+{% endblock %}
