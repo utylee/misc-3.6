@@ -85,14 +85,17 @@ async def proc():
             print('총 {} 개의 경매 아이템이 등록되어있습니다'.format(total))
 
             for l in js['auctions']:
+                '''
                 # 프로그레션을 표시합니다
                 pct = int(num * 100 / total)
                 print('{}번쨰- [{}%]'.format(num, pct))
+                '''
                 #해당 item넘버를 통해 item name을 받아옵니다
                 # 로컬 테이블을 먼저 검색해보고 없는 아이템이라면 블리자드 dev웹을 통해 가져옵니다
                 item = l['item']
                 name = ''
 
+                '''
                 result = 0
                 async for r in conn.execute(tbl_items.select().where(tbl_items.c.id==int(item))):
                     #print(r[1])
@@ -116,6 +119,7 @@ async def proc():
                                                     quantity=l['quantity'],
                                                     timeleft=l['timeLeft'],
                                                     datetime='000'))
+                '''
                 num += 1
 
                 #하늘골렘 아이템의 리스트를 작성합니다
@@ -126,6 +130,10 @@ async def proc():
                     i += 1
                     sellers.append(l['owner'])
                     price = l['buyout']
+
+                    # 간혹 즉구가없이 경매가만 올리는 유저가 있어 계산에 오류가 생기길래 추가했습니다
+                    if price == 0:
+                        price = l['bid']
 
                     if min == 0:
                         min = int(price)
