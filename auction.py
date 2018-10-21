@@ -45,6 +45,8 @@ async def proc():
             #battle dev api 로서 api key를 사용해 일단 json 주소를 전송받습니다
             url = 'https://kr.api.battle.net/wow/auction/data/{}?locale={}&apikey={}'.format(server, locale, myapi)
 
+            #await get_item_id(conn, "사술매듭 가방")
+            #return
             # .loads 함수인 것을 봅니다. s가 없는 load 함수는 파일포인터를 받더군요
             print('json주소를 받아옵니다')
             load = json.loads(requests.get(url).text)
@@ -123,7 +125,8 @@ async def proc():
                 num += 1
 
                 #하늘골렘 아이템의 리스트를 작성합니다
-                if l['item'] == 95416:
+                if l['item'] == 95416:     #하늘골렘
+                #if l['item'] == 114821:     #사술매듭 가방
                     d = json.dumps(l, ensure_ascii = False) #ensure_ascii는 유니코드 출력의 한글 문제를 해결해줍니다
                     #print(l)
                     #print(d)
@@ -173,13 +176,21 @@ async def proc():
                     print(l)
 
 
-
+# battle dev 로부터 아이템을 가져옵니다
 def get_item(id):
     #https://kr.api.battle.net/wow/item/18803?locale=ko_KR&apikey=m5u8gdp6qmhbjkhbht3ax9byp62wench
     r = requests.get('https://kr.api.battle.net/wow/item/{}?locale={}&apikey={}'.format(id, locale, myapi))
     js = json.loads(r.text)
     #print(js['name'])
+    #일단 가져온 값중 이름만 취하기로 합니다
     return js['name']
+
+# 로컬 db에서 이름을 통해 id를 가져옵니다
+async def get_item_id(conn, name):
+    id = 0
+    async for r in conn.execute(tbl_items.select().where(tbl_items.c.name==name)):
+        id = r[0]
+    return id 
 
 
 
