@@ -72,6 +72,13 @@ async def proc():
                 js = json.load(f)
                 #print(js['auctions'])
 
+            target_item_name = "하늘 골렘"
+            #target_item_name = "야만의 피"
+            #target_item_name = "사술매듭 가방"
+            #target_item_name = "살아있는 강철"
+
+            target_item_id = await get_item_id(conn, target_item_name)
+
             # 저장된 파일을 읽은 후 한줄씩 탐색합니다
             golems = []
             sellers = []
@@ -125,7 +132,8 @@ async def proc():
                 num += 1
 
                 #하늘골렘 아이템의 리스트를 작성합니다
-                if l['item'] == 95416:     #하늘골렘
+                if l['item'] == target_item_id:     #하늘골렘
+                #if l['item'] == 95416:     #하늘골렘
                 #if l['item'] == 114821:     #사술매듭 가방
                     d = json.dumps(l, ensure_ascii = False) #ensure_ascii는 유니코드 출력의 한글 문제를 해결해줍니다
                     #print(l)
