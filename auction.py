@@ -72,10 +72,19 @@ async def proc():
                 js = json.load(f)
                 #print(js['auctions'])
 
-            target_item_name = "하늘 골렘"
+            #target_item_name = "하늘 골렘"
+            #target_item_name = "호화로운 모피"
+            target_item_name = "묘지기의 투구"
+            #target_item_name = "강봉오리"
+            #target_item_name = "해안 마나 물약"
+            #target_item_name = "파멸의 증오"
             #target_item_name = "야만의 피"
             #target_item_name = "사술매듭 가방"
             #target_item_name = "살아있는 강철"
+            #target_item_name = "황천의 근원"
+            #target_item_name = "드레나이 가루"
+            #target_item_name = "폭풍 은 광석"
+            #target_item_name = "진철주괴"
 
             target_item_id = await get_item_id(conn, target_item_name)
 
@@ -172,7 +181,7 @@ async def proc():
 
 
 
-            print("\n** 총 {}개의 하늘골렘이 올라와 있습니다".format(i))
+            print("\n** 총 {}개의 {}이(가) 올라와 있습니다".format(i, target_item_name))
             print("최소/최대가격은 각각 {} / {} 골드입니다".format(int(min/10000), int(max/10000)))
             print("평균가격은 {}골드입니다".format(int((sum/i)/10000)))
             print("{}".format(set(sellers)))
