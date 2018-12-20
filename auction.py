@@ -72,14 +72,17 @@ async def proc():
                 js = json.load(f)
                 #print(js['auctions'])
 
-            #target_item_name = "하늘 골렘"
+            target_item_name = "하늘 골렘"
+            #target_item_name = "얼어붙은 보주"
             #target_item_name = "호화로운 모피"
-            target_item_name = "묘지기의 투구"
+            #target_item_name = "묘지기의 투구"
             #target_item_name = "강봉오리"
             #target_item_name = "해안 마나 물약"
             #target_item_name = "파멸의 증오"
             #target_item_name = "야만의 피"
             #target_item_name = "사술매듭 가방"
+            #target_item_name = "영웅의 얼어붙은 무구"
+            #target_item_name = "폭풍 은 광석"
             #target_item_name = "살아있는 강철"
             #target_item_name = "황천의 근원"
             #target_item_name = "드레나이 가루"
