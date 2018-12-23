@@ -208,10 +208,19 @@ def get_item(id):
 # 로컬 db에서 이름을 통해 id를 가져옵니다
 async def get_item_id(conn, name):
     id = 0
+    result = 0
     async for r in conn.execute(tbl_items.select().where(tbl_items.c.name==name)):
         id = r[0]
-    return id 
+        result = 1
 
+    #해당 아이템이 로컬 테이블에 없다면 받아온 후 로컬 테이블에 저정합니다
+    if result == 0:
+        print('### item no. {} 이 로컬에 없기에 battlenet dev를 통해 이름을 가져옵니다...'.format(int(item)))
+        name = get_item(item)
+        print(name)
+        await conn.execute(tbl_items.insert().values(id=int(item), name=name))
+
+    return id 
 
 
 loop = asyncio.get_event_loop()
