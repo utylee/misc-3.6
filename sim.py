@@ -5,6 +5,16 @@ import re
 import sys
 import requests
 
+# 전투시간과 풀버프삭제를 추가할 지를 결정합니다
+add_options = 1  
+
+def option_string():
+    global add_options
+    time = 40
+    buff = 0
+    r = '{} {}'.format('max_time={}'.format(time), 'optimal_raid={}'.format(buff)) if add_options else ''
+
+    return r
 
 def sim_myself(r):
     # 클립보드의 내용을 특정 파일에 기록한후
@@ -12,22 +22,16 @@ def sim_myself(r):
     with open("/home/utylee/temp/simc/engine/utylee.simc", "w") as f:
         s = pyperclip.paste()
         f.write(s)
-        # 전투시간을 1분30초로 조정합니다
-        #f.write("\nmax_time=30")
-        f.write("\nmax_time=120")
-
-        # 모든 버프를 끕니다
-        f.write("\noptimal_raid=0")
     
     # simc를 돌립니다
     # report 출력여부 옵션을 확인합니다
     if (r == 2):
         result = subprocess.check_output(\
-            'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc html=/mnt/d/report.html', shell=True)
+            'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {} html=/mnt/d/report.html'.format(option_string()), shell=True)
 
     else:
         result = subprocess.check_output(\
-            'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc', shell=True)
+            'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {}'.format(option_string()), shell=True)
     
     # bytes 값을 스트링으로 변환합니다
     result = result.decode()
@@ -88,7 +92,9 @@ def sim_him(him):
         htm = requests.get('https://worldofwarcraft.com/ko-kr/character/azshara/{}'.format(him))
         txt = re.search('.*meta\sname=\"description\"\scontent=\"(.*)\"/><meta\sproperty=\"fb', htm.text)
         desc = txt.group(1)
-        cmd = 'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc armory=kr,azshara,{}'.format(him)
+        cmd = 'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc \
+                            armory=kr,azshara,{} {}'.format(him, option_string())
+
     ''' 
     with open("/home/utylee/temp/simc/engine/web.simc", "w") as f:
         f.write(txt)
