@@ -13,12 +13,12 @@ def proc(fname, start_line, end_line):
 
     '''utf-8로open 시도해보고 실패시 cp949로 오픈합니다'''
     try:
-        print('trying open by utf8 codec')
+        print('trying open with utf8 codec')
         f = open(fname, 'r+')
         p = f.readlines()
     except:
         print('failed!\n ')
-        print('trying open by cp949 codec')
+        print('trying open with cp949 codec')
         f = open(fname, "r+", encoding="cp949")
         p = f.readlines()
     else:
