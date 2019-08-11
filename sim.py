@@ -10,12 +10,12 @@ import copy
 # 's' 옵션을 주면 html을 파싱하여 sample sequence table 의 로테이션을 출력해줍니다 
 
 # 개발중 모드일 때는 pyperclip을 통한 클립보드 복사를 하지 않고 그냥 기존 파일을 통해 합니다
-devel = 1
-#devel = 0
+#devel = 1
+devel = 0
 
 # 전투시간과 풀버프삭제를 추가할 지를 결정합니다
 add_options = 1  
-file_report = '/mnt/d/reportsex.html'
+file_report = '/mnt/d/report.html'
 seq_num = 30        # sample sequence 표기시 기본 30개만 표현해줍니다
 
 def option_string():
@@ -23,8 +23,8 @@ def option_string():
     time = 40
     buff = 0
     r = '{} {}'.format('max_time={}'.format(time), 'optimal_raid={}'.format(buff)) if add_options else ''
-
     return r
+
 # sample sequence 출력 추가 프로세스
 def print_sample_sequence():
     #print('sample')
@@ -53,7 +53,10 @@ def print_sample_sequence():
                     if m1:
                         found += 1
                         m2 = re.search('<td class="left">(.*)</td>', frag1[index+3])
-                        print(f'{m1.group(1)}\t{m2.group(1)}')
+                        skill = m2.group(1)
+                        if skill == '&nbsp;':
+                            skill = '---wait---'
+                        print(f'{m1.group(1)}\t{skill}')
                     index += 1
                     if found >= seq_num:
                         full_br = 1
