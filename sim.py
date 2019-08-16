@@ -17,12 +17,18 @@ devel = 0
 add_options = 1  
 file_report = '/mnt/d/report.html'
 seq_num = 30        # sample sequence 표기시 기본 30개만 표현해줍니다
+time = 0                # 0일 경우 health 기반 모드로 동작합니다
+target_health = 370000
 
 def option_string():
     global add_options
-    time = 40
     buff = 0
-    r = '{} {}'.format('max_time={}'.format(time), 'optimal_raid={}'.format(buff)) if add_options else ''
+    # time base일지 target health base 일지에 따라 바뀝니다
+    if time:
+        #r = '{} {}'.format('max_time={}'.format(time), 'optimal_raid={}'.format(buff)) if add_options else ''
+        r = f'max_time={time} optimal_raid={buff}' if add_options else ''
+    else:
+        r = f'fixed_time=0 override.target_health={target_health} optimal_raid={buff}' if add_options else ''
     return r
 
 # sample sequence 출력 추가 프로세스
