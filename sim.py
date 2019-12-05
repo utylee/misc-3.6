@@ -16,9 +16,9 @@ devel = 0
 # 전투시간과 풀버프삭제를 추가할 지를 결정합니다
 add_options = 1  
 file_report = '/mnt/d/report.html'
-seq_num = 30        # sample sequence 표기시 기본 30개만 표현해줍니다
-time = 0                # 0일 경우 health 기반 모드로 동작합니다
-target_health = 370000
+seq_num = 35        # sample sequence 표기시 기본 30개만 표현해줍니다
+time = 25                # 0일 경우 health 기반 모드로 동작합니다
+target_health = 270000
 
 def option_string():
     global add_options
@@ -67,8 +67,6 @@ def print_sample_sequence():
                     if found >= seq_num:
                         full_br = 1
                         break
-
-
 
 def sim_myself(r):
 
