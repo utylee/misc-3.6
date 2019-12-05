@@ -1,34 +1,14 @@
 import aiohttp
 import asyncio
 #import wow_korean_server
-from wow_korean_server import *
+from blizzard_trans import *
 import sys
 import re
-
-#url = 'https://raider.io/characters/kr/azshara/%EC%9C%A0%ED%83%80%EC%9D%BC%EB%A6%AC'
-#url = 'https://raider.io/api/v1/characters/profile?name=%EC%9C%A0%ED%83%80%EC%9D%BC%EB%A6%AC&region=kr&realm=azshara'
 
 #url = 'https://raider.io/api/v1/characters/profile?region=kr&realm=azshara&name=유타일리&fields=mythic_plus_scores,mythic_plus_recent_runs,mythic_plus_best_runs,mythic_plus_ranks,mythic_plus_highest_level_runs'
 
 def k(e):
-    ret = ''
-    if e == 'Shrine of the Storm':
-        ret = '폭풍의 사원'
-    elif e == "Kings' Rest":
-        ret = '왕들의 안식처'
-    elif e == "Temple of Sethraliss":
-        ret = '세스랄리스 사원'
-    elif e == "The MOTHERLODE!!":
-        ret = '왕노다지 광산'
-    elif e == "Siege of Boralus":
-        ret = '보랄러스 공성전'
-    elif e == "Freehold":
-        ret = '자유지대'
-        
-    else:
-        ret = e
-
-    return ret
+    return get_kor_dg_name(e)
 
 def up_num(n):
     ret = ''
@@ -134,7 +114,6 @@ async def proc(a):
             print(f'{k(recent[0]["dungeon"])}\t{recent[0]["mythic_level"]}{num}')
             #print(recent[1]['dungeon'])
             '''
-
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(main())
