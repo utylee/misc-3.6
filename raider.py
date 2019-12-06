@@ -85,15 +85,16 @@ async def proc(a):
             recent = json['mythic_plus_recent_runs']
             best = json['mythic_plus_best_runs']
             highest = json['mythic_plus_highest_level_runs']
-            hnum = up_num(highest[0]['num_keystone_upgrades'])
+            hnum = up_num(highest[0]['num_keystone_upgrades']) if highest else ''
 
             #print(json['mythic_plus_recent_runs'][0])
-            bnum = up_num(best[0]['num_keystone_upgrades'])
-            bnum1 = up_num(best[1]['num_keystone_upgrades'])
-            bnum2 = up_num(best[2]['num_keystone_upgrades'])
-            num = up_num(recent[0]['num_keystone_upgrades'])
-            num1 = up_num(recent[1]['num_keystone_upgrades'])
-            num2 = up_num(recent[2]['num_keystone_upgrades'])
+            bnum = up_num(best[0]['num_keystone_upgrades']) if best else ''
+            bnum1 = up_num(best[1]['num_keystone_upgrades']) if len(best) > 2 else '' 
+            bnum2 = up_num(best[2]['num_keystone_upgrades']) if len(best) > 3 else '' 
+            #bnum2 = 'sex' if len(best) > 2 else '' 
+            num = up_num(recent[0]['num_keystone_upgrades']) if recent else ''
+            num1 = up_num(recent[1]['num_keystone_upgrades']) if len(best) > 2 else '' 
+            num2 = up_num(recent[2]['num_keystone_upgrades']) if len(best) > 3 else '' 
 
             name = json['name']
             active_spec = json['active_spec_role']
@@ -105,7 +106,7 @@ async def proc(a):
             else:
                 print(f'{name}({lvl},{active_spec},{pro}{cls}) - {realm}')
             print(json['mythic_plus_scores']['all'])
-            print(f'{highest[0]["mythic_level"]}{hnum} / {best[0]["mythic_level"]}{bnum} / {recent[0]["mythic_level"]}{num}')
+            print(f'{highest[0]["mythic_level"]}{hnum} / {best[0]["mythic_level"]}{bnum} / {recent[0]["mythic_level"]}{num}') if highest and best and recent else '' 
             '''
             print(f'{k(highest[0]["dungeon"])}\t{highest[0]["mythic_level"]}{hnum}')
             print(f'{k(best[0]["dungeon"])}\t{best[0]["mythic_level"]}{bnum}')
