@@ -7,6 +7,8 @@ import re
 
 #url = 'https://raider.io/api/v1/characters/profile?region=kr&realm=azshara&name=유타일리&fields=mythic_plus_scores,mythic_plus_recent_runs,mythic_plus_best_runs,mythic_plus_ranks,mythic_plus_highest_level_runs'
 
+me = '유타일리'
+
 def k(e):
     return get_kor_dg_name(e)
 
@@ -40,15 +42,31 @@ def parse_name(n):
 
 
 async def main():
+    with open('raider_default.txt', 'a+') as f:
+        f.seek(0)           # a+ 모드와 seek(0) 조합을 사용해야합니다. w+모드는 기존 파일을 삭제하고 생성합니다
+        me = f.read()
+        #print(f'read:{me}')
+        if len(me) == 0:
+            me = '유타일리'
+            f.write(me)
+        #print(me)
 
     # 아규먼트를 분석합니다
 
     target = ''
-    me = '유타일리'         # 기본 아이디는 유타일리(드루이드)로 합니다
-    if(len(sys.argv) <= 1):
+    #me = '유타일리'         # 기본 아이디는 유타일리(드루이드)로 합니다
+    if(len(sys.argv) == 1):
         target = me
-    else:
+    elif(len(sys.argv) == 2):
         target = sys.argv[1]
+    #else:
+    elif(len(sys.argv) == 3):  # 현재는 default 캐릭터를 세팅하는 SET 이라는 명령어를 추가합니다
+        if sys.argv[1].lower() == 'set':
+            target = sys.argv[2]
+            with open('raider_default.txt', 'w+') as f:
+                f.write(target)
+                #print(target)
+            return
 
     await proc(target)
 
