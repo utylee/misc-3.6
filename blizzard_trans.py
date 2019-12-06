@@ -1,3 +1,30 @@
+# 종족 번역함수입니다
+def get_kor_rc_name(e):
+    e = e.lower()
+    ret = ''
+    if e == 'blood elf':
+        ret = '블엘'
+    elif e == 'tauren':
+        ret = '타우렌'
+    elif e == 'human':
+        ret = '인간'
+    elif e == 'undead':
+        ret = '언데드'
+    elif e == 'goblin':
+        ret = '고블린'
+    elif e == 'pandaren':
+        ret = '판다렌'
+    elif e == 'orc':
+        ret = '오크'
+    elif e == 'troll':
+        ret = '트롤'
+    elif e == 'zandalari troll':
+        ret = '잔달라트롤'
+    else:
+        ret = e
+
+    return ret
+
 def get_kor_dg_name(e):
     #e = e.lower()
     ret = ''

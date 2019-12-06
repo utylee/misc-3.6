@@ -82,13 +82,9 @@ async def proc(a):
             html = await response.text()
             txt = re.search('.*meta\sname=\"description\"\scontent=\"(.*)\"/><meta\sproperty=\"fb', html)
             l = re.search('\s(\w+)\s(\w+),\s(\d*)레벨',txt.group(1))
-            pro = l.group(1)
-            cls = l.group(2)
-            lvl = l.group(3)
-            #print(l.group(1))
-            #print(l.group(2))
-            #print(l.group(3))
-            #print(txt.group(1))
+            pro = l.group(1) if l else ''
+            cls = l.group(2) if l else ''
+            lvl = l.group(3) if l else ''
 
     # raider.io 에서 정보를 가져와서 처리합니다
     recent = ''
@@ -99,7 +95,14 @@ async def proc(a):
             #html = await response.text()
             json = await response.json()
             #print(html[:100])
-            #print(json['mythic_plus_ranks'])
+
+            #print(json)
+            # 없는 캐릭터이거나 서버 오류인 경우 안내 후 종료합니다
+            if 'statusCode' in json.keys():
+                #print(f'statusCode:{json["statusCode"]}')
+                print(f'!!! 캐릭터가 없거나 서버오류입니다. (err:{json["statusCode"]})')
+                return
+
             recent = json['mythic_plus_recent_runs']
             best = json['mythic_plus_best_runs']
             highest = json['mythic_plus_highest_level_runs']
@@ -115,14 +118,15 @@ async def proc(a):
             num2 = up_num(recent[2]['num_keystone_upgrades']) if len(best) > 3 else '' 
 
             name = json['name']
+            race = get_kor_rc_name(json['race'])
             active_spec = json['active_spec_role']
             realm = get_kor_name(json['realm'])
 
-            # 아이디 정보등을 표시합니다
-            if realm == '아즈샤라':
-                print(f'{name}({lvl},{active_spec},{pro}{cls})')
-            else:
-                print(f'{name}({lvl},{active_spec},{pro}{cls}) - {realm}')
+            # 아이디 정보등을 표시합니다'
+            prt_name = f'{name}({lvl},{active_spec},{pro}{cls},{race})'
+            if realm != '아즈샤라':
+                prt_name += f' - {realm}'
+            print(prt_name)
             print(json['mythic_plus_scores']['all'])
             print(f'{highest[0]["mythic_level"]}{hnum} / {best[0]["mythic_level"]}{bnum} / {recent[0]["mythic_level"]}{num}') if highest and best and recent else '' 
             '''
