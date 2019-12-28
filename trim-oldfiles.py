@@ -9,11 +9,12 @@ intv = 24
 
 # list of policy tuple [('pattern-formatted-dir-location', 'how-many-days-olded'), ...]
 policys = [
-    ('/home/odroid/media/3001/21-motion2/*mp4', 15),
-    ('/home/odroid/media/3001/21-motion2/*jpg', 15),
-    ('/home/odroid/media/3001/20-motion/*jpg', 7),
-    ('/home/odroid/media/3001/22-motion3/*avi', 2),
-    ('/home/odroid/media/3002/99-data/91-transmission-watch/*added', 200)
+    ('/home/odroid/media/4001/21-motion2/*mp4', 15),
+    ('/home/odroid/media/4001/21-motion2/*avi', 15),
+    ('/home/odroid/media/4001/21-motion2/*jpg', 15),
+    ('/home/odroid/media/4001/20-motion/*jpg', 7),
+    ('/home/odroid/media/4001/22-motion3/*avi', 2),
+    ('/home/odroid/media/4002/99-data/91-transmission-watch/*added', 200)
 
     ]
 
