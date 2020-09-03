@@ -3,7 +3,7 @@ from aiohttp import web
 import asyncio
 
 # openweathermap 의 api를 이용합니다
-url = 'https://api.openweathermap.org/data/2.5/weather?q=Seoul,kr&units=metric&appid=0b062e642fd30e78ab8786222d510464'
+url = 'https://api.openweathermap.org/data/2.5/weather?q=Seongnam,kr&units=metric&appid=0b062e642fd30e78ab8786222d510464'
 intv = 60              # 1분마다 가져와서 보관해둡니다
 
 async def handle(request):
