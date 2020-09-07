@@ -18,7 +18,7 @@ if __name__ == "__main__":
     elif len(sys.argv) == 3 and sys.argv[2] == 'l':  
         today = datetime.date.today()
         results = []
-        for i in range(0,7):
+        for i in range(0,10):
             #l = dates.append(today - datetime.timedelta(days=i))
             #print('\033[10C', end='')
             print(f'\rfetching {i+1}...', end='')
@@ -48,4 +48,3 @@ if __name__ == "__main__":
         except:
             print(f'error occurred')
 
-#c.convert('
