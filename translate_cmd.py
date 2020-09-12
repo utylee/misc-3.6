@@ -54,7 +54,9 @@ def unescape(text):
         parser = HTMLParser.HTMLParser()
     else:
         parser = html.parser.HTMLParser()
-    return (parser.unescape(text))
+    # DeprecationWarning 이 뜨며 제안하길래 그대로 바꾸어보니 더이상 경고가 뜨지 않네요
+    #return (parser.unescape(text))
+    return (html.unescape(text))
 
 
 def translate(to_translate, to_language="auto", from_language="auto"):
