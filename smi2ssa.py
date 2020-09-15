@@ -96,7 +96,7 @@ def convert_ssa(data, lang): # written by utylee
         m = int(time/1000/60)%60
         h = int(time/1000/60/60)
         return (h,m,s,ms)
-    ssa=init_ssa('') + '\n'
+    ssa=init_ssa() + '\n'
     sub_nb = 1
     for i in range(len(data)-1):
         try:
