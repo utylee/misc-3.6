@@ -44,11 +44,14 @@ async def main():
             #print(subs_ext)
             break
 
-    newsubs = thename + '.' + subs_ext
-    os.rename(os.path.join(curdir,subs), os.path.join(curdir, newsubs)) 
-    print('')
-    print(newsubs)
-    print('..로 변환완료되었습니다')
+    try:
+        newsubs = thename + '.' + subs_ext
+        os.rename(os.path.join(curdir,subs), os.path.join(curdir, newsubs)) 
+        print('')
+        print(newsubs)
+        print('..로 변환완료되었습니다')
+    except:
+        print('에러가 발생하였습니다')
 
 '''
     files = [f for f in os.listdir(curdir) if os.path.isfile(os.path.join(curdir,f))]
