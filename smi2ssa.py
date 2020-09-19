@@ -31,11 +31,24 @@ def parse(smi): # smi parsing algorithm written in PYSAMI by g6123 (https://gith
     def split_content(string, tag):
         threshold = '<'+tag
 
+        '''
         if tag is 'p':
             standard = threshold + ' Class=' + LANG + '>'
             if standard.upper() not in string.upper():
                 idx = string.find('>') + 1
                 string = string[:idx] + standard + string[idx:]
+        '''
+        # p가 없을경우 krcc 기반으로 추가해주는 작업을 해줍니다
+        result = []
+
+        if tag is 'p':
+            standard = threshold + ' Class=' + LANG + '>'
+
+            r = search(string, '<p ') 
+            if r is None:
+                idx = string.find('>') + 1
+                string = string[:idx] + standard + string[idx:]
+                #print(f'<p> force-added: {string}')
 
         return list(map(
             lambda item: (threshold+item).strip(),
@@ -54,41 +67,63 @@ def parse(smi): # smi parsing algorithm written in PYSAMI by g6123 (https://gith
         return ''
 
     def parse_p(item):
-        lang = search(item, '<p(.+)class=([a-z]+)').group(2)
-        content = item[search(item, '<p[^>]+>').end():]
+        #lang = search(item, '<p(.+)class=([a-z]+)').group(2)
+        #content = item[search(item, '<p[^>]+>').end():]
+
+        #print(f'before:{item}')
+        lang = ''
+        r = search(item, '<p(.+)class=([a-z]+)')
+        # p 태크가 아예 없는 경우는 다르게 처리합니다
+        if r.group(0) is None:
+            lang = LANG
+            content = item
+        else:
+            lang = search(item, '<p(.+)class=([a-z]+)').group(2)
+            content = item[search(item, '<p[^>]+>').end():]
+
         content = content.replace('\r', '')
         content = content.replace('\n', '')
         content = re.sub('<br ?/?>', '\\N', content, flags=re.I)
         content = re.sub('<i>', '{\\i1}', content, flags=re.I)
         content = re.sub('</i>', '{\\i0}', content, flags=re.I)
         content = re.sub('<[^>]+>', remove_tag, content)
+
+        #print(f'after:{content}')
+
+        #print([lang, content])
         return [lang, content]
 
     data = []
 
     try:
-        for item in split_content(smi, 'sync'):
-            pattern = search(item, '<sync start=([0-9]+)')
+        for item_sync in split_content(smi, 'sync'):
+            pattern = search(item_sync, '<sync start=([0-9]+)')
             if pattern!=None:
                 timecode = pattern.group(1)
-                content = dict(map(parse_p, split_content(item, 'p')))
+                content = dict(map(parse_p, split_content(item_sync, 'p')))
                 data.append([timecode, content])
     except:
         print('Conversion ERROR: maybe this file is not supported.')
     
+    #print(data)
     return data
 
 def convert_ssa(data, lang): # written by utylee
+    #print(f'lang and keys:{lang} ,{data[0][1].keys()}')
     if lang not in data[0][1].keys():
         print('lang: %s is not found. will use the first lang in the smi file.' %lang)
-        i=0
-        while True:
-            try:
-                lang = list(data[i][1].keys())[0]
-                break
-            except:
-                i+=1
-        print('chosen lang: %s' %lang)
+        #print(data[0][1].keys())
+        lang = list(data[0][1].keys())[0]
+        #i=0
+        #while True:
+            #print(i[1].keys())
+            #print(i)
+            #try:
+                #lang = list(data[i][1].keys())[0]
+                #break
+            #except:
+                #i+=1
+        print(f'chosen lang: {lang}')
     def ms_to_ts(time):
         time = int(time)
         ms = round((time%1000)/10, 2)
@@ -114,7 +149,6 @@ def convert_ssa(data, lang): # written by utylee
 
                 ssa+=data[i][1][lang]+'\n'
 
-
                 '''
                 ssa+=str(sub_nb)+'\n'
                 sub_nb+=1
@@ -138,7 +172,7 @@ ScriptType: v4.0
 
 [V4 Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding
-Style: Default,Arial,30.0,16777215,255,0,0,0,0,1,2.0,0.0,2,10,10,10,0,1
+Style: Default,Arial,26.0,16777215,255,0,0,0,0,1,1.5,0.0,2,10,10,10,0,1
 
 [Events]
 Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text'''
@@ -174,13 +208,15 @@ async def main():
     for smi in smi_list:
         print(smi)
 
-    print('\nworked .smi subtitles:')
-    for smi in success:
-        print(smi)
+    if len(success) > 0:
+        print('\nworked .smi subtitles:')
+        for smi in success:
+            print(smi)
 
-    print('\nfailed .smi subtitles:')
-    for smi in fail:
-        print(smi)
+    if len(fail) > 0:
+        print('\nfailed .smi subtitles:')
+        for smi in fail:
+            print(smi)
 
     if REMOVE_OPTION:
         print('\nworked smi files are removed due to removal option')

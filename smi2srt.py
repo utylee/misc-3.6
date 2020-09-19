@@ -23,6 +23,7 @@ langcodeConvRules = {'.kr':'.ko'}
 if(SUFFIX in langcodeConvRules):
     SUFFIX = langcodeConvRules[SUFFIX]
 
+
 def parse(smi): # smi parsing algorithm written in PYSAMI by g6123 (https://github.com/g6123/PySAMI)
     search = lambda string, pattern: re.search(pattern, string, flags=re.I)
     tags = re.compile('<[^>]+>')
