@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 import codecs
 import re
 import cchardet
 import os
 import argparse
-import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--language", help="choose language to convert", default="kr")
@@ -24,6 +22,7 @@ DECODE_ERRORS = 'ignore' if args.ignore else 'strict'
 langcodeConvRules = {'.kr':'.ko'}
 if(SUFFIX in langcodeConvRules):
     SUFFIX = langcodeConvRules[SUFFIX]
+
 
 def parse(smi): # smi parsing algorithm written in PYSAMI by g6123 (https://github.com/g6123/PySAMI)
     search = lambda string, pattern: re.search(pattern, string, flags=re.I)
@@ -111,42 +110,39 @@ def convert(data, lang): # written by ncianeo
             continue
     return srt
 
+print('media library path:', PATH)
+success=[]
+fail=[]
+print('finding and converting started...')
+for p,w,f in os.walk(PATH):
+    for file_name in f:
+        if file_name[-4:].lower()=='.smi':
+            print('processing %s' %os.path.join(p,file_name))
+            try:
+                with open(os.path.join(p,file_name),'rb') as smi_file:
+                    smi_raw = smi_file.read()
+                    encoding = cchardet.detect(smi_raw)
+                smi = smi_raw.decode(encoding['encoding'], errors=DECODE_ERRORS)
+                srt_file = codecs.open(os.path.join(p,os.path.splitext(file_name)[0]+SUFFIX+'.srt'),'w',encoding='utf-8')
+                srt_file.write(convert(parse(smi),LANG))
+                success.append(file_name)
+                if REMOVE_OPTION:
+                    os.remove(os.path.join(p,file_name))
+            except:
+                fail.append(file_name)
 
-# main
-if __name__ == "__main__":
-    print('media library path:', PATH)
-    success=[]
-    fail=[]
-    print('finding and converting started...')
-    for p,w,f in os.walk(PATH):
-        for file_name in f:
-            if file_name[-4:].lower()=='.smi':
-                print('processing %s' %os.path.join(p,file_name))
-                try:
-                    with open(os.path.join(p,file_name),'rb') as smi_file:
-                        smi_raw = smi_file.read()
-                        encoding = cchardet.detect(smi_raw)
-                    smi = smi_raw.decode(encoding['encoding'], errors=DECODE_ERRORS)
-                    srt_file = codecs.open(os.path.join(p,os.path.splitext(file_name)[0]+SUFFIX+'.srt'),'w',encoding='utf-8')
-                    srt_file.write(convert(parse(smi),LANG))
-                    success.append(file_name)
-                    if REMOVE_OPTION:
-                        os.remove(os.path.join(p,file_name))
-                except:
-                    fail.append(file_name)
+smi_list = list(set(success) | set(fail))
+print('\nfound .smi subtitles:')
+for smi in smi_list:
+    print(smi)
 
-    smi_list = list(set(success) | set(fail))
-    print('\nfound .smi subtitles:')
-    for smi in smi_list:
-        print(smi)
+print('\nworked .smi subtitles:')
+for smi in success:
+    print(smi)
 
-    print('\nworked .smi subtitles:')
-    for smi in success:
-        print(smi)
+print('\nfailed .smi subtitles:')
+for smi in fail:
+    print(smi)
 
-    print('\nfailed .smi subtitles:')
-    for smi in fail:
-        print(smi)
-
-    if REMOVE_OPTION:
-        print('\nworked smi files are removed due to removal option')
+if REMOVE_OPTION:
+    print('\nworked smi files are removed due to removal option')
