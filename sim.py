@@ -169,6 +169,7 @@ async def print_sample_sequence():
                                             database = 'wow_transl',
                                             user = 'postgres',
                                             password = 'sksmsqnwk11') as engine:
+                #print('connected')
                 for l in result:
                     found = 0
                     #skill = l[1]
@@ -177,9 +178,15 @@ async def print_sample_sequence():
 
                     if skill == l[1]:       # 예외 고정문자로 변환이 없으면 변환을 진행합니다
                         skill = skill.replace("_"," ")
+                        #print(f'skill: {skill}')
                         #print(skill)
                         for line in full:
-                            t = re.search('www.wowhead.com/spell=(\d+)[\?ilvl=\d+]*.*>' + skill + '</a>' \
+                            #print(f'line: {line}')
+                            #t = re.search('www.wowhead.com/spell=(\d+)[\?ilvl=\d+]*.*>' + skill + '</a>' \
+                                    #, line, flags=re.I)
+                            # 소둠땅이라고 www.가 아닌 beta.wowhead.com 이라고 report.html 가
+                            #  작성되어 있더군요.
+                            t = re.search('wowhead.com/spell=(\d+)[\?ilvl=\d+]*.*>' + skill + '</a>' \
                                     , line, flags=re.I)
                             if t is not None:
                                 spellid = t.group(1)
@@ -232,14 +239,16 @@ async def sim_myself(r):
    
     else:
         # DPS에 해당하는 숫자열을 가져와서 표시합니다
-        lines = result.split('\n', 31)      # 굳이 전체를 다 파싱하진 않고 31열까지만 파싱합니다
+        # 소둠땅 베타라고 추가 열이 좀 생겼더군요. 10줄 더 읽는 것으로 수정했습니다
+        lines = result.split('\n', 41)      # 굳이 전체를 다 파싱하진 않고 31열까지만 파싱합니다
         
         # 새 리스트를 선언합니다
         new_lines = []
         target_num = 0
         
-        for i in range(0,30):
+        for i in range(0,40):
             line = lines[i]
+            #print(line)
             #m = re.search('DPS Ranking', line)
             m = re.search('Player: ', line)
             
