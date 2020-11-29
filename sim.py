@@ -22,8 +22,11 @@ devel = 0
 # 전투시간과 풀버프삭제를 추가할 지를 결정합니다
 add_options = 1  
 file_report = '/mnt/d/report.html'
-seq_num = 35        # sample sequence 표기시 기본 30개만 표현해줍니다
-time = 25                # 0일 경우 health 기반 모드로 동작합니다
+#seq_num = 35        # sample sequence 표기시 기본 30개만 표현해줍니다
+#seq_num = 40        # sample sequence 표기시 기본 30개만 표현해줍니다
+#seq_num = 200        # sample sequence 표기시 기본 30개만 표현해줍니다
+#time = 25                   # 0일 경우 health 기반 모드로 동작합니다
+time = 30                   # 0일 경우 health 기반 모드로 동작합니다
 target_health = 270000
 
 # wowhead에서 주문넘버로 한글명을 얻어올수 있습니다
@@ -58,6 +61,7 @@ def fixed_string(s):
 
 def option_string():
     global add_options
+    global time
     buff = 0
     # time base일지 target health base 일지에 따라 바뀝니다
     if time:
@@ -108,6 +112,10 @@ async def translate(engine, spellid, skill):
 async def print_sample_sequence():
     #print('\n')
     #print('ss')
+    global time 
+
+    seq_num = round(time * 1.4) + 9     # 초기 flask와 attack 시퀀스 등의 pre 가 7줄은 최소들어가는 듯
+    print(f'시간: {time}초, seq_num(시간*1.4근사치):{seq_num}\n')
 
     # report html 파일을 열어서 해당문구를 찾아 파싱합니다
     async with aiofiles.open(file_report, 'r') as f :
@@ -219,10 +227,14 @@ async def sim_myself(r):
     if (r == 2):
         result = subprocess.check_output(\
             'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {} html=/mnt/d/report.html'.format(option_string()), shell=True)
-
     elif (r == 3):
+        ''' 
+        print(f'sim_myself:time:{time}')
+        _ = f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string()} html={file_report}'
+        print(_)
+        '''
         result = subprocess.check_output(\
-            f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string()} html={file_report}', shell=True)
+                f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string()} html={file_report}', shell=True)
 
 
     else:
@@ -409,11 +421,15 @@ async def main():
 
             # html을 파싱하여 sample sequence table 의 로테이션을 출력해줍니다
             elif (sys.argv[1] == 's'):
-
                 await sim_myself(3)
-
             else:
                 sim_him(sys.argv[1])
+
+        elif len(sys.argv) == 3:
+            global time
+            time = int(sys.argv[2])
+            await sim_myself(3)
+
         # 별도의 파라미터없이 클립보드만으로 실행할 경우입니다
         else:
             await sim_myself(0)
