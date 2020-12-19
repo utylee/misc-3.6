@@ -20,6 +20,8 @@ import sim_db as db
 devel = 0
 
 # 전투시간과 풀버프삭제를 추가할 지를 결정합니다
+use_pre_potion = 0
+enemies = 1
 add_options = 1  
 file_report = '/mnt/d/report.html'
 #seq_num = 35        # sample sequence 표기시 기본 30개만 표현해줍니다
@@ -62,11 +64,18 @@ def fixed_string(s):
 def option_string():
     global add_options
     global time
+    global enemies
+    #global use_pre_potion
     buff = 0
     # time base일지 target health base 일지에 따라 바뀝니다
     if time:
         #r = '{} {}'.format('max_time={}'.format(time), 'optimal_raid={}'.format(buff)) if add_options else ''
-        r = f'max_time={time} optimal_raid={buff}' if add_options else ''
+
+        #r = f'max_time={time} optimal_raid={buff}' if add_options else ''
+        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies}' if add_options else ''
+        r = f'max_time={time} optimal_raid={buff} actions.precombat-=/flask desired_targets={enemies}' if add_options else ''
+            #await f.write('\ndesired_targets=3')
+        #r = f'max_time={time} optimal_raid={buff} use_pre_potion={use_pre_potion}' if add_options else ''
     else:
         r = f'fixed_time=0 override.target_health={target_health} optimal_raid={buff}' if add_options else ''
     return r
@@ -138,10 +147,13 @@ async def print_sample_sequence():
                 frag1_copy = copy.deepcopy(frag1)
                 index = 0
                 found = 0
+                target = '';res = ''    # 대상과 자원도 표기하기로 합니다
                 for ll in frag1:
+                    # 시간을 포함한 행을 찾습니다
                     m1 = re.search('<td class="right">(.*)</td>', ll, flags=re.I)
                     if m1:
                         found += 1
+                        # 스킬명을 포함한 행을 찾습니다 
                         m2 = re.search('<td class="left">(.*)</td>', frag1[index+3], flags=re.I)
                         if m2:
                             skill = m2.group(1)
@@ -152,10 +164,26 @@ async def print_sample_sequence():
                             #else:
                                 #skills.update(skill)
 
-                            # 바로 출력이 아닌 튜플리스트로 저장하는 것으로 바꿉니다. 번역을위해
-                            result.append([m1.group(1), skill])
-                            #print(f'{m1.group(1)}\t{skill}')
-                            #print(result)
+                            m3 = re.search('<td class="left">(.*)</td>', frag1[index+4], flags=re.I)
+                            if m3:
+                                target = m3.group(1)
+
+                                # 타겟과 자원을 포함한 행을 각각 찾습니다
+                                l_res = re.findall('\s[\d|\.]*/\d+:', frag1[index+5], flags=re.I)
+                                res = []
+                                for lt in l_res:
+                                    lt = lt.strip()
+                                    lt = lt.rstrip(':')
+                                    lt = lt.split('/')[0]
+                                    lt = lt.split('.')[0]
+                                    #lt = lt.rstrip('/')
+                                    res.append(lt)
+                                    #print(res)
+
+                                # 바로 출력이 아닌 튜플리스트로 저장하는 것으로 바꿉니다. 번역을위해
+                                #result.append([m1.group(1), skill])
+                                result.append([m1.group(1), skill, res, target])
+
                     index += 1
                     if found >= seq_num:
                         full_br = 1
@@ -208,10 +236,17 @@ async def print_sample_sequence():
                         l += ['0', skill]       
                 #print(f'{m1.group(1)}\t{skill}')
                 print(f'\r                                                   ', end='')
-                #print(f'\r                      ')
-                #print('')
+
                 for l in result:
-                    print(f'\r{l[0]}\t{l[3]}')
+                    # l[0] 1 2 3 4 각각은 시간 / 스킬아이디 / 자원(들) / 대상 / 기술명 의미합니다
+                     
+                    #print(f'\r{l[0]}\t{l[3]}')      # 시간 /t   기술   순서로 출력
+                    print(f'\r{l[0]:15}\t{l[5]:15}\t', end='')      # 시간 기술 자원 대상    순서로 출력합니다
+                    for _ in l[2]:                  # 자원이 여러개일 경우를 대응합니다
+                        print(f'{_:7}', end='')
+                        print(f'\t', end='')
+                    print(f'{l[3]}\n', end='')      # 대상을 출력합니다
+
 
 
 async def sim_myself(r):
@@ -221,6 +256,8 @@ async def sim_myself(r):
         async with aiofiles.open("/home/utylee/temp/simc/engine/utylee.simc", "w") as f:
             s = pyperclip.paste()
             await f.write(s)
+            #await f.write('\nuse_pre_potion=0')
+            #await f.write('\ndesired_targets=3')
     
     # simc를 돌립니다
     # report 출력여부 옵션을 확인합니다
@@ -291,15 +328,26 @@ def sim_him(him):
         f.write(s)
         '''
 
+
+    '''
+    async with aiohttp.ClientSession() as client: 
+        async with client.get(url) as resp:
+            txt = await resp.text()
+            result = re.search('<title>(.*)\s-\s주문.*</title>', txt, flags=re.I)
+            if result:
+                spell = result.group(1)
+                #print(spell)
+                print(f'\r                    ', end='')
+                print(f'\r{spell}', end='')
+    '''
     # ,(쉼표) 여부로 외부서버일 경우 분간하여 처리합니다
-
-    r = re.search('(.*)\,(.*)', him)
-
     # 다른서버일 경우(쉼표있을 경우)
+    r = re.search('(.*)\,(.*)', him)
     if (r):
         eng = get_eng_name(r.group(2))
         # 레벨곽 무기레벨을 가져오기 위해 따로 wow 페이지에서 긁어옵니다.
-        htm = requests.get('https://worldofwarcraft.com/ko-kr/character/{}/{}'.format(eng, r.group(1)))
+        #htm = requests.get('https://worldofwarcraft.com/ko-kr/character/{}/{}'.format(eng, r.group(1)))
+        htm = requests.get('https://worldofwarcraft.com/ko-kr/character/kr/{}/{}'.format(eng, r.group(1)))
         txt = re.search('.*meta\sname=\"description\"\scontent=\"(.*)\"/><meta\sproperty=\"fb', htm.text, flags=re.I)
         desc = txt.group(1)
         cmd = 'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc armory=kr,{},{}'.format(eng, r.group(1))
@@ -409,6 +457,8 @@ if __name__ == "__main__":
 '''
 
 async def main():
+    global time
+    global enemies
     # 파라미터가 변수로 입력되면 그 변수를 넣어주고 그 사람의 전장정보실 정보를 이용해 심크를 돌립니다
     try:
         if (len(sys.argv) == 2):
@@ -426,8 +476,13 @@ async def main():
                 sim_him(sys.argv[1])
 
         elif len(sys.argv) == 3:
-            global time
             time = int(sys.argv[2])
+            await sim_myself(3)
+
+        # 시간과 적의 수를 지정하는 경우입니다. 적의 수를 지정하는 경우 시간도 지정해주도록 인자 단순화합니다
+        elif len(sys.argv) == 4:
+            time = int(sys.argv[2])
+            enemies = int(sys.argv[3])
             await sim_myself(3)
 
         # 별도의 파라미터없이 클립보드만으로 실행할 경우입니다
