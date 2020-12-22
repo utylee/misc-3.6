@@ -69,15 +69,33 @@ def option_string():
     buff = 0
     # time base일지 target health base 일지에 따라 바뀝니다
     if time:
-        #r = '{} {}'.format('max_time={}'.format(time), 'optimal_raid={}'.format(buff)) if add_options else ''
+        # 기본입니다
+        r = f'max_time={time} optimal_raid={buff} desired_targets={enemies}' if add_options else ''
 
-        #r = f'max_time={time} optimal_raid={buff}' if add_options else ''
-        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies}' if add_options else ''
-        r = f'max_time={time} optimal_raid={buff} actions.precombat-=/flask desired_targets={enemies}' if add_options else ''
-            #await f.write('\ndesired_targets=3')
+        # 조드: 천체의정렬이 없을 경우입니다
+        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=celestial_alignment' if add_options else ''
+
+        # 조드: 나이트페이 영혼소집이 없을 경우입니다
+        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=convoke_the_spirits' if add_options else ''
+
+        # 조드: 천체의정렬과 영혼소집이 모두 없을 경우입니다
+        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=celestial_alignment/convoke_the_spirits' if add_options else ''
+
+        # 잠적: 어둠의칼날과 피고름이 모두 없을 경우입니다
+        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=shadow_blades/sepsis' if add_options else ''
+
+        # 잠적: 어둠의칼날과 피고름이 거기에 죽음의 상징까지 모두 없을 경우입니다
+        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=shadow_blades/sepsis/symbols_of_death' if add_options else ''
+
+        # 고흑: 어둠의칼날과 피고름이 거기에 죽음의 상징까지 모두 없을 경우입니다
+        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=summon_darkglare/dark_soul' if add_options else ''
+
+
+
         #r = f'max_time={time} optimal_raid={buff} use_pre_potion={use_pre_potion}' if add_options else ''
     else:
         r = f'fixed_time=0 override.target_health={target_health} optimal_raid={buff}' if add_options else ''
+
     return r
 
 async def translate(engine, spellid, skill):
@@ -103,7 +121,6 @@ async def translate(engine, spellid, skill):
                 result = re.search('<title>(.*)\s-\s주문.*</title>', txt, flags=re.I)
                 if result:
                     spell = result.group(1)
-                    #print(spell)
                     print(f'\r                    ', end='')
                     print(f'\r{spell}', end='')
         if condi == 0:      # 튜플 자체가 존재하지 않는 경우 insert합니다
@@ -214,8 +231,12 @@ async def print_sample_sequence():
 
                     if skill == l[1]:       # 예외 고정문자로 변환이 없으면 변환을 진행합니다
                         skill = skill.replace("_"," ")
+
+                        # 스킬 이름이 html과 일치하지 않는 특수한 경우를 수동으로 교정합니다
+                        if skill == "multishot": skill = "multi-shot"
+                        if skill == "dark soul": skill = "dark soul: misery"
                         #print(f'skill: {skill}')
-                        #print(skill)
+
                         for line in full:
                             #print(f'line: {line}')
                             #t = re.search('www.wowhead.com/spell=(\d+)[\?ilvl=\d+]*.*>' + skill + '</a>' \
@@ -250,6 +271,7 @@ async def print_sample_sequence():
 
 
 async def sim_myself(r):
+    global file_report
     # 개발모드일 때는 클립보드로부터 파일쓰기를 행하지 않고 기존 파일을 보존해서 작업합니다
     if not devel:
         # 클립보드의 내용을 특정 파일에 기록한후
@@ -265,14 +287,8 @@ async def sim_myself(r):
         result = subprocess.check_output(\
             'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {} html=/mnt/d/report.html'.format(option_string()), shell=True)
     elif (r == 3):
-        ''' 
-        print(f'sim_myself:time:{time}')
-        _ = f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string()} html={file_report}'
-        print(_)
-        '''
-        result = subprocess.check_output(\
-                f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string()} html={file_report}', shell=True)
-
+        ins = f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string()} html={file_report}'
+        result = subprocess.check_output(ins, shell=True)
 
     else:
         result = subprocess.check_output(\
