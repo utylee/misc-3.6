@@ -30,6 +30,7 @@ file_report = '/mnt/d/report.html'
 #time = 25                   # 0일 경우 health 기반 모드로 동작합니다
 time = 30                   # 0일 경우 health 기반 모드로 동작합니다
 target_health = 270000
+class_ = ''          # 클립보드에서 spec=직업 문구를 통해서 직업특성을 기록해놓습니다
 
 # wowhead에서 주문넘버로 한글명을 얻어올수 있습니다
 '''====report.html
@@ -61,7 +62,7 @@ def fixed_string(s):
 
     return ret
 
-def option_string():
+def option_string(param):
     global add_options
     global time
     global enemies
@@ -69,30 +70,12 @@ def option_string():
     buff = 0
     # time base일지 target health base 일지에 따라 바뀝니다
     if time:
-        # 기본입니다
-        r = f'max_time={time} optimal_raid={buff} desired_targets={enemies}' if add_options else ''
+        if param == 0:
+            # 기본입니다
+            r = f'max_time={time} optimal_raid={buff} desired_targets={enemies}' if add_options else ''
+        elif param >= 2:
+            r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions={skips_str(param)}' if add_options else ''
 
-        # 조드: 천체의정렬이 없을 경우입니다
-        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=celestial_alignment' if add_options else ''
-
-        # 조드: 나이트페이 영혼소집이 없을 경우입니다
-        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=convoke_the_spirits' if add_options else ''
-
-        # 조드: 천체의정렬과 영혼소집이 모두 없을 경우입니다
-        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=celestial_alignment/convoke_the_spirits' if add_options else ''
-
-        # 잠적: 어둠의칼날과 피고름이 모두 없을 경우입니다
-        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=shadow_blades/sepsis' if add_options else ''
-
-        # 잠적: 어둠의칼날과 피고름이 거기에 죽음의 상징까지 모두 없을 경우입니다
-        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=shadow_blades/sepsis/symbols_of_death' if add_options else ''
-
-        # 고흑: 어둠의칼날과 피고름이 거기에 죽음의 상징까지 모두 없을 경우입니다
-        #r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions=summon_darkglare/dark_soul' if add_options else ''
-
-
-
-        #r = f'max_time={time} optimal_raid={buff} use_pre_potion={use_pre_potion}' if add_options else ''
     else:
         r = f'fixed_time=0 override.target_health={target_health} optimal_raid={buff}' if add_options else ''
 
@@ -208,7 +191,6 @@ async def print_sample_sequence():
                 #for ll in result:
                     #print(ll)
 
-
         if len(result) > 0:
             # 시퀸스 결과가 있다면 해당 스킬의 스펠번호도 저장해놓습니다
             '''====report.html
@@ -268,26 +250,33 @@ async def print_sample_sequence():
                         print(f'\t', end='')
                     print(f'{l[3]}\n', end='')      # 대상을 출력합니다
 
-
-
 async def sim_myself(r):
     global file_report
+    global class_
     # 개발모드일 때는 클립보드로부터 파일쓰기를 행하지 않고 기존 파일을 보존해서 작업합니다
     if not devel:
         # 클립보드의 내용을 특정 파일에 기록한후
         async with aiofiles.open("/home/utylee/temp/simc/engine/utylee.simc", "w") as f:
             s = pyperclip.paste()
             await f.write(s)
+            
+            # 직업 특성을 저장해놓습니다. 쿨기없을 경우를 로테이션도 대응하기 위함입니다
+            _ = re.search('spec=(.*)\n', s, flags=re.I)
+            if(_):
+                class_ = _.group(1)
+
             #await f.write('\nuse_pre_potion=0')
             #await f.write('\ndesired_targets=3')
     
     # simc를 돌립니다
     # report 출력여부 옵션을 확인합니다
     if (r == 2):
-        result = subprocess.check_output(\
-            'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {} html=/mnt/d/report.html'.format(option_string()), shell=True)
-    elif (r == 3):
-        ins = f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string()} html={file_report}'
+        ins = f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string(r)} html={file_report}'
+        result = subprocess.check_output(ins, shell=True)
+
+    # 3이상 경우는 여러개로 분기됩니다
+    elif (r >= 3):
+        ins = f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string(r)} html={file_report}'
         result = subprocess.check_output(ins, shell=True)
 
     else:
@@ -330,7 +319,7 @@ async def sim_myself(r):
         print('*****************************************************************\n')
 
         # s옵션일 경우, 샘플 시퀀스를 출력해줍니다
-        if (r == 3):
+        if (r >= 3):
             await print_sample_sequence()
         
         #print(new_lines)
@@ -343,7 +332,6 @@ def sim_him(him):
         s = pyperclip.paste()
         f.write(s)
         '''
-
 
     '''
     async with aiohttp.ClientSession() as client: 
@@ -413,7 +401,6 @@ def sim_him(him):
     #print('\n{}\n\n{}'.format(line[i-1], lines[i+1]))
     #print('{}\n{}\n'.format(desc, lines[i+1]))
     print('\n{}\n'.format(lines[i+1]))
-    
 
 def get_eng_name(r):
     if (r == '데스윙'):
@@ -455,22 +442,52 @@ def get_eng_name(r):
 
     #print(name)
     return name
-    
-    
-'''
-if __name__ == "__main__":
 
-    
-    # 파라미터가 변수로 입력되면 그 변수를 넣어주고 그 사람의 전장정보실 정보를 이용해 심크를 돌립니다
-    try:
-        if (len(sys.argv) > 1):
-            sim_him(sys.argv[1])
-        else:
-            sim_myself()
-    except:
-        pass
+def skips_str(param):
+    global class_
+    s = ''
+    if class_ == 'marksmanship':
+        if param == 4:
+            s = 'double_tap/trueshot'
+        elif param == 5:
+            s = 'double_tap/trueshot/wild_spirits'
+        elif param == 6:
+            s = 'double_tap/trueshot/wild_spirits/volley'
 
-'''
+    elif class_ == 'balance':
+        if param == 4:
+            # 조드: 천체의정렬이 없을 경우입니다
+            s = 'celestial_alignment'
+        elif param == 5:
+            # 조드: 나이트페이 영혼소집이 없을 경우입니다
+            s = 'convoke_the_spirits'
+        elif param == 6:
+            # 조드: 천체의정렬과 영혼소집이 모두 없을 경우입니다
+            s = 'celestial_alignment/convoke_the_spirits'
+
+    elif class_ == 'subtlety':
+        if param == 4:
+            # 잠적: 어둠의칼날 없을 경우입니다
+            s = 'shadow_blades'
+        elif param == 5:
+            # 잠적: 어둠의칼날과 피고름이 모두 없을 경우입니다
+            s = 'shadow_blades/sepsis'
+        elif param == 6:
+            # 잠적: 어둠의칼날과 피고름이 거기에 죽음의 상징까지 모두 없을 경우입니다
+            s = 'shadow_blades/sepsis/symbols_of_death'
+
+    elif class_ == 'affliction':
+        if param == 4:
+            # 고흑: 암흑시선 없을 경우입니다
+            s = 'summon_darkglare'
+        elif param == 5:
+            # 고흑: 암흑시선과 불행 모두 없을 경우입니다
+            s = 'summon_darkglare/dark_soul'
+        elif param == 6:
+            # 고흑: 암흑시선과 불행 영혼부식 모두 없을 경우입니다
+            s = 'summon_darkglare/dark_soul/soul_rot'
+
+    return s
 
 async def main():
     global time
@@ -488,6 +505,19 @@ async def main():
             # html을 파싱하여 sample sequence table 의 로테이션을 출력해줍니다
             elif (sys.argv[1] == 's'):
                 await sim_myself(3)
+
+            # 직업 쿨기가 없을 때의 로테이션을 출력합니다 
+            elif (sys.argv[1] == 'ss'):
+                await sim_myself(4)
+
+            # 직업 쿨기와 성약단쿨기가 모두 없을 때의 로테이션을 출력합니다 
+            elif (sys.argv[1] == 'sss'):
+                await sim_myself(5)
+
+            # 직업 쿨기와 성약단쿨기에 광역이라던지 중요스킬도 없을 때 로테이션을 출력합니다 
+            elif (sys.argv[1] == 'ssss'):
+                await sim_myself(6)
+
             else:
                 sim_him(sys.argv[1])
 
