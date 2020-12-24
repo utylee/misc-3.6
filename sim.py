@@ -539,9 +539,15 @@ async def main():
         if (len(sys.argv) == 2):
             if sys.argv[1] == 'f' or    \
                 sys.argv[1] == 'r' or    \
-                sys.argv[1] == 's':
+                sys.argv[1] == 's' or \
+                sys.argv[1] == 'ss' or \
+                sys.argv[1] == 'sss' or \
+                sys.argv[1] == 'ssss':
                 await sim_myself(sys.argv[1], time, enemies)
-            elif sys.argv[1] == 'h':
+            elif sys.argv[1] == 'h' or \
+                sys.argv[1] == 'hh' or \
+                sys.argv[1] == 'hhh' or \
+                sys.argv[1] == 'hhhh':
                 await sim_myself(sys.argv[1], target_health, enemies)
             else:
                 sim_him(sys.argv[1])
