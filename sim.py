@@ -14,6 +14,7 @@ import sim_db as db
 
 
 # 's' 옵션을 주면 html을 파싱하여 sample sequence table 의 로테이션을 출력해줍니다 
+# 'h' 옵션을 주면 s 옵션일 때와 동일할지만 시간이 아닌 헬스량으로 계산합니다
 
 # 개발중 모드일 때는 pyperclip을 통한 클립보드 복사를 하지 않고 그냥 기존 파일을 통해 합니다
 #devel = 1
@@ -29,7 +30,8 @@ file_report = '/mnt/d/report.html'
 #seq_num = 200        # sample sequence 표기시 기본 30개만 표현해줍니다
 #time = 25                   # 0일 경우 health 기반 모드로 동작합니다
 time = 30                   # 0일 경우 health 기반 모드로 동작합니다
-target_health = 270000
+#target_health = 270000
+target_health = 60000
 class_ = ''          # 클립보드에서 spec=직업 문구를 통해서 직업특성을 기록해놓습니다
 
 # wowhead에서 주문넘버로 한글명을 얻어올수 있습니다
@@ -62,22 +64,42 @@ def fixed_string(s):
 
     return ret
 
-def option_string(param):
+def option_string(param, t_or_h, e):        # t_or_h : time 혹은 적의 health를 갖는 변수입니다
     global add_options
-    global time
-    global enemies
+    #global time
+    #global enemies
+
     #global use_pre_potion
     buff = 0
     # time base일지 target health base 일지에 따라 바뀝니다
-    if time:
-        if param == 0:
-            # 기본입니다
-            r = f'max_time={time} optimal_raid={buff} desired_targets={enemies}' if add_options else ''
-        elif param >= 2:
-            r = f'max_time={time} optimal_raid={buff} desired_targets={enemies} skip_actions={skips_str(param)}' if add_options else ''
+    #if t > 0:
+    if param == 'r':    # 시퀀스를 출력하는 것은 아니고 report.html 을 작성하는 루틴인데 효용은 모르겠습니다
+        # 이경우 time_or_health 는 time 이 됩니다 
+        r = f'max_time={t_or_h} optimal_raid={buff} desired_targets={e}' if add_options else ''
+
+    elif param == 's' or param == 'ss' or param == 'sss' or param == 'ssss':
+        # 이경우 time_or_health 는 time 이 됩니다 
+        #if param == 0:
+        if param == 's':
+            r = f'max_time={t_or_h} optimal_raid={buff} desired_targets={e}' if add_options else ''
+        else:
+            # 건너뛰는 액션을 추가합니다
+            r = f'max_time={t_or_h} optimal_raid={buff} desired_targets={e} skip_actions={skips_str(param)}' if add_options else ''
+            #elif param >= 2:
 
     else:
-        r = f'fixed_time=0 override.target_health={target_health} optimal_raid={buff}' if add_options else ''
+        # 이경우 time_or_health 는 health 가 됩니다 
+            #param == 'h' or param == 'hh' or param == 'hhh' or param == 'hhhh':
+        #r = f'fixed_time=0 override.target_health={t_or_h} optimal_raid={buff}' if add_options else ''
+        #if param == 0:
+        if param == 'h':
+            # 기본입니다
+            r = f'fixed_time=0 override.target_health={t_or_h} optimal_raid={buff} desired_targets={e}' if add_options else ''
+        #elif param >= 2:
+        else:
+            # 건너뛰는 액션을 추가합니다
+            r = f'fixed_time=0 override.target_health={t_or_h} optimal_raid={buff} desired_targets={e} skip_actions={skips_str(param)}' if add_options else ''
+            #r = f'max_time={t_or_h} optimal_raid={buff} desired_targets={e} skip_actions={skips_str(param)}' if add_options else ''
 
     return r
 
@@ -118,13 +140,18 @@ async def translate(engine, spellid, skill):
     return spell
 
 # sample sequence 출력 추가 프로세스
-async def print_sample_sequence():
+async def print_sample_sequence(param, t_or_h):           # health는 굳이 받을 필요가 없습니다
     #print('\n')
     #print('ss')
-    global time 
+    #global time 
 
-    seq_num = round(time * 1.4) + 9     # 초기 flask와 attack 시퀀스 등의 pre 가 7줄은 최소들어가는 듯
-    print(f'시간: {time}초, seq_num(시간*1.4근사치):{seq_num}\n')
+    seq_num = 0
+    if param == 0:      # time 기준일 경우입니다
+        seq_num = round(t_or_h * 1.4) + 9     # 초기 flask와 attack 시퀀스 등의 pre 가 7줄은 최소들어가는 듯
+        print(f'시간: {t_or_h}초, seq_num(시간*1.4근사치):{seq_num}\n')
+    else :              # health 기준일 경우입니다
+        seq_num = 10000
+        print(f'체력: {t_or_h} \n')
 
     # report html 파일을 열어서 해당문구를 찾아 파싱합니다
     async with aiofiles.open(file_report, 'r') as f :
@@ -250,7 +277,7 @@ async def print_sample_sequence():
                         print(f'\t', end='')
                     print(f'{l[3]}\n', end='')      # 대상을 출력합니다
 
-async def sim_myself(r):
+async def sim_myself(r, t_or_h, e):             # t_or_h : health나 time 이냐를 받습니다
     global file_report
     global class_
     # 개발모드일 때는 클립보드로부터 파일쓰기를 행하지 않고 기존 파일을 보존해서 작업합니다
@@ -268,20 +295,12 @@ async def sim_myself(r):
             #await f.write('\nuse_pre_potion=0')
             #await f.write('\ndesired_targets=3')
     
-    # simc를 돌립니다
-    # report 출력여부 옵션을 확인합니다
-    if (r == 2):
-        ins = f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string(r)} html={file_report}'
-        result = subprocess.check_output(ins, shell=True)
 
-    # 3이상 경우는 여러개로 분기됩니다
-    elif (r >= 3):
-        ins = f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {option_string(r)} html={file_report}'
-        result = subprocess.check_output(ins, shell=True)
-
-    else:
-        result = subprocess.check_output(\
-            'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {}'.format(option_string()), shell=True)
+    # 분기를 다 통합시킬 수 있었습니다. 결국 option_string 함수에서만 분기해주면 됩니다
+    #if (r == 'r' or r == 's' or r == 'ss' r == 'sss' or r == 'ssss' or r == 'h' or r == 'hh' \ or r == 'hhh' or r == 'hhhh'):
+    _ = option_string(r, t_or_h, e)
+    ins = f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {_} html={file_report}'
+    result = subprocess.check_output(ins, shell=True)
     
     # bytes 값을 스트링으로 변환합니다
     result = result.decode()
@@ -319,8 +338,18 @@ async def sim_myself(r):
         print('*****************************************************************\n')
 
         # s옵션일 경우, 샘플 시퀀스를 출력해줍니다
-        if (r >= 3):
-            await print_sample_sequence()
+        #if (r >= 3):
+        if sys.argv[1] == 's' or    \
+            sys.argv[1] == 'ss' or    \
+            sys.argv[1] == 'sss' or    \
+            sys.argv[1] == 'ssss':
+            await print_sample_sequence(0, t_or_h)
+
+        elif sys.argv[1] == 'h' or    \
+            sys.argv[1] == 'hh' or    \
+            sys.argv[1] == 'hhh' or    \
+            sys.argv[1] == 'hhhh':
+            await print_sample_sequence(1, t_or_h)
         
         #print(new_lines)
         
@@ -447,43 +476,55 @@ def skips_str(param):
     global class_
     s = ''
     if class_ == 'marksmanship':
-        if param == 4:
+        #if param == 4:
+        if param == 'ss' or param == 'hh':
             s = 'double_tap/trueshot'
-        elif param == 5:
+        #elif param == 5:
+        elif param == 'sss' or param == 'hhh':
             s = 'double_tap/trueshot/wild_spirits'
-        elif param == 6:
+        #elif param == 6:
+        elif param == 'ssss' or param == 'hhhh':
             s = 'double_tap/trueshot/wild_spirits/volley'
 
     elif class_ == 'balance':
-        if param == 4:
+        #if param == 4:
+        if param == 'ss' or param == 'hh':
             # 조드: 천체의정렬이 없을 경우입니다
             s = 'celestial_alignment'
-        elif param == 5:
+        elif param == 'sss' or param == 'hhh':
+        #elif param == 5:
             # 조드: 나이트페이 영혼소집이 없을 경우입니다
             s = 'convoke_the_spirits'
-        elif param == 6:
+        #elif param == 6:
+        elif param == 'ssss' or param == 'hhhh':
             # 조드: 천체의정렬과 영혼소집이 모두 없을 경우입니다
             s = 'celestial_alignment/convoke_the_spirits'
 
     elif class_ == 'subtlety':
-        if param == 4:
+        if param == 'ss' or param == 'hh':
+        #if param == 4:
             # 잠적: 어둠의칼날 없을 경우입니다
             s = 'shadow_blades'
-        elif param == 5:
+        #elif param == 5:
+        elif param == 'sss' or param == 'hhh':
             # 잠적: 어둠의칼날과 피고름이 모두 없을 경우입니다
             s = 'shadow_blades/sepsis'
-        elif param == 6:
+        #elif param == 6:
+        elif param == 'ssss' or param == 'hhhh':
             # 잠적: 어둠의칼날과 피고름이 거기에 죽음의 상징까지 모두 없을 경우입니다
             s = 'shadow_blades/sepsis/symbols_of_death'
 
     elif class_ == 'affliction':
-        if param == 4:
+        if param == 'ss' or param == 'hh':
+        #if param == 4:
             # 고흑: 암흑시선 없을 경우입니다
             s = 'summon_darkglare'
-        elif param == 5:
+        #elif param == 5:
+        elif param == 'sss' or param == 'hhh':
             # 고흑: 암흑시선과 불행 모두 없을 경우입니다
             s = 'summon_darkglare/dark_soul'
-        elif param == 6:
+        #elif param == 6:
+        elif param == 'ssss' or param == 'hhhh':
             # 고흑: 암흑시선과 불행 영혼부식 모두 없을 경우입니다
             s = 'summon_darkglare/dark_soul/soul_rot'
 
@@ -491,45 +532,29 @@ def skips_str(param):
 
 async def main():
     global time
+    global target_health
     global enemies
     # 파라미터가 변수로 입력되면 그 변수를 넣어주고 그 사람의 전장정보실 정보를 이용해 심크를 돌립니다
     try:
         if (len(sys.argv) == 2):
-            if (sys.argv[1] == 'f'):
-                await sim_myself(1)
-
-            # 출력 후 report 도 기록합니다. html출력을 통해 스킬 로테이션을 살펴보기 위합니다
-            elif (sys.argv[1] == 'r'):
-                await sim_myself(2)
-
-            # html을 파싱하여 sample sequence table 의 로테이션을 출력해줍니다
-            elif (sys.argv[1] == 's'):
-                await sim_myself(3)
-
-            # 직업 쿨기가 없을 때의 로테이션을 출력합니다 
-            elif (sys.argv[1] == 'ss'):
-                await sim_myself(4)
-
-            # 직업 쿨기와 성약단쿨기가 모두 없을 때의 로테이션을 출력합니다 
-            elif (sys.argv[1] == 'sss'):
-                await sim_myself(5)
-
-            # 직업 쿨기와 성약단쿨기에 광역이라던지 중요스킬도 없을 때 로테이션을 출력합니다 
-            elif (sys.argv[1] == 'ssss'):
-                await sim_myself(6)
-
+            if sys.argv[1] == 'f' or    \
+                sys.argv[1] == 'r' or    \
+                sys.argv[1] == 's':
+                await sim_myself(sys.argv[1], time, enemies)
+            elif sys.argv[1] == 'h':
+                await sim_myself(sys.argv[1], target_health, enemies)
             else:
                 sim_him(sys.argv[1])
 
         elif len(sys.argv) == 3:
-            time = int(sys.argv[2])
-            await sim_myself(3)
+            time_or_health = int(sys.argv[2])
+            await sim_myself(sys.argv[1], time_or_health, enemies)
 
         # 시간과 적의 수를 지정하는 경우입니다. 적의 수를 지정하는 경우 시간도 지정해주도록 인자 단순화합니다
         elif len(sys.argv) == 4:
-            time = int(sys.argv[2])
+            time_or_health = int(sys.argv[2])
             enemies = int(sys.argv[3])
-            await sim_myself(3)
+            await sim_myself(sys.argv[1], time_or_health, enemies)
 
         # 별도의 파라미터없이 클립보드만으로 실행할 경우입니다
         else:
