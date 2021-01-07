@@ -24,7 +24,7 @@ instapush==0.1.2
 isort==4.2.15
 itsdangerous==0.24
 Jinja2==2.9.6
-lxml==3.8.0
+lxml==4.6.2
 Markdown==2.6.8
 MarkupSafe==1.0
 msgpack==0.6.1
