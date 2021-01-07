@@ -77,7 +77,7 @@ def option_string(param, t_or_h, e):        # t_or_h : time 혹은 적의 health
         # 이경우 time_or_health 는 time 이 됩니다 
         r = f'max_time={t_or_h} optimal_raid={buff} desired_targets={e}' if add_options else ''
 
-    elif param == 's' or param == 'ss' or param == 'sss' or param == 'ssss':
+    elif param == 's' or param == 'ss' or param == 'sss' or param == 'ssss' or param == 'sssss':
         # 이경우 time_or_health 는 time 이 됩니다 
         #if param == 0:
         if param == 's':
@@ -342,13 +342,15 @@ async def sim_myself(r, t_or_h, e):             # t_or_h : health나 time 이냐
         if sys.argv[1] == 's' or    \
             sys.argv[1] == 'ss' or    \
             sys.argv[1] == 'sss' or    \
-            sys.argv[1] == 'ssss':
+            sys.argv[1] == 'ssss' or \
+            sys.argv[1] == 'sssss':
             await print_sample_sequence(0, t_or_h)
 
         elif sys.argv[1] == 'h' or    \
             sys.argv[1] == 'hh' or    \
             sys.argv[1] == 'hhh' or    \
-            sys.argv[1] == 'hhhh':
+            sys.argv[1] == 'hhhh' or \
+            sys.argv[1] == 'hhhhh':
             await print_sample_sequence(1, t_or_h)
         
         #print(new_lines)
@@ -528,6 +530,21 @@ def skips_str(param):
             # 고흑: 암흑시선과 불행 영혼부식 모두 없을 경우입니다
             s = 'summon_darkglare/dark_soul/soul_rot'
 
+    elif class_ == 'elemental':
+        if param == 'ss' or param == 'hh':
+            # 정술: 대지의 정령 없을 경우입니다
+            s = 'earth_elemental'
+        elif param == 'sss' or param == 'hhh':
+            # 정술: 대지의 정령, 폭풍의 정령 없을 경우입니다
+            s = 'earth_elemental/storm_elemental'
+        elif param == 'ssss' or param == 'hhhh':
+            # 정술: 대지의 정령, 폭풍의 정령, 폭풍수호자 없을 경우입니다
+            s = 'earth_elemental/storm_elemental/stormkeeper'
+        elif param == 'sssss' or param == 'hhhhh':
+            # 정술: 대지의 정령, 폭풍의 정령, 폭풍수호자, 태고의 파도 없을 경우입니다
+            s = 'earth_elemental/storm_elemental/stormkeeper/primordial_wave'
+            #s = 'earth_elemental/storm_elemental/stormkeeper'
+
     return s
 
 async def main():
@@ -542,12 +559,14 @@ async def main():
                 sys.argv[1] == 's' or \
                 sys.argv[1] == 'ss' or \
                 sys.argv[1] == 'sss' or \
-                sys.argv[1] == 'ssss':
+                sys.argv[1] == 'ssss' or \
+                sys.argv[1] == 'sssss':
                 await sim_myself(sys.argv[1], time, enemies)
             elif sys.argv[1] == 'h' or \
                 sys.argv[1] == 'hh' or \
                 sys.argv[1] == 'hhh' or \
-                sys.argv[1] == 'hhhh':
+                sys.argv[1] == 'hhhh' or \
+                sys.argv[1] == 'hhhhh':
                 await sim_myself(sys.argv[1], target_health, enemies)
             else:
                 sim_him(sys.argv[1])
