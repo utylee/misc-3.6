@@ -77,6 +77,8 @@ def convert(srt): # written by utylee
             #content = re.sub('<[^>]+>', remove_tag, content)
             l = re.sub('<i>', '{\\i1}', l, flags=re.I)
             l = re.sub('</i>', '{\\i0}', l, flags=re.I)
+            # i를 제외한 font나 b태그 등은 모두 지우기로 합니다
+            l = re.sub('<[^>]+>', '', l, flags=re.I)
 
             # \r가 사용된 파일일 경우 \n 대신 \r\n 으로 취급합니다
             if '\r' in l:
