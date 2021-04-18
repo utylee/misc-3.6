@@ -13,7 +13,7 @@ async def weather(request):
     w = app['weather'][0]
     t = app['weather'][1]
     h = app['weather'][2]
-    result = f'{w},{t},{h}'
+    result = f'{w},{t}p,{h}%'
     return web.Response(text=result)
 
 async def crawl_weather():
@@ -41,7 +41,7 @@ async def timer_proc(app):
         except:
             app['weather'] = [0,0,0]
 
-        print(app['weather'])
+        #print(app['weather'])
         await asyncio.sleep(intv)
 
 if __name__ == "__main__":
