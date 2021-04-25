@@ -1,4 +1,6 @@
 import asyncio
+import uvloop
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 import aiohttp
 import aiofiles
 from aiopg.sa import create_engine 
