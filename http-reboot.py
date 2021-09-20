@@ -30,13 +30,21 @@ async def reboot(request):
     #asyncio.ensure_future(reboot_5())
     return web.Response(text='reboot after 5 seconds')
 
+'''
 app = web.Application()
 
 app.add_routes([web.get('/', handle),
                 web.get('/reboot', reboot)
                 ])
+                '''
 
 if __name__ == '__main__':
+    app = web.Application()
+
+    app.add_routes([web.get('/', handle),
+                    web.get('/reboot', reboot)
+                    ])
+
     my_port = '9' + getmyip().split('.')[-1]
     web.run_app(app, port=my_port)
 
