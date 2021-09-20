@@ -34,22 +34,31 @@ async def reboot(request):
     #asyncio.ensure_future(reboot_5())
     return web.Response(text='reboot after 5 seconds')
 
+# ?나 다른 기호들이 안들어올 경우를 대비하여 따로 양방향으로 교체를 모두 해줍니다
+def transl(t):
+    t = re.sub('_u_qa_', '?', t)
+    t = re.sub('_u_sp_', ' ', t)
+    t = re.sub('_u_im_', '&', t)
+    return t
+
 def deco_link(t):
+    print(t)
     r = t
-    m = re.search('http',t.lower())
+    m = re.search('://|magnet:',t.lower())
     if m:
         r = f'<a href=\'{t}\'>{t}</a>'
     return r
 
 async def ccopy(request):
     l = app['clipboards']
-    l.append(request.match_info['content'])
+    a = request.match_info['content']
+    l.append(a)
     m = f'추가했습니다. 총 {len(l)}개의 항목이 있습니다\n\n'
     #m = f'추가했습니다. 총 {len(l)}개의 항목이 있습니다<br><br>'
     
     # 항목들도 다 보여주기로 합니다
     for i in l:
-        m += i + '\n'
+        m += transl(i) + '\n'
         #m += deco_link(i) + '<br>'
 
     #return web.Response(text=m, content_type='text/html')
@@ -66,7 +75,7 @@ async def cremove(request):
         # 항목들도 다 보여주기로 합니다
         for i in l:
             #m += deco_link(i) + '<br>'
-            m += i + '\n'
+            m += transl(i) + '\n'
 
     #return web.Response(text=m, content_type='text/html')
     return web.Response(text=m)
@@ -76,7 +85,7 @@ async def cview(request):
     l = app['clipboards']
     m = f'총 {len(l)}개의 항목이 있습니다<br><br>'
     for i in l:
-        m += deco_link(i) + '<br>'
+        m += deco_link(transl(i)) + '<br>'
 
     return web.Response(text=m, content_type='text/html')
 
@@ -85,7 +94,7 @@ async def cviewtext(request):
     l = app['clipboards']
     m = f'총 {len(l)}개의 항목이 있습니다\n\n'
     for i in l:
-        m += i + '\n'
+        m += transl(i) + '\n'
 
     return web.Response(text=m)
 
