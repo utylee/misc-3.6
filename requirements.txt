@@ -46,7 +46,7 @@ requests==2.18.1
 sanic==0.6.0
 selenium==3.141.0
 six==1.10.0
-SQLAlchemy==1.1.13
+SQLAlchemy==1.3.0
 sqlalchemy-aio==0.11.0
 typing==3.7.4.1
 typing-extensions==3.7.4.1
