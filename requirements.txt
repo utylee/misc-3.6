@@ -39,7 +39,7 @@ pycurl==7.43.0
 pynvim==0.3.2
 pyperclip==1.7.0
 pyscreenshot==0.4.2
-python-engineio==1.7.0
+python-engineio==3.8.2.post1
 python-socketio==1.8.0
 Represent==1.5.1
 requests==2.18.1
