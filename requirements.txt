@@ -22,7 +22,7 @@ idna-ssl==1.1.0
 instapush==0.1.2
 itsdangerous==0.24
 jedi==0.17.2
-Jinja2==2.9.6
+Jinja2==2.11.3
 Markdown==2.6.8
 MarkupSafe==1.1.1
 msgpack==0.6.1
