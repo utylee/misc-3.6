@@ -42,7 +42,7 @@ pyscreenshot==0.4.2
 python-engineio==1.7.0
 python-socketio==1.8.0
 Represent==1.5.1
-requests==2.18.1
+requests==2.20.0
 sanic==0.6.0
 selenium==3.141.0
 six==1.10.0
