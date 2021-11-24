@@ -10,7 +10,7 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy()) # 최신버전은 uvloop
                                             # 간단히 실행할 수 있으나 파이선 3.7이상을 요구합니다   
 def getmyip():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        s.connect(("192.168.0.1", 80))
+        s.connect(("192.168.1.1", 80))
         ip = s.getsockname()[0]
         # 아이피 마지막을 얻기위한 방법입니다
         #what = ip.split('.')[-1]
