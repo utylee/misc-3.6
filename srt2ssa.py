@@ -75,8 +75,8 @@ def convert(srt): # written by utylee
             #content = content.replace('\n', '')
             #content = re.sub('<br ?/?>', '\\N', content, flags=re.I)
             #content = re.sub('<[^>]+>', remove_tag, content)
-            l = re.sub('<i>', '{\\i1}', l, flags=re.I)
-            l = re.sub('</i>', '{\\i0}', l, flags=re.I)
+            l = re.sub('<i>', r'{\\i1}', l, flags=re.I)
+            l = re.sub('</i>', r'{\\i0}', l, flags=re.I)
             # i를 제외한 font나 b태그 등은 모두 지우기로 합니다
             l = re.sub('<[^>]+>', '', l, flags=re.I)
 
@@ -85,14 +85,14 @@ def convert(srt): # written by utylee
                 # \r\n 들 사이에 공백이 있는 경우가 있었습니다  
                 #l = l[:-4]      
                 l = l.rstrip('\r\n ')   # 이 세문자를오른쪽에서부터 다른문제발생까지모두삭제
-                l = re.sub('\r\n', '\\N', l, flags=re.I)
+                l = re.sub('\r\n', r'\\N', l, flags=re.I)
                 cur_ssa += l
 
             else:
                 #l = l[:-2]      # 마지막의 \n\n을 제거한 후
                 #l.replace('\n', '<br>')    # \n을 <br> 로 대치합니다
                 l = l.rstrip('\n ')   # 이 세문자를오른쪽에서부터 다른문제발생까지모두삭제
-                l = re.sub('\n', '\\N', l, flags=re.I)
+                l = re.sub('\n', r'\\N', l, flags=re.I)
                 cur_ssa += l
 
             #print(cur_ssa)
