@@ -83,9 +83,9 @@ def parse(smi): # smi parsing algorithm written in PYSAMI by g6123 (https://gith
 
         content = content.replace('\r', '')
         content = content.replace('\n', '')
-        content = re.sub('<br ?/?>', '\\N', content, flags=re.I)
-        content = re.sub('<i>', '{\\i1}', content, flags=re.I)
-        content = re.sub('</i>', '{\\i0}', content, flags=re.I)
+        content = re.sub('<br ?/?>', r'\\N', content, flags=re.I)
+        content = re.sub('<i>', r'{\\i1}', content, flags=re.I)
+        content = re.sub('</i>', r'{\\i0}', content, flags=re.I)
         content = re.sub('<[^>]+>', remove_tag, content)
 
         #print(f'after:{content}')
