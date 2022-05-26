@@ -50,7 +50,7 @@ SQLAlchemy==1.1.13
 sqlalchemy-aio==0.11.0
 typing==3.7.4.1
 typing-extensions==3.7.4.1
-ujson==1.35
+ujson==5.2.0
 urllib3==1.21.1
 uvloop==0.15.2
 websockets==3.3
