@@ -5,7 +5,10 @@ import os
 import argparse
 import asyncio
 import time
+import math
 from datetime import datetime
+
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--language", help="choose language to convert", default="kr")
@@ -28,8 +31,7 @@ if(SUFFIX in langcodeConvRules):
 
 def init_smi():
     s = \
-    '''
-<SAMI>
+    '''<SAMI>
 <HEAD>
 <TITLE></TITLE>
 <STYLE TYPE="text/css">
@@ -45,79 +47,87 @@ P { margin-left:2pt; margin-right:2pt; margin-bottom:1pt;
 '''
     return s
 
+# 숫자를 받아서 00:00:00 포맷으로 분해합니다
+def format_total(i):
+    i, msec = divmod(int(i), 100)
+
+    hour, minute = divmod(i, 3600)
+    minute, seconds = divmod(minute, 60)
+    seconds_str = f'{seconds:02}.{msec}'
+
+    s = f'{hour:02}:{minute:02}:{seconds_str}'
+    # print(s)
+
+    return s
+
+# string을 받아서 초의 총합을 반납해줍니다
+def calc_total(s):
+    a, b, c = s.split(':')
+    sum = int(a) * 3600000 + int(b) * 60000 + math.trunc(float(c) * 1000)
+    return sum
+
+# 행으로 분리해서 리스트로 반납합니다
+def parse_ssa(ssa):
+    l = ssa.split('\n')
+
+    return l
+
 def convert(ssa): # written by utylee
     smi = init_smi()
+    # print(smi)
 
     #특정기준으로 ssa를 분리합니다
-    #print(ssa)
+    # print(ssa)
+    full = parse_ssa(ssa)
+    # print(full)
+
     '''
-[Events]
-Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Dialogue: Marked=01,0:02:32.28,0:02:36.56,Default,,0,0,0,,{\i1}안녕하십니까\N뉴욕 뉴스입니다{\i0}
-Dialogue: 0,0:00:10.00,0:00:22.87,1080 - 지난 줄거리,,0,0,0,,본 드라마는 실화를 바탕으로 하였으나\N특정한 장면,     인물, 이름, 회사, 위치,\N사건 등은 드라마에 맞게 각색하였다
+    Dialogue: Marked=01,00:03:32.26,00:03:35.96,Default,,0,0,0,,버지니아주, 폴스 교회새벽 3시 26분
     '''
 
+    # 이전 행 endtime과 다음행 starttime이 같을 경우에는 &nbsp;를 추가하지 않기 위해서입니다
+    last_time = 0
 
-    #pat = '\d+\s*\r*\n(\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+)\s*\r*\n'   # 괄호로 그룹을 지정해주면 re.split 시에도 결과리스트에 추가됩니다
-    pat = 'Dialogue: \d+\s*\r*\n(\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+)\s*\r*\n'   # 괄호로 그룹을 지정해주면 re.split 시에도 결과리스트에 추가됩니다
-    result = re.split(pat, srt, flags=re.I)
-    # 1부터 시작해서 홀수는 시간, 짝수는 자막 컨텐츠가 들어가 있습니다
-    print(result[0:5])
-    del result[0]
+    for i in full:
+        # print(i)
+        buf = ''
+        pat = r'dialogue:\s*marked=\d+,(.*),(.*),default,,0,0,0,,(.*)'
 
-    ticktock = 1
-    t_start = 0
-    t_end = 0
-    for l in result:
-        # 시간 구간입니다
-        if ticktock == 1:
-            #print('come')
-            #print(l)
-            ll = list(map(lambda x:re.split('[:|,]', x), re.split(' --> ', l)))
-            #ll = list(map(lambda x:re.split('\W', x), re.split(' --> ', l)))   # \W는 비문자 특수문자를 뜻
-            #print(f'll:{ll}')
-            t_start = int(ll[0][3]) + (int(ll[0][2])*1000) + (int(ll[0][1])*60000) + (int(ll[0][0])*3600000)
-            t_end = int(ll[1][3]) + (int(ll[1][2])*1000) + (int(ll[1][1])*60000) + (int(ll[1][0])*3600000)
-            #print(f'stime:{t_start},endtime:{t_end}')
+        # result = re.split(pat, srt, flags=re.I)
+        m = re.search(pat, i.lower())
+        if(m):
+            starttime = m.group(1)
+            endtime = m.group(2)
+            txt = m.group(3)
+
+            starttime_conv = calc_total(starttime)
+            endtime_conv = calc_total(endtime)
+            # txt의 개행문자를 <br>로 변경합니다
+            txt = re.sub(r'\\n', '<br>', txt)
+
+            # print(m.group(1), m.group(2))
+            # print(f'{starttime_conv}, {endtime_conv}\n{txt}')
+
+            ''' 
+            <SYNC Start=19625><P Class=KRCC>
+            밀포드 북쪽 방향에선  미끄럼 사고가<br>
+            발생해 교통정체가 이어지고 있습니다.
+            <SYNC Start=26525><P Class=KRCC>&nbsp;
+            <SYNC Start=42015><P Class=KRCC>
+            시간됐습니다.
             '''
-            time = int(time)
-            ms = time%1000
-            s = int(time/1000)%60
-            m = int(time/1000/60)%60
-            h = int(time/1000/60/60)
-            '''
 
-            ticktock *= -1
-        # 자막 텍스트 구간입니다
-        else:
-            # \n 은 <br> 로 치환해야합니다
-            '''
-1
-00:02:32,280 --> 00:02:36,569
-<i>안녕하십니까
-뉴욕 뉴스입니다</i>
+            # 이전 자막시간과 간격이 있는 경우는 &nbsp;를 추가합니다
+            if (last_time != 0 and last_time != starttime_conv):
+                buf +=  f'<SYNC Start={last_time}><P Class=KRCC>&nbsp;\n'
 
-<SYNC Start=152280><P Class=KRCC>
-<i>안녕하십니까<br>
-뉴욕 뉴스입니다</i>
-<SYNC Start=156569><P Class=KRCC>&nbsp;
-            '''
-            # \r가 사용된 파일일 경우 \n 대신 \r\n 으로 취급합니다
-            if '\r' in l:
-                l = l[:-4]      
-                l = re.sub('\r\n', '<br>\n', l, flags=re.I)
-                smi += '<SYNC Start=' + str(t_start) + '><P Class=KRCC>\n' + l + '\n<SYNC Start=' + \
-                            str(t_end) + '><P Class=KRCC>&nbsp;\n'
+            buf += f'<SYNC Start={starttime_conv}><P Class=KRCC>\n{txt}\n'
+            # print(buf)
 
-            else:
-                l = l[:-2]      # 마지막의 \n\n을 제거한 후
-                #l.replace('\n', '<br>')    # \n을 <br> 로 대치합니다
-                l = re.sub('\n', '<br>\n', l, flags=re.I)
-                smi += '<SYNC Start=' + str(t_start) + '><P Class=KRCC>\n' + l + '\n<SYNC Start=' + \
-                            str(t_end) + '><P Class=KRCC>&nbsp;\n'
-            ticktock *= -1
-    #print(len(result))
+            last_time = endtime_conv
+            smi += buf
     smi += '</BODY>\n</SAMI>'
+    # print(smi)
 
     return smi
 
@@ -136,27 +146,33 @@ async def main():
                         encoding = cchardet.detect(ssa_raw)
                     ssa = ssa_raw.decode(encoding['encoding'], errors=DECODE_ERRORS)
                     smi_file = codecs.open(os.path.join(p,os.path.splitext(file_name)[0]+SUFFIX+'.smi'),'w',encoding='utf-8')
+
+                    # smi_file.write(convert(ssa))
+
+                    # convert(ssa)
+                    # smi_file.write(convert_ssa(ssa),LANG)
                     smi_file.write(convert(ssa))
+
                     success.append(file_name)
                     if REMOVE_OPTION:
                         os.remove(os.path.join(p,file_name))
                 except:
                     fail.append(file_name)
 
-    srt_list = list(set(success) | set(fail))
-    print('\nfound .srt subtitles:')
-    for srt in srt_list:
-        print(srt)
+    ssa_list = list(set(success) | set(fail))
+    print('\nfound .ssa subtitles:')
+    for ssa in ssa_list:
+        print(ssa)
 
     if len(success) > 0:
         print('\nworked .smi subtitles:')
-        for srt in success:
-            print(srt)
+        for ssa in success:
+            print(ssa)
 
     if len(fail) > 0:
         print('\nfailed .smi subtitles:')
-        for srt in fail:
-            print(srt)
+        for ssa in fail:
+            print(ssa)
 
     if REMOVE_OPTION:
         print('\nworked smi files are removed due to removal option')
