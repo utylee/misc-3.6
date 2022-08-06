@@ -43,7 +43,7 @@ python-engineio==1.7.0
 python-socketio==1.8.0
 Represent==1.5.1
 requests==2.18.1
-sanic==0.6.0
+sanic==20.12.7
 selenium==3.141.0
 six==1.10.0
 SQLAlchemy==1.1.13
