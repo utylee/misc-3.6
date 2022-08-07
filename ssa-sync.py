@@ -9,6 +9,7 @@ Dialogue: Marked=01,0:43:30.87,0:43:37.50,Default,,0,0,0,,어쩌면.. 그건 내
 '''
 # Usage : smi-sync filename +-sec starttime('00:00:00') endtime(-1)
 #           if range specified two argument all must included
+#               : no! if one starttime there, endtime is -1 automatically
 
 
 # string을 받아서 초의 총합을 반납해줍니다
@@ -181,13 +182,18 @@ if __name__ == "__main__":
     until_time = '09:00:00'
     # until_time = -1
     try:
-        if(sys.argv[3] and sys.argv[4]):
+        # if(sys.argv[3] and sys.argv[4]):
             # start_line = int(sys.argv[3])
             # end_line = int(sys.argv[4])
+
+        # if (sys.argv[3]):
+
+        if (len(sys.argv) >= 4):
             from_time = sys.argv[3]
-            until_time = sys.argv[4]
-            if (until_time == '-1'):
-                until_time = '09:00:00'
+            if (len(sys.argv) == 5):
+                until_time = sys.argv[4]
+                if (until_time == '-1'):
+                    until_time = '09:00:00'
     except:
         print('no line argument \n processing full file')
         #import pdb;pdb.set_trace()
