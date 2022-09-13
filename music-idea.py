@@ -21,10 +21,17 @@ tbl_idea = sa.Table('music_idea', meta,
             sa.Column('content', sa.String(255)),
             sa.Column('description', sa.String(1024)))
             '''
+def transl(content):
+    content = content.replace('_u_sp_', ' ')
+    content = content.replace('_u_qa_', '?')
+    content = content.replace('_u_im_', '&')
+
+    return content
 
 async def add_writing(request):
     cur = round(datetime.datetime.now().timestamp())
     content = request.match_info['content']
+    content = transl(content)
     async with request.app['engine'].acquire() as conn:
         # print(len(await conn.execute(db.tbl_idea.select())))
 
@@ -76,6 +83,7 @@ async def add_writing(request):
 async def add_arranging(request):
     cur = round(datetime.datetime.now().timestamp())
     content = request.match_info['content']
+    content = transl(content)
     async with request.app['engine'].acquire() as conn:
         # print(len(await conn.execute(db.tbl_idea.select())))
 
@@ -128,6 +136,7 @@ async def add_arranging(request):
 async def add_mixing(request):
     cur = round(datetime.datetime.now().timestamp())
     content = request.match_info['content']
+    content = transl(content)
     async with request.app['engine'].acquire() as conn:
         # print(len(await conn.execute(db.tbl_idea.select())))
 
@@ -396,15 +405,55 @@ async def pick_any(request):
 
     return web.Response(text=printing)
 
+async def list_type(request):
+    type_str = ['Writing', 'Arranging', 'Mixing']
+    printings = ''
+
+    type= int(request.match_info['content']) 
+
+    printings += '\n'
+    async with request.app['engine'].acquire() as conn:
+        confirm = await (await conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==type))).first()
+        if confirm is None:
+            printings += f'{type_str[type]} 관련 항목이 없습니다\n'
+
+    async with request.app['engine'].acquire() as conn:
+        async for r in conn.execute(sa.select([db.tbl_idea.c.content_number,
+                                            db.tbl_idea.c.content])
+                                            .where(db.tbl_idea.c.type==type)
+                                            .order_by(db.tbl_idea.c.content_number)):
+            printings += f'{type_str[type]} {r[0]} {r[1]} \n' 
+
+    return web.Response(text=printings)
+
 async def list_all(request):
-    return 0
-    pass
+    types = [0, 1, 2]
+    type_str = ['Writing', 'Arranging', 'Mixing']
+    printings = ''
 
-async def fetch_db(app, engine):
-    async with engine.acquire() as conn:
-        pass
+    for i in types:
+        printings += '\n'
+        async with request.app['engine'].acquire() as conn:
+            confirm = await (await conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==i))).first()
+            if confirm is None:
+                printings += f'{type_str[i]} 관련 항목이 없습니다\n'
+                continue
 
-    return 0
+        # async for r in conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==i).order_by(db.tbl_idea.c.content_number)):
+        # async for r in conn.execute(sa.select([db.tbl_idea.c.content_number,
+        #                                    db.tbl_idea.c.content])
+        #                             .where(db.tbl_idea.c.type==i)
+        #                             .order_by(db.tbl_idea.c.content_number)):
+        async with request.app['engine'].acquire() as conn:
+            # async for r in conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==i).order_by(db.tbl_idea.c.content_number)):
+            async for r in conn.execute(sa.select([db.tbl_idea.c.content_number,
+                                                db.tbl_idea.c.content])
+                                                .where(db.tbl_idea.c.type==i)
+                                                .order_by(db.tbl_idea.c.content_number)):
+                printings += f'{type_str[i]} {r[0]} {r[1]} \n' 
+
+    return web.Response(text=printings)
+
 
 async def create_bg_tasks(app):
     app['engine'] = await create_engine(host='192.168.1.204',
@@ -435,7 +484,8 @@ if __name__ == "__main__":
                     web.get('/pick/mixing', pick_mixing),
                     web.get('/pick/any', pick_any),
 
-                    web.get('/list_all/{content:.*}', list_all),
+                    web.get('/list_all', list_all),
+                    web.get('/list_all/{content:.*}', list_type)
                     ])
                     #web.get('/weather', weather)
                     #])
