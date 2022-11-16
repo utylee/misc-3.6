@@ -80,18 +80,18 @@ async def add_writing(request):
     printing = f'입력 Writing {number}. {content}'
     return web.Response(text=printing)
 
-async def add_arranging(request):
+async def add_sounding(request):
     cur = round(datetime.datetime.now().timestamp())
     content = request.match_info['content']
     content = transl(content)
     async with request.app['engine'].acquire() as conn:
         # print(len(await conn.execute(db.tbl_idea.select())))
 
-        # arranging 항목의 수를 셉니다
+        # writing 항목의 수를 셉니다
         count = 0
         async for r in conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==1)):
             count += 1
-        print(f'총 {count}개의 arranging 항목이 있습니다')
+        print(f'총 {count}개의 sounding 항목이 있습니다')
 
         exists = []
         punks = []
@@ -101,7 +101,7 @@ async def add_arranging(request):
             async for r in conn.execute(db.tbl_idea.select()
                                         .where(db.tbl_idea.c.type==1)
                                         .where(db.tbl_idea.c.content_number==l)):
-                print(f'add_arranging 중 {l+1} 이 발견되었습니다')
+                print(f'add_sounding 중 {l+1} 이 발견되었습니다')
                 exists.append(l)
                 break
         print(f'exists={exists}')
@@ -128,6 +128,58 @@ async def add_arranging(request):
                                                 content_number=number, 
                                                 content=content, 
                                                 description=''))
+    # return 0
+    printing = f'입력 Sounding {number}. {content}'
+    return web.Response(text=printing)
+
+async def add_arranging(request):
+    cur = round(datetime.datetime.now().timestamp())
+    content = request.match_info['content']
+    content = transl(content)
+    async with request.app['engine'].acquire() as conn:
+        # print(len(await conn.execute(db.tbl_idea.select())))
+
+        # arranging 항목의 수를 셉니다
+        count = 0
+        async for r in conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==2)):
+            count += 1
+        print(f'총 {count}개의 arranging 항목이 있습니다')
+
+        exists = []
+        punks = []
+
+        templist = range(1, count+1)
+        for l in templist:
+            async for r in conn.execute(db.tbl_idea.select()
+                                        .where(db.tbl_idea.c.type==2)
+                                        .where(db.tbl_idea.c.content_number==l)):
+                print(f'add_arranging 중 {l+1} 이 발견되었습니다')
+                exists.append(l)
+                break
+        print(f'exists={exists}')
+
+        for i in templist:
+            if i not in exists:
+                punks.append(i)
+
+        # 비어있는 숫자를 경고해줍니다. 나중에 목록추가 숫자설정에 계속 문제를 일으킵니다
+        if len(punks):
+            print('없는 숫자들은 ', end='')
+            for i in punks:
+                print(f'{i} ', end='')
+            print('입니다')
+
+        number = count + 1 
+        if len(punks):
+            number = punks[0] 
+                                        
+        # 없는 숫자중 가장 작은 숫자로 지정하여 입력해줍니다
+        #async for r in conn.execute(db.tbl_idea.select()):
+        await conn.execute(db.tbl_idea.insert().values(id=cur, 
+                                                type=2, 
+                                                content_number=number, 
+                                                content=content, 
+                                                description=''))
     printing = f'입력 Arranging {number}. {content}'
     return web.Response(text=printing)
     # return 0
@@ -142,7 +194,7 @@ async def add_mixing(request):
 
         # writing 항목의 수를 셉니다
         count = 0
-        async for r in conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==2)):
+        async for r in conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==3)):
             count += 1
         print(f'총 {count}개의 writing 항목이 있습니다')
 
@@ -152,7 +204,7 @@ async def add_mixing(request):
         templist = range(1, count+1)
         for l in templist:
             async for r in conn.execute(db.tbl_idea.select()
-                                        .where(db.tbl_idea.c.type==2)
+                                        .where(db.tbl_idea.c.type==3)
                                         .where(db.tbl_idea.c.content_number==l)):
                 print(f'add_mixing 중 {l+1} 이 발견되었습니다')
                 exists.append(l)
@@ -177,7 +229,7 @@ async def add_mixing(request):
         # 없는 숫자중 가장 작은 숫자로 지정하여 입력해줍니다
         #async for r in conn.execute(db.tbl_idea.select()):
         await conn.execute(db.tbl_idea.insert().values(id=cur, 
-                                                type=2, 
+                                                type=3, 
                                                 content_number=number, 
                                                 content=content, 
                                                 description=''))
@@ -205,20 +257,41 @@ async def remove_writing(request):
     # return web.Response(text=f'{content_number}. {content}')
     return web.Response(text=printing)
 
-async def remove_arranging(request):
+async def remove_sounding(request):
     number = int(request.match_info['content'])
     content = ''
     printing = ''
     async with request.app['engine'].acquire() as conn:
         confirm = await (await conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==1))).first()
         if confirm is None:
-            return web.Response(text='Arranging 관련 항목이 없습니다')
+            return web.Response(text='Sounding 관련 항목이 없습니다')
 
         async for p in conn.execute(sa.select([db.tbl_idea.c.content])
                                 .where(db.tbl_idea.c.type==1).where(db.tbl_idea.c.content_number==number)):
             content = p[0]
         await conn.execute(db.tbl_idea.delete()
                                 .where(db.tbl_idea.c.type==1).where(db.tbl_idea.c.content_number==number))
+
+    # printing += f'\n Mixing {content_number}. {content}'
+    printing = f'삭제 Sounding {number}. {content}' if len(content) else f'없는 항목입니다'
+
+    # return web.Response(text=f'{content_number}. {content}')
+    return web.Response(text=printing)
+
+async def remove_arranging(request):
+    number = int(request.match_info['content'])
+    content = ''
+    printing = ''
+    async with request.app['engine'].acquire() as conn:
+        confirm = await (await conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==2))).first()
+        if confirm is None:
+            return web.Response(text='Arranging 관련 항목이 없습니다')
+
+        async for p in conn.execute(sa.select([db.tbl_idea.c.content])
+                                .where(db.tbl_idea.c.type==2).where(db.tbl_idea.c.content_number==number)):
+            content = p[0]
+        await conn.execute(db.tbl_idea.delete()
+                                .where(db.tbl_idea.c.type==2).where(db.tbl_idea.c.content_number==number))
 
     # printing += f'\n Mixing {content_number}. {content}'
     printing = f'삭제 Arranging {number}. {content}' if len(content) else f'없는 항목입니다'
@@ -231,15 +304,15 @@ async def remove_mixing(request):
     content = ''
     printing = ''
     async with request.app['engine'].acquire() as conn:
-        confirm = await (await conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==2))).first()
+        confirm = await (await conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==3))).first()
         if confirm is None:
             return web.Response(text='Mixing 관련 항목이 없습니다')
 
         async for p in conn.execute(sa.select([db.tbl_idea.c.content])
-                                .where(db.tbl_idea.c.type==2).where(db.tbl_idea.c.content_number==number)):
+                                .where(db.tbl_idea.c.type==3).where(db.tbl_idea.c.content_number==number)):
             content = p[0]
         await conn.execute(db.tbl_idea.delete()
-                                .where(db.tbl_idea.c.type==2).where(db.tbl_idea.c.content_number==number))
+                                .where(db.tbl_idea.c.type==3).where(db.tbl_idea.c.content_number==number))
 
     # printing += f'\n Mixing {content_number}. {content}'
     printing = f'삭제 Mixing {number}. {content}' if len(content) else f'없는 항목입니다'
@@ -281,7 +354,7 @@ async def pick_writing(request):
     # return web.Response(text=f'{content_number}. {content}')
     return web.Response(text=printing)
 
-async def pick_arranging(request):
+async def pick_sounding(request):
     max = 0
     content_number = 1
     content = ''
@@ -289,7 +362,7 @@ async def pick_arranging(request):
     async with request.app['engine'].acquire() as conn:
         confirm = await (await conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==1))).first()
         if confirm is None:
-            return web.Response(text='Arranging 관련 항목이 없습니다')
+            return web.Response(text='Writing 관련 항목이 없습니다')
         async for r in conn.execute(sa.select([db.tbl_idea.c.content_number]).where(db.tbl_idea.c.type==1)):
             max = r[0] if r[0] > max else max
 
@@ -310,12 +383,12 @@ async def pick_arranging(request):
             content = p[1]
 
     # printing += f'\n Mixing {content_number}. {content}'
-    printing = f'Arranging {content_number}. {content}'
+    printing = f'Sounding {content_number}. {content}'
 
     # return web.Response(text=f'{content_number}. {content}')
     return web.Response(text=printing)
 
-async def pick_mixing(request):
+async def pick_arranging(request):
     max = 0
     content_number = 1
     content = ''
@@ -323,8 +396,7 @@ async def pick_mixing(request):
     async with request.app['engine'].acquire() as conn:
         confirm = await (await conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==2))).first()
         if confirm is None:
-            return web.Response(text='Mixing 관련 항목이 없습니다')
-
+            return web.Response(text='Arranging 관련 항목이 없습니다')
         async for r in conn.execute(sa.select([db.tbl_idea.c.content_number]).where(db.tbl_idea.c.type==2)):
             max = r[0] if r[0] > max else max
 
@@ -341,6 +413,41 @@ async def pick_mixing(request):
         async for p in conn.execute(sa.select([db.tbl_idea.c.content_number, 
                                 db.tbl_idea.c.content])
                                 .where(db.tbl_idea.c.type==2).where(db.tbl_idea.c.content_number==number)):
+            content_number = p[0]
+            content = p[1]
+
+    # printing += f'\n Mixing {content_number}. {content}'
+    printing = f'Arranging {content_number}. {content}'
+
+    # return web.Response(text=f'{content_number}. {content}')
+    return web.Response(text=printing)
+
+async def pick_mixing(request):
+    max = 0
+    content_number = 1
+    content = ''
+    printing = ''
+    async with request.app['engine'].acquire() as conn:
+        confirm = await (await conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==3))).first()
+        if confirm is None:
+            return web.Response(text='Mixing 관련 항목이 없습니다')
+
+        async for r in conn.execute(sa.select([db.tbl_idea.c.content_number]).where(db.tbl_idea.c.type==3)):
+            max = r[0] if r[0] > max else max
+
+        number = 1
+        while 1:
+            number = random.randint(1, max + 1)
+            printing += f'랜덤 숫자는 {number}입니다\n'
+            print(f'랜덤 숫자는 {number}입니다')
+            result = await (await conn.execute(db.tbl_idea.select().where(db.tbl_idea.c.type==3).where(db.tbl_idea.c.content_number==number))).first()
+            if result: break
+        printing += f'선정된 숫자는 {number}입니다\n'
+        print(f'선정된 숫자는 {number}입니다')
+
+        async for p in conn.execute(sa.select([db.tbl_idea.c.content_number, 
+                                db.tbl_idea.c.content])
+                                .where(db.tbl_idea.c.type==3).where(db.tbl_idea.c.content_number==number)):
             content_number = p[0]
             content = p[1]
 
@@ -395,18 +502,21 @@ async def pick_any(request):
             content = p[0]
 
     # printing += f'\n Mixing {content_number}. {content}'
-    type_str = 'Writing'
-    if type == 1:
-        type_str = 'Arranging'
-    elif type == 2:
-        type_str = 'Mixing'
+    type_str = ['Writing',  'Sounding',  'Arranging',  'Mixing']
 
-    printing = f'{type_str} {content_number}. {content}'
+    # type_str = 'Writing'
+    # if type == 1:
+    #     type_str = 'Arranging'
+    # elif type == 2:
+    #     type_str = 'Mixing'
+    # printing = f'{type_str} {content_number}. {content}'
+
+    printing = f'{type_str[type]} {content_number}. {content}'
 
     return web.Response(text=printing)
 
 async def list_type(request):
-    type_str = ['Writing', 'Arranging', 'Mixing']
+    type_str = ['Writing', 'Sounding', 'Arranging', 'Mixing']
     printings = ''
 
     type= int(request.match_info['content']) 
@@ -427,8 +537,8 @@ async def list_type(request):
     return web.Response(text=printings)
 
 async def list_all(request):
-    types = [0, 1, 2]
-    type_str = ['Writing', 'Arranging', 'Mixing']
+    types = [0, 1, 2, 3]
+    type_str = ['Writing', 'Sounding', 'Arranging', 'Mixing']
     printings = ''
 
     for i in types:
@@ -474,12 +584,15 @@ if __name__ == "__main__":
 
     app.add_routes([web.get('/', idea), 
                     web.get('/add/writing/{content:.*}', add_writing),
+                    web.get('/add/sounding/{content:.*}', add_sounding),
                     web.get('/add/arranging/{content:.*}', add_arranging),
                     web.get('/add/mixing/{content:.*}', add_mixing),
                     web.get('/remove/writing/{content:.*}', remove_writing),
+                    web.get('/remove/sounding/{content:.*}', remove_sounding),
                     web.get('/remove/arranging/{content:.*}', remove_arranging),
                     web.get('/remove/mixing/{content:.*}', remove_mixing),
                     web.get('/pick/writing', pick_writing),
+                    web.get('/pick/sounding', pick_sounding),
                     web.get('/pick/arranging', pick_arranging),
                     web.get('/pick/mixing', pick_mixing),
                     web.get('/pick/any', pick_any),
