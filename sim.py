@@ -22,6 +22,14 @@ import sim_db as db
 #devel = 1
 devel = 0
 
+
+# db 접속 관련 정보입니다
+host_ip = '192.168.1.204'
+db_name = 'wow_transl'
+db_usr = 'utylee'
+db_pwd = 'sksmsqnwk11'
+
+
 # 전투시간과 풀버프삭제를 추가할 지를 결정합니다
 use_pre_potion = 0
 enemies = 1
@@ -30,10 +38,11 @@ file_report = '/mnt/d/report.html'
 #seq_num = 35        # sample sequence 표기시 기본 30개만 표현해줍니다
 #seq_num = 40        # sample sequence 표기시 기본 30개만 표현해줍니다
 #seq_num = 200        # sample sequence 표기시 기본 30개만 표현해줍니다
-#time = 25                   # 0일 경우 health 기반 모드로 동작합니다
+# #time = 25                   # 0일 경우 health 기반 모드로 동작합니다
 time = 30                   # 0일 경우 health 기반 모드로 동작합니다
 #target_health = 270000
-target_health = 60000
+# target_health = 60000
+target_health = 300
 class_ = ''          # 클립보드에서 spec=직업 문구를 통해서 직업특성을 기록해놓습니다
 
 # wowhead에서 주문넘버로 한글명을 얻어올수 있습니다
@@ -51,6 +60,8 @@ def fixed_string(s):
     ret = ''
     if s == 'auto_attack':
         ret = '(자동공격)'
+    elif s == 'on_use_trinket':
+        ret = '<장신구사용>'
     elif s == 'use_items':
         ret = '<아이템사용>'
     elif s == 'potion':
@@ -145,7 +156,7 @@ async def translate(engine, spellid, skill):
 async def print_sample_sequence(param, t_or_h):           # health는 굳이 받을 필요가 없습니다
     #print('\n')
     #print('ss')
-    #global time 
+    ##global time 
 
     seq_num = 0
     if param == 0:      # time 기준일 경우입니다
@@ -163,14 +174,15 @@ async def print_sample_sequence(param, t_or_h):           # health는 굳이 받
         full_br = 0         # loop 탈출 변수
         skills = set()         # 기술이름들을 따로 저장하고 있다가 번역합니다
         result = []
-        for l in full:
+        for f in full:
             if full_br:
                 break
             num += 1
             # sample seqence 부분찾기
-            m = re.search('Sample Sequence Table', l)
+            m = re.search('Sample Sequence Table', f)
             #m = re.search('sample sequence table', l, flags=re.I)
             if m:
+                # print('found')
                 # 해당부터의 리스트로 제한하여 탐색합니다
                 frag1 = full[num:]
                 frag1_copy = copy.deepcopy(frag1)
@@ -228,26 +240,28 @@ async def print_sample_sequence(param, t_or_h):           # health는 굳이 받
             result.append([m1.group(1), skill])
             '''
             output = ''
+
             # spell db에 접속합니다 
-            async with create_engine(host = '192.168.0.212',
-                                            database = 'wow_transl',
-                                            user = 'postgres',
-                                            password = 'sksmsqnwk11') as engine:
+            async with create_engine(host = host_ip,
+                                            database = db_name,
+                                            user = db_usr,
+                                            password = db_pwd) as engine:
                 #print('connected')
+                # 샘플 시퀀스 전체 결과행을 한줄씩 처리합니다
                 for l in result:
                     found = 0
-                    #skill = l[1]
+                    #skill = l[2]
                     # 예외로 고정된 문자열로 번역할 항목인지 판단합니다
                     skill = fixed_string(l[1])
-
                     if skill == l[1]:       # 예외 고정문자로 변환이 없으면 변환을 진행합니다
                         skill = skill.replace("_"," ")
 
                         # 스킬 이름이 html과 일치하지 않는 특수한 경우를 수동으로 교정합니다
                         if skill == "multishot": skill = "multi-shot"
-                        if skill == "dark soul": skill = "dark soul: misery"
+                        elif skill == "dark soul": skill = "dark soul: misery"
                         #print(f'skill: {skill}')
 
+                        # report.html 전체행 하나하나 점검합니다?
                         for line in full:
                             #print(f'line: {line}')
                             #t = re.search('www.wowhead.com/spell=(\d+)[\?ilvl=\d+]*.*>' + skill + '</a>' \
@@ -260,20 +274,35 @@ async def print_sample_sequence(param, t_or_h):           # health는 굳이 받
                                 spellid = t.group(1)
                                 #print(spellid)  
                                 kor = await translate(engine, spellid, skill)
+                                # print('번역함')
+
                                 l += [spellid, kor]
                                 found = 1
                                 break
                     if found != 1:
                         # spellid 는 0으로, 스킬이름은 공백이나 고정값을 넣습니다
+                        # l.append('0')
+                        # l.append(skill)
+                        # print('번역 안함')
                         l += ['0', skill]       
+                    # print(f'l is :{l}')
                 #print(f'{m1.group(1)}\t{skill}')
                 print(f'\r                                                   ', end='')
+
+                # print(f'result: {result}')
 
                 for l in result:
                     # l[0] 1 2 3 4 각각은 시간 / 스킬아이디 / 자원(들) / 대상 / 기술명 의미합니다
                      
                     #print(f'\r{l[0]}\t{l[3]}')      # 시간 /t   기술   순서로 출력
+                    # print(f'\r{l[0]:15}\t{l[5]:15}\t', end='')      # 시간 기술 자원 대상    순서로 출력합니다
+
+                    # 스킬id과 한글명이 없으면 별도로 출력해줍니다
                     print(f'\r{l[0]:15}\t{l[5]:15}\t', end='')      # 시간 기술 자원 대상    순서로 출력합니다
+                    # if(len(l) < 5):
+                    #     print(f'\r{l[0]:15}\t{l[1]:15}\t', end='')      # 시간 기술 자원 대상    순서로 출력합니다
+                    # else:
+                    #     print(f'\r{l[0]:15}\t{l[5]:15}\t', end='')      # 시간 기술 자원 대상    순서로 출력합니다
                     for _ in l[2]:                  # 자원이 여러개일 경우를 대응합니다
                         print(f'{_:7}', end='')
                         print(f'\t', end='')
@@ -303,11 +332,14 @@ async def sim_myself(r, t_or_h, e):             # t_or_h : health나 time 이냐
     _ = option_string(r, t_or_h, e)
     ins = f'echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {_} html={file_report}'
     result = subprocess.check_output(ins, shell=True)
+
+    # print(f'full_command:{ins}')
     
     # bytes 값을 스트링으로 변환합니다
     result = result.decode()
 
     print('\n*****************************************************************')
+
     # 풀 출력
     if(r == 1):
         print(result)
@@ -341,18 +373,31 @@ async def sim_myself(r, t_or_h, e):             # t_or_h : health나 time 이냐
 
         # s옵션일 경우, 샘플 시퀀스를 출력해줍니다
         #if (r >= 3):
-        if sys.argv[1] == 's' or    \
-            sys.argv[1] == 'ss' or    \
-            sys.argv[1] == 'sss' or    \
-            sys.argv[1] == 'ssss' or \
-            sys.argv[1] == 'sssss':
+        # if sys.argv[1] == 's' or    \
+        #     sys.argv[1] == 'ss' or    \
+        #     sys.argv[1] == 'sss' or    \
+        #     sys.argv[1] == 'ssss' or \
+        #     sys.argv[1] == 'sssss':
+
+        if r == 's' or    \
+            r == 'ss' or    \
+            r == 'sss' or    \
+            r == 'ssss' or \
+            r == 'sssss':
+
             await print_sample_sequence(0, t_or_h)
 
-        elif sys.argv[1] == 'h' or    \
-            sys.argv[1] == 'hh' or    \
-            sys.argv[1] == 'hhh' or    \
-            sys.argv[1] == 'hhhh' or \
-            sys.argv[1] == 'hhhhh':
+        # elif sys.argv[1] == 'h' or    \
+        #     sys.argv[1] == 'hh' or    \
+        #     sys.argv[1] == 'hhh' or    \
+        #     sys.argv[1] == 'hhhh' or \
+        #     sys.argv[1] == 'hhhhh':
+
+        elif r == 'h' or    \
+            r == 'hh' or    \
+            r == 'hhh' or    \
+            r == 'hhhh' or \
+            r == 'hhhhh':
             await print_sample_sequence(1, t_or_h)
         
         #print(new_lines)
@@ -476,6 +521,7 @@ def get_eng_name(r):
     #print(name)
     return name
 
+# 스킬 중 궁극기 등이 없는 경우를 측정하고 싶을 때 적용합니다
 def skips_str(param):
     global class_
     s = ''
@@ -585,7 +631,9 @@ async def main():
 
         # 별도의 파라미터없이 클립보드만으로 실행할 경우입니다
         else:
-            await sim_myself(0)
+            print('sim_myself')
+            # await sim_myself(0)
+            await sim_myself('s', 30, 1)
     except:
         pass
     #print('*****************************************************************\n')
