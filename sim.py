@@ -42,7 +42,7 @@ file_report = '/mnt/d/report.html'
 time = 30                   # 0일 경우 health 기반 모드로 동작합니다
 #target_health = 270000
 # target_health = 60000
-target_health = 300
+target_health = 30000
 class_ = ''          # 클립보드에서 spec=직업 문구를 통해서 직업특성을 기록해놓습니다
 
 # wowhead에서 주문넘버로 한글명을 얻어올수 있습니다
@@ -109,6 +109,9 @@ def option_string(param, t_or_h, e):        # t_or_h : time 혹은 적의 health
             # 기본입니다
             r = f'fixed_time=0 override.target_health={t_or_h} optimal_raid={buff} desired_targets={e}' if add_options else ''
         #elif param >= 2:
+        # 시퀀스는 출력 안하는 옵션입니다
+        elif param =='n' or param =='f':
+            r = f'max_time={t_or_h} optimal_raid={buff} desired_targets={e}' if add_options else ''
         else:
             # 건너뛰는 액션을 추가합니다
             r = f'fixed_time=0 override.target_health={t_or_h} optimal_raid={buff} desired_targets={e} skip_actions={skips_str(param)}' if add_options else ''
@@ -151,6 +154,20 @@ async def translate(engine, spellid, skill):
             await conn.execute(db.tbl_spells.update().where(db.tbl_spells.c.spell_id == spellid)
                                                 .values(kor=spell))
     return spell
+
+async def find_avg_itemlvl():
+    async with aiofiles.open(file_report, 'r') as f :
+        itemlvl = ''
+        fullline = await f.readlines()
+        for f in fullline[4000:]:
+            m = re.search('Average Item Level: (\d*)', f, flags=re.I)
+            if m:
+                itemlvl = m.group(1)
+                # print(f'avg item lvl: {itemlvl}')
+                # print(f'avg item lvl: {m.group(1)}')
+                return itemlvl
+
+
 
 # sample sequence 출력 추가 프로세스
 async def print_sample_sequence(param, t_or_h):           # health는 굳이 받을 필요가 없습니다
@@ -341,7 +358,8 @@ async def sim_myself(r, t_or_h, e):             # t_or_h : health나 time 이냐
     print('\n*****************************************************************')
 
     # 풀 출력
-    if(r == 1):
+    # if(r == 1):
+    if(r == 'f'):
         print(result)
    
     else:
@@ -352,7 +370,11 @@ async def sim_myself(r, t_or_h, e):             # t_or_h : health나 time 이냐
         # 새 리스트를 선언합니다
         new_lines = []
         target_num = 0
-        
+
+        itemlvl = 0
+        itemlvl = await find_avg_itemlvl()
+
+        # 아이디를 찾습니다
         for i in range(0,40):
             line = lines[i]
             #print(line)
@@ -360,14 +382,24 @@ async def sim_myself(r, t_or_h, e):             # t_or_h : health나 time 이냐
             m = re.search('Player: ', line)
             
             if m:
-                #print('line [{}] : {}'.format(i, m.group()))
-                print('\n{}'.format(line))
+                print(f'\n{line}')
+                print(f'item lv. {itemlvl}')
+                # print('\n{}'.format(line))
+                print('\n{}\n'.format(lines[i+1]))
                 target_num = i
                 break
+
+        # targetlist = result[4000:]
+        # for l in targetlist:
+        #     m = re.search('Average Item Level: ', line)
+
+        #     if m:
+
         
         #찾은 다음열에 원하는 값이 들어있습니다.
         #print('\n{}\n\n{}'.format(lines[i], lines[i+1]))
-        print('\n{}\n'.format(lines[i+1]))
+        # print('\n{}\n'.format(lines[i+1]))
+        # print('\n{}\n'.format(lines[target_num+1]))
 
         print('*****************************************************************\n')
 
@@ -399,6 +431,10 @@ async def sim_myself(r, t_or_h, e):             # t_or_h : health나 time 이냐
             r == 'hhhh' or \
             r == 'hhhhh':
             await print_sample_sequence(1, t_or_h)
+
+        else:
+            pass
+
         
         #print(new_lines)
         
@@ -631,9 +667,11 @@ async def main():
 
         # 별도의 파라미터없이 클립보드만으로 실행할 경우입니다
         else:
-            print('sim_myself')
+            print('just DPS, 20 secs...')
             # await sim_myself(0)
-            await sim_myself('s', 30, 1)
+            # await sim_myself('s', 30, 1)
+            await sim_myself('n', 20, 1)
+            # await sim_myself('f', 20, 1)
     except:
         pass
     #print('*****************************************************************\n')
