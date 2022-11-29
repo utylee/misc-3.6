@@ -29,6 +29,7 @@ idna==3.4
 idna-ssl==1.1.0
 importlib-metadata==4.12.0
 instapush==0.1.2
+<<<<<<< HEAD
 itsdangerous==2.1.2
 jedi==0.18.1
 jeepney==0.8.0

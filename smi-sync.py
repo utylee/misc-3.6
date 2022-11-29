@@ -57,9 +57,17 @@ if __name__ == "__main__":
     start_line = 0
     end_line = -1
     try:
-        if(sys.argv[3] and sys.argv[4]):
+        # if(sys.argv[3] and sys.argv[4]):
+        #     start_line = int(sys.argv[3])
+        #     end_line = int(sys.argv[4])
+
+        # if (sys.argv[3]):
+        if (len(sys.argv) >= 4):
             start_line = int(sys.argv[3])
-            end_line = int(sys.argv[4])
+            # if (sys.argv[4]):
+            if (len(sys.argv) == 5):
+                end_line = int(sys.argv[4])
+
     except:
         print('no line argument \n processing full file')
         #import pdb;pdb.set_trace()
