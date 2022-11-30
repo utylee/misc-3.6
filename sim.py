@@ -1,5 +1,5 @@
 import sim_db as db
-import copy
+# import copy
 import requests
 import sys
 import re
@@ -15,8 +15,12 @@ import uvloop
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
+# 아무옵션을 주지 않으면 기본 dps만 계산해서 표시해줍니다
 # 's' 옵션을 주면 html을 파싱하여 sample sequence table 의 로테이션을 출력해줍니다
+# 'sss' 등 반복횟수를 늘리면 궁극기 등을 하나씩 제거한 순수 기술 시퀀스를 표시합니다
 # 'h' 옵션을 주면 s 옵션일 때와 동일할지만 시간이 아닌 헬스량으로 계산합니다
+# 'hhh' 등 반복횟수를 늘리면 궁극기 등을 하나씩 제거한 순수 기술 시퀀스를 표시합니다
+# 'd' 옵션은 clipboard가 아닌 기존에 저장된 utylee..simc 를 활용해서 계산합니다
 
 # 개발중 모드일 때는 pyperclip을 통한 클립보드 복사를 하지 않고 그냥 기존 파일을 통해 합니다
 # devel = 1
@@ -168,7 +172,8 @@ async def translate(engine, spellid, skill):
             end="",
         )
         async for r in conn.execute(
-            select([db.tbl_spells.c.kor]).where(db.tbl_spells.c.spell_id == spellid)
+            select([db.tbl_spells.c.kor]).where(
+                db.tbl_spells.c.spell_id == spellid)
         ):
             if r is not None:
                 condi = 1
@@ -258,11 +263,10 @@ async def print_sample_sequence(param, t_or_h):  # health는 굳이 받을 필�
     async with aiofiles.open(file_report, "r") as f:
         full = await f.readlines()
         num = 0  # 라인넘버를 저장하는 변수입니다
-        cond1, cond2, cond3 = 0, 0, 0
         full_br = 0  # loop 탈출 변수
         skills = set()  # 기술이름들을 따로 저장하고 있다가 번역합니다
         result = []
-        
+
         for f in full:
             if full_br:
                 break
@@ -277,7 +281,7 @@ async def print_sample_sequence(param, t_or_h):  # health는 굳이 받을 필�
                 # print('found')
                 # 해당부터의 리스트로 제한하여 탐색합니다
                 frag1 = full[num:]
-                frag1_copy = copy.deepcopy(frag1)
+                # frag1_copy = copy.deepcopy(frag1)
                 index = 0
                 found = 0
                 target = ""
@@ -355,7 +359,7 @@ async def print_sample_sequence(param, t_or_h):  # health는 굳이 받을 필�
 
             result.append([m1.group(1), skill])
             """
-            output = ""
+            # output = ""
 
             # spell db에 접속합니다
             async with create_engine(
@@ -464,6 +468,7 @@ async def print_sample_sequence(param, t_or_h):  # health는 굳이 받을 필�
 async def sim_myself(r, t_or_h, e):  # t_or_h : health나 time 이냐를 받습니다
     global file_report
     global class_
+    global devel
     # 개발모드일 때는 클립보드로부터 파일쓰기를 행하지 않고 기존 파일을 보존해서 작업합니다
     if not devel:
         # 클립보드의 내용을 특정 파일에 기록한후
@@ -511,8 +516,8 @@ async def sim_myself(r, t_or_h, e):  # t_or_h : health나 time 이냐를 받습�
         lines = result.split("\n", 41)  # 굳이 전체를 다 파싱하진 않고 31열까지만 파싱합니다
 
         # 새 리스트를 선언합니다
-        new_lines = []
-        target_num = 0
+        # new_lines = []
+        # target_num = 0
 
         itemlvl = 0
         itemlvl = await find_avg_itemlvl()
@@ -529,7 +534,7 @@ async def sim_myself(r, t_or_h, e):  # t_or_h : health나 time 이냐를 받습�
                 print(f"item lv. {itemlvl}")
                 # print('\n{}'.format(line))
                 print("\n{}\n".format(lines[i + 1]))
-                target_num = i
+                # target_num = i
                 break
 
         # targetlist = result[4000:]
@@ -623,9 +628,11 @@ def sim_him(him):
             flags=re.I,
         )
         desc = txt.group(1)
+        # option_string 이 설정안되어있어 일단 기본값을 넣어줬습니다
+        #
         cmd = "echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc \
                             armory=kr,azshara,{} {}".format(
-            him, option_string()
+            him, option_string('s', 30, 1)
         )
 
     """
@@ -645,7 +652,7 @@ def sim_him(him):
     lines = result.split("\n", 31)  # 굳이 전체를 다 파싱하진 않고 31열까지만 파싱합니다
 
     # 새 리스트를 선언합니다
-    new_lines = []
+    # new_lines = []
     target_num = 0
 
     for i in range(0, 30):
@@ -664,10 +671,12 @@ def sim_him(him):
     # 추가로 wow웹에서 가져온 레벨과 무기레벨 등의 description도 표시합니다
     # print('\n{}\n\n{}'.format(line[i-1], lines[i+1]))
     # print('{}\n{}\n'.format(desc, lines[i+1]))
-    print("\n{}\n".format(lines[i + 1]))
+    # print("\n{}\n".format(lines[i + 1]))
+    print("\n{}\n".format(lines[target_num + 1]))
 
 
 def get_eng_name(r):
+    name = ''
     if r == "데스윙":
         name = "deathwing"
     elif r == "가로나":
@@ -788,6 +797,7 @@ async def main():
     global time
     global target_health
     global enemies
+    global devel
     # 파라미터가 변수로 입력되면 그 변수를 넣어주고 그 사람의 전장정보실 정보를 이용해 심크를 돌립니다
     try:
         if len(sys.argv) == 2:
@@ -817,6 +827,11 @@ async def main():
                     target_health,
                     enemies,
                 )
+                
+            elif sys.argv[1] == "d":
+                devel = 1# utylee.simc 파일을 활용한
+                print('devel mode')
+                await sim_myself("n", 20, 1)
             else:
                 sim_him(sys.argv[1])
 
