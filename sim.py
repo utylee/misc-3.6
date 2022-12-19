@@ -476,7 +476,13 @@ async def sim_myself(r, t_or_h, e):  # t_or_h : health나 time 이냐를 받습�
             "/home/utylee/temp/simc/engine/utylee.simc",
             "w",
         ) as f:
+            # wsl2강제 업그레이드 된 이후에 문제가 생긴 것 같은데 일단 
+            # 추가했더니 문제는 사라졌습니다
+            pyperclip.ENCODING = 'cp949'        # 기존에는 잘됐는데 utf8 복사였던 건지
+
+            # print('before pyperclip')
             s = pyperclip.paste()
+            # print(s)
             await f.write(s)
 
             # 직업 특성을 저장해놓습니다. 쿨기없을 경우를 로테이션도 대응하기 위함입니다
@@ -827,9 +833,9 @@ async def main():
                     target_health,
                     enemies,
                 )
-                
+
             elif sys.argv[1] == "d":
-                devel = 1# utylee.simc 파일을 활용한
+                devel = 1  # utylee.simc 파일을 활용한
                 print('devel mode')
                 await sim_myself("n", 20, 1)
             else:
