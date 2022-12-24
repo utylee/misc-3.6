@@ -478,7 +478,7 @@ async def sim_myself(r, t_or_h, e):  # t_or_h : health나 time 이냐를 받습�
         ) as f:
             # wsl2강제 업그레이드 된 이후에 문제가 생긴 것 같은데 일단 
             # 추가했더니 문제는 사라졌습니다
-            pyperclip.ENCODING = 'cp949'        # 기존에는 잘됐는데 utf8 복사였던 건지
+            # pyperclip.ENCODING = 'cp949'        # 기존에는 잘됐는데 utf8 복사였던 건지
 
             # print('before pyperclip')
             s = pyperclip.paste()
@@ -502,6 +502,7 @@ async def sim_myself(r, t_or_h, e):  # t_or_h : health나 time 이냐를 받습�
     # 'h' or r == 'hh' \ or r == 'hhh' or r == 'hhhh'):
     _ = option_string(r, t_or_h, e)
     ins = f"echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {_} html={file_report}"
+    # ins = f"echo sksmsqnwk11 | sudo -S /home/utylee/temp/simc/engine/simc /home/utylee/temp/simc/engine/utylee.simc {_} enemy=1 enemy=2 enemy=3 html={file_report}"
     result = subprocess.check_output(ins, shell=True)
 
     # print(f'full_command:{ins}')
@@ -743,15 +744,30 @@ def skips_str(param):
         # if param == 4:
         if param == "ss" or param == "hh":
             # 조드: 천체의정렬이 없을 경우입니다
-            s = "celestial_alignment"
+            # s = "celestial_alignment"
+            s = "celestial_alignment/incarnation_chosen_of_elune"
+
         elif param == "sss" or param == "hhh":
             # elif param == 5:
             # 조드: 나이트페이 영혼소집이 없을 경우입니다
-            s = "convoke_the_spirits"
+            # s = "convoke_the_spirits"
+            s = "fury_of_elune/convoke_the_spirits"
         # elif param == 6:
         elif param == "ssss" or param == "hhhh":
             # 조드: 천체의정렬과 영혼소집이 모두 없을 경우입니다
-            s = "celestial_alignment/convoke_the_spirits"
+            s = "celestial_alignment/incarnation_chosen_of_elune/convoke_the_spirits/fury_of_elune"
+
+    # 암사입니다
+    elif class_ == "shadow":
+        # if param == 4:
+        if param == "ss" or param == "hh":
+            s = "shadowfiend/mindbender"
+        # elif param == 5:
+        elif param == "sss" or param == "hhh":
+            s = "shadowfiend/mindbender/dark_ascension"
+        # elif param == 6:
+        elif param == "ssss" or param == "hhhh":
+            s = "shadowfiend/mindbender/dark_ascension"
 
     elif class_ == "subtlety":
         if param == "ss" or param == "hh":
@@ -815,6 +831,9 @@ async def main():
                 or sys.argv[1] == "sss"
                 or sys.argv[1] == "ssss"
                 or sys.argv[1] == "sssss"
+                # or sys.argv[1] == "sm"          # multi target
+                # or sys.argv[1] == "ssm"         # multi
+                # or sys.argv[1] == "sssm"        # multi
             ):
                 await sim_myself(
                     sys.argv[1],
@@ -827,6 +846,9 @@ async def main():
                 or sys.argv[1] == "hhh"
                 or sys.argv[1] == "hhhh"
                 or sys.argv[1] == "hhhhh"
+                # or sys.argv[1] == "hm"
+                # or sys.argv[1] == "hhm"
+                # or sys.argv[1] == "hhhm"
             ):
                 await sim_myself(
                     sys.argv[1],

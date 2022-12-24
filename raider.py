@@ -47,7 +47,8 @@ async def main():
         me = f.read()
         #print(f'read:{me}')
         if len(me) == 0:
-            me = '유타일리'
+            # me = '유타일리'
+            me = '부자인생젖'
             f.write(me)
         #print(me)
 
@@ -74,10 +75,11 @@ async def proc(a):
     nm, rm = parse_name(a)      # 서버와 이름을 분리해서 변수에 저장합니다
     cls = pro = ''               # 직업과 전문화 변수입니다
     lvl = 0
+    # print(f'server: {rm}\nname: {nm}')
 
     # Blizzard에서 아이템 레벨을 가져옵니다
     async with aiohttp.ClientSession() as session:
-        url = f'https://worldofwarcraft.com/ko-kr/character/{rm}/{nm}'
+        url = f'https://worldofwarcraft.com/ko-kr/character/kr/{rm}/{nm}'
         async with session.get(url) as response:
             html = await response.text()
             txt = re.search('.*meta\sname=\"description\"\scontent=\"(.*)\"/><meta\sproperty=\"fb', html)
@@ -86,6 +88,14 @@ async def proc(a):
             cls = l.group(2) if l else ''
             lvl = l.group(3) if l else ''
 
+    # print('blizzard ended')
+    print(f'{nm}\n{lvl}\n{pro} {cls}')
+    # await raider_proc()
+
+
+async def raider_proc():
+
+    # raider_io가 오류가 나는 것 같습니다 일단 비활성화
     # raider.io 에서 정보를 가져와서 처리합니다
     recent = ''
     up = ''
@@ -96,7 +106,7 @@ async def proc(a):
             json = await response.json()
             #print(html[:100])
 
-            #print(json)
+            # print(json)
             # 없는 캐릭터이거나 서버 오류인 경우 안내 후 종료합니다
             if 'statusCode' in json.keys():
                 #print(f'statusCode:{json["statusCode"]}')
@@ -137,6 +147,7 @@ async def proc(a):
             print(f'{k(recent[0]["dungeon"])}\t{recent[0]["mythic_level"]}{num}')
             #print(recent[1]['dungeon'])
             '''
+
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(main())
