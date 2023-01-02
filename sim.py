@@ -77,6 +77,14 @@ def fixed_string(s):
         ret = "<음식>"
     elif s == "flask":
         ret = "<플라스크>"
+    elif s == "berserk_bear":
+        ret = "광폭화"
+    elif s == "barkskin+brambles":
+        ret = "무쇠껍질+가시나무"
+    elif s == "thrash_bear":
+        ret = "난타"
+    elif s == "swipe_bear":
+        ret = "휘둘러치기"
     else:
         ret = s
 
@@ -740,6 +748,7 @@ def skips_str(param):
         elif param == "ssss" or param == "hhhh":
             s = "double_tap/trueshot/wild_spirits/volley"
 
+    # 조화 드루이드 입니다
     elif class_ == "balance":
         # if param == 4:
         if param == "ss" or param == "hh":
@@ -757,6 +766,22 @@ def skips_str(param):
             # 조드: 천체의정렬과 영혼소집이 모두 없을 경우입니다
             s = "celestial_alignment/incarnation_chosen_of_elune/convoke_the_spirits/fury_of_elune"
 
+    # 수호 드루이드 입니다
+    elif class_ == "guardian":
+        # if param == 4:
+        if param == "ss" or param == "hh":
+            # 광폭화가 없을 경우입니다
+            s = "berserk_bear"
+
+        elif param == "sss" or param == "hhh":
+            # elif param == 5:
+            # 조드: 나이트페이 영혼소집이 없을 경우입니다
+            # s = "convoke_the_spirits"
+            s = "fury_of_elune/convoke_the_spirits"
+        # elif param == 6:
+        elif param == "ssss" or param == "hhhh":
+            # 조드: 천체의정렬과 영혼소집이 모두 없을 경우입니다
+            s = "celestial_alignment/incarnation_chosen_of_elune/convoke_the_spirits/fury_of_elune"
     # 암사입니다
     elif class_ == "shadow":
         # if param == 4:
