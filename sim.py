@@ -83,8 +83,18 @@ def fixed_string(s):
         ret = "무쇠껍질+가시나무"
     elif s == "thrash_bear":
         ret = "난타"
+    elif s == "thrash_cat":
+        ret = "난타"
     elif s == "swipe_bear":
         ret = "휘둘러치기"
+    elif s == "swipe_cat":
+        ret = "휘둘러치기"
+    # 죽기
+    elif s == "deaths_caress":
+        ret = "죽음의 마수"
+    # 수사
+    elif s == "shadow_word_death":
+        ret = "신의 권능: 죽음"
     else:
         ret = s
 
@@ -500,7 +510,7 @@ async def sim_myself(r, t_or_h, e):  # t_or_h : health나 time 이냐를 받습�
                 flags=re.I,
             )
             if _:
-                class_ = _.group(1)
+                class_ = _.group(1).strip()
 
             # await f.write('\nuse_pre_potion=0')
             # await f.write('\ndesired_targets=3')
@@ -748,6 +758,24 @@ def skips_str(param):
         elif param == "ssss" or param == "hhhh":
             s = "double_tap/trueshot/wild_spirits/volley"
 
+    # 보호 성기사 입니다
+    elif class_ == "protection":
+        # if param == 4:
+        if param == "ss" or param == "hh":
+            # 보기: 빛의 수호 방패가 없을 경우입니다
+            # s = "celestial_alignment"
+            s = "bastion_of_light"
+
+        elif param == "sss" or param == "hhh":
+            # elif param == 5:
+            # 조드: 나이트페이 영혼소집이 없을 경우입니다
+            # s = "convoke_the_spirits"
+            s = "avenging_wrath"
+        # elif param == 6:
+        elif param == "ssss" or param == "hhhh":
+            # 조드: 천체의정렬과 영혼소집이 모두 없을 경우입니다
+            s = "bastion_of_light/avenging_wrath"
+
     # 조화 드루이드 입니다
     elif class_ == "balance":
         # if param == 4:
@@ -782,6 +810,30 @@ def skips_str(param):
         elif param == "ssss" or param == "hhhh":
             # 조드: 천체의정렬과 영혼소집이 모두 없을 경우입니다
             s = "celestial_alignment/incarnation_chosen_of_elune/convoke_the_spirits/fury_of_elune"
+
+    # 회복 드루이드 입니다
+    elif class_ == "restoration":
+        # print('resto')
+        # if param == 4:
+        if param == "ss" or param == "hh":
+            # 광폭화가 없을 경우입니다
+            # s = "convoke_the_spirits"
+            s = "convoke_the_spirits/prowl"
+            # s = "berserk_bear"
+
+        elif param == "sss" or param == "hhh":
+            # elif param == 5:
+            # 조드: 나이트페이 영혼소집이 없을 경우입니다
+            # s = "convoke_the_spirits"
+            # s = "adaptive_swarm"
+            s = "adaptive_swarm/prowl"
+            # s = "fury_of_elune/convoke_the_spirits"
+        # elif param == 6:
+        elif param == "ssss" or param == "hhhh":
+            # 회드: 영혼소집이 없을 경우입니다
+            # s = "celestial_alignment/incarnation_chosen_of_elune/convoke_the_spirits/fury_of_elune"
+            s = "convoke_the_spirits/adaptive_swarm/prowl"
+
     # 암사입니다
     elif class_ == "shadow":
         # if param == 4:
@@ -793,6 +845,18 @@ def skips_str(param):
         # elif param == 6:
         elif param == "ssss" or param == "hhhh":
             s = "shadowfiend/mindbender/dark_ascension"
+
+    # 수사입니다
+    elif class_ == "discipline":
+        # if param == 4:
+        if param == "ss" or param == "hh":
+            s = "shadowfiend"
+        # elif param == 5:
+        elif param == "sss" or param == "hhh":
+            s = "shadowfiend"
+        # elif param == 6:
+        elif param == "ssss" or param == "hhhh":
+            s = "shadowfiend"
 
     elif class_ == "subtlety":
         if param == "ss" or param == "hh":
