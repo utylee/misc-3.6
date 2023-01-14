@@ -94,7 +94,7 @@ def fixed_string(s):
         ret = "죽음의 마수"
     # 수사
     elif s == "shadow_word_death":
-        ret = "신의 권능: 죽음"
+        ret = "어둠의 권능: 죽음"
     else:
         ret = s
 
