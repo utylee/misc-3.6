@@ -5,6 +5,7 @@ import re
 import os
 import time
 import socket
+import json
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())  # 최신버전은 uvloop.install()로
 # 간단히 실행할 수 있으나 파이선 3.7이상을 요구합니다
@@ -25,8 +26,27 @@ async def handle(request):
 
 async def copyend(request):
     data = await request.json()
+    js = json.loads(data)
+    path = '/home/utylee/media/4002/00-MediaWorld-4002/97-Capture/'
+    fname = js['file']
+    # print(js['test'])
+    # print(js)
     print(data)
-    return web.Response(text='')
+    # print(data["test"])
+    # print(data["test"])
+    # print(js)
+    print(js['file'])
+    # print(data[test])
+
+    result = 0
+    txt = 'ok'
+    result = os.rename(f'{path}{fname}.part', f'{path}{fname}')
+    if result is not None:
+        txt = 'not ok'
+
+    print(result)
+
+    return web.Response(text=txt)
 
 
 async def reboot_5():
