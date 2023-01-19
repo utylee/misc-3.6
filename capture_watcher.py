@@ -64,31 +64,35 @@ async def main():
                 # if added[0][-7:] == 'torrent' :
                 # if i[-7:] == 'torrent':
                 if i[-3:] == 'mp4':
-                    # print(i)
-                    # print(target)
                     exct = 0
                     a = f'{path}{i}'
                     b = f'{target}/{i}'
                     # b = f'{target}/{i}.part'
+                    # print(i)
+                    # print(target)
+                    try: 
+                        before_size = os.path.getsize(a)
+                        print('size checking start')
+                        while 1:
+                            time.sleep(3)
+                            cur_size = os.path.getsize(a)
+                            print(f'before: {before_size}, cur: {cur_size}')
+                            if before_size == cur_size:
+                                print('complete recoding')
+                                break
+                            before_size = cur_size
 
-                    before_size = os.path.getsize(a)
-                    print('size checking start')
-                    while 1:
-                        time.sleep(3)
-                        cur_size = os.path.getsize(a)
-                        print(f'before: {before_size}, cur: {cur_size}')
-                        if before_size == cur_size:
-                            print('complete recoding')
-                            break
-                        before_size = cur_size
+                        print('copy process start')
+                        #a = path + "".join(added)
+                        # a = path + "".join(i)
+                        b_org = f'{target}/{i}'
 
-                    print('copy process start')
-                    #a = path + "".join(added)
-                    # a = path + "".join(i)
-                    b_org = f'{target}/{i}'
-
-                    # 2초 후 전송을 시작합니다
-                    time.sleep(2)
+                        # 2초 후 전송을 시작합니다
+                        time.sleep(2)
+                    except:
+                        print('exception in added file check')
+                        exct = 1
+                        continue
 
                     try:
                         async with aiofiles.open(a, mode='rb') as src:
@@ -102,7 +106,7 @@ async def main():
                                     await asyncio.sleep(0.5)
 
                     except:
-                        print('exception')
+                        print('exception in copying')
                         exct = 1
                         continue
 
