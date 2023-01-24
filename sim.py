@@ -794,6 +794,22 @@ def skips_str(param):
             # 조드: 천체의정렬과 영혼소집이 모두 없을 경우입니다
             s = "celestial_alignment/incarnation_chosen_of_elune/convoke_the_spirits/fury_of_elune"
 
+    # 혈죽입니다
+    elif class_ == "blood":
+        # if param == 4:
+        if param == "ss" or param == "hh":
+            # 시체 되살리기가 없을 경우입니다
+            s = "raise_dead"
+
+        elif param == "sss" or param == "hhh":
+            # elif param == 5:
+            # 춤추는 룬무기가 없을 경우입니다
+            s = "dancing_rune_weapon"
+        # elif param == 6:
+        elif param == "ssss" or param == "hhhh":
+            # 춤추는 룬무기와 시체 되살리기 모두가 없을 경우입니다
+            s = "raise_dead/dancing_rune_weapon"
+
     # 수호 드루이드 입니다
     elif class_ == "guardian":
         # if param == 4:
