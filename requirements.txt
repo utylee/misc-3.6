@@ -54,7 +54,7 @@ outcome==1.2.0
 parso==0.8.3
 pathspec==0.10.2
 peewee==3.15.3
-Pillow==9.2.0
+Pillow==9.3.0
 platformdirs==2.5.4
 protobuf==4.21.12
 psutil==5.9.2
