@@ -496,7 +496,7 @@ async def sim_myself(r, t_or_h, e):  # t_or_h : health나 time 이냐를 받습�
         ) as f:
             # wsl2강제 업그레이드 된 이후에 문제가 생긴 것 같은데 일단 
             # 추가했더니 문제는 사라졌습니다
-            # pyperclip.ENCODING = 'cp949'        # 기존에는 잘됐는데 utf8 복사였던 건지
+            pyperclip.ENCODING = 'cp949'        # 기존에는 잘됐는데 utf8 복사였던 건지
 
             # print('before pyperclip')
             s = pyperclip.paste()
