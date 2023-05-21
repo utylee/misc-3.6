@@ -3,14 +3,51 @@ import time
 import shutil
 import asyncio
 import aiohttp
+from aiohttp import web
 import aiofiles
 import json
 import subprocess
 import logging
 
+def main():
+    app = web.Application()
+    app['log_path'] = f'/home/utylee/capture.log'
+    app['cur_length'] = 8 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+    app['paths'] = [
+                '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
+                '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
+                '/mnt/c/Users/utylee/Videos/Desktop/'
+            ]
+    app[ 'target' ] = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
 
-async def main():
-    log_path = f'/home/utylee/capture.log'
+    # watcher 프로시져 함수를 돌립니다
+    app.on_startup.append(create_bg_tasks)
+
+    # 웹서버를 엽니다. 히오스가 활성상태인지 확인하는 정보를 받습니다
+    app.add_routes([
+                    web.get('/low', low),
+                    web.get('/high', high)
+                    ])
+    web.run_app(app, port=8007)
+
+async def low(request):
+    # print('low')
+    request.app['cur_length'] = 8 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+    return web.Response(text='low')
+
+async def high(request):
+    # print('high')
+    request.app['cur_length'] = 48 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+    return web.Response(text='high')
+
+async def create_bg_tasks(app):
+    # aiohttp에서 app.loop 이 사라졌다고 하네요 그냥 아래와같이 하라고 합니다
+    # app.loop.create_task(watching(app))
+    asyncio.create_task(watching(app))
+
+async def watching(app):
+    # log_path = f'/home/utylee/capture.log'
+    log_path = app['log_path']
 
     # supervisor에 의해 root권한으로 생성되었을 때 혹은 반대의 경우의 권한
     #문제를 위한 해결법입니다
@@ -33,20 +70,32 @@ async def main():
     # path = 'E:/Down/'
     # path = 'C:/Users/utylee/Videos/World Of Warcraft'
 
+
+    # 게임 중이냐 아느냐로 속도 조절을 할 수 있게끔 기준 변수를 넣어봅니다
+    speed_control = 1
+
+
     # 복사 버퍼 크기인데 0.5초 단위의 속도를 의미합니다. 현재 초당 5메가로
     # 캡쳐과 되고 있기에 그걸 감안해서 설정합니다
     # cur_length = 24 * 1024 * 100     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
     #cur_length = 16 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
     # 속도를 더 늦춰봅니다
-    cur_length = 2 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+    # cur_length = 8 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+    cur_length = app['cur_length']
+
+    # 게임 중이 아니라면 높은속도로 복사합니다
+    if speed_control == 0:
+        cur_length = 24 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+
 
     # 여러 경로를 감시하게끔 변경합니다
     #path = '/mnt/c/Users/utylee/Videos/World Of Warcraft/'
-    paths = [
-                '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
-                '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
-                '/mnt/c/Users/utylee/Videos/Desktop/'
-            ]
+    paths = app['paths']
+    # paths = [
+    #             '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
+    #             '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
+    #             '/mnt/c/Users/utylee/Videos/Desktop/'
+    #         ]
 
     # path = '/mnt/c/Users/utylee/Videos/Desktop/'
 
@@ -61,9 +110,11 @@ async def main():
     # target = r'\\192.168.1.205\clark\4001\99-data\91-transmission-watch'
     # target = r'\\192.168.1.202\clark\4002\00-MediaWorld-4002'
     # target = '/mnt/clark/4002/00-MediaWorld-4002'
-    target = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
     # target = r'\\192.168.1.202\clark\4002\00-MediaWorld-4002\97-Capture'
     # target = r'\\192.168.1.202\clark\4001\99-data\91-transmission-watch'
+
+    # target = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
+    target = app['target']
 
     backup_target = r'E:/magnets/'
 
@@ -95,8 +146,8 @@ async def main():
         # for path in paths:
         for n in range(len(paths)):
             # 5초 주기입니다
-            time.sleep(5)
-            # await asyncio.sleep(5)
+            # time.sleep(5)
+            await asyncio.sleep(5)
             # after = dict([(f, None) for f in os.listdir(path)])
             # added = [f for f in after if not f in before]
             afters[n] = dict([(f, None) for f in os.listdir(paths[n])])
@@ -129,7 +180,8 @@ async def main():
                             print('size checking start')
                             log.info('size checking start')
                             while 1:
-                                time.sleep(3)
+                                # time.sleep(3)
+                                await asyncio.sleep(3)
                                 cur_size = os.path.getsize(a)
                                 print(f'before: {before_size}, cur: {cur_size}')
                                 log.info(f'before: {before_size}, cur: {cur_size}')
@@ -160,11 +212,12 @@ async def main():
                                 async with aiofiles.open(b, mode='wb') as dst:
                                     print('async copying')
                                     while 1:
+                                        cur_length = app['cur_length']
                                         buf = await src.read(cur_length)
                                         if not buf:
                                             break
                                         await dst.write(buf)
-                                        # print(f'{time.time()} wrote:{len(buf)}')
+                                        print(f'{time.time()} wrote:{len(buf)}')
                                         log.info(f'{time.time()} wrote:{len(buf)}')
                                         await asyncio.sleep(0.5)
                         # try:
@@ -246,4 +299,8 @@ async def send_complete(fname):
         print(a)
         return a
 
-asyncio.get_event_loop().run_until_complete(main())
+
+if __name__ == '__main__':
+    main()
+
+#asyncio.get_event_loop().run_until_complete(main())
