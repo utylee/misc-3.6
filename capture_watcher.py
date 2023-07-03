@@ -337,7 +337,7 @@ async def watching(app):
                                                        local=1, uploading=0,
                                                        queueing=1,
                                                        youtube_queueing=0,
-                                                       making=1, remote=0,
+                                                       making=1, remote=0, copying=0,
                                                        start_path=paths[n],
                                                        dest_path=target))
                         except:
