@@ -26,6 +26,7 @@ import copy
 
 
 FIXED_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture/'
+LOGIN_PATH = '/home/utylee/login.json'
 
 
 def progress(yuklenen, toplam):
@@ -157,8 +158,17 @@ async def monitor(app):
                         title=title)
                     # log.info(f'upload completed. ret was {ret}')
                     log.info(f'upload completed. ')
+
+                    # error 발생했을 경우
+                    if 'error' in ret.keys():
+                        log.info(f'upload error. ret is {ret}')
+                        ret = 1
+                    # 성공했을 경우
+                    else:
+                        ret = 0
                 except:
                     log.info(f'yt.uploadVideo upload excepted')
+                    ret = 1
                 # ret = json.loads(ret)
 
                 # SESSION_TOKEN 에 문제가 있을 때의 응답입니다
@@ -166,29 +176,38 @@ async def monitor(app):
                 {'error': {'code': 400, 'message': 'Request contains an invalid argument.', 'errors': [{'message': 'Request contains an invalid argument.', 'domain': 'global', 'reason': 'badRequest'}], 'status': 'INVALID_ARGUMENT'}}]
                 '''
 
-                # error 발생했을 경우
-                if 'error' in ret.keys():
-                    log.info(f'upload error. ret is {ret}')
-                    ret = 1
-                # 성공했을 경우
-                else:
-                    ret = 0
-
-                # if ret is not None:
-                #     ret = 0
-
             # except:
             #    log.info('exeption in monitor')
             #     pass
 
             # 업로드 성공했으면
             if ret == 0:
-                # if ret is not None:
-                payload = {"file": cur_file, "result": 0}
-                async with aiohttp.ClientSession() as sess:
-                    async with sess.post(url_result, json=payload) as resp:
-                        log.info(f'upload ok send and response')
+                try:
+                    async with engine.acquire() as conn:
+                        async with conn.execute(db.tbl_youtube_files.update().
+                                where(db.tbl_youtube_files.c.filename==cur_file).
+                                values(uploading=3)):
+                            log.info(f'uploading to 3 to db')
+                    ret = 1
+
+                except:
+                    log.info(f'exception:: on uploading to 3 to db')
+
+                # payload = {"file": cur_file, "result": 0}
+                # async with aiohttp.ClientSession() as sess:
+                #     async with sess.post(url_result, json=payload) as resp:
+                #         log.info(f'upload ok send and response')
                 ret = 1
+            elif ret == 1:
+                try:
+                    async with engine.acquire() as conn:
+                        async with conn.execute(db.tbl_youtube_files.update().
+                                where(db.tbl_youtube_files.c.filename==cur_file).
+                                values(uploading=4)):
+                            log.info(f'erro:uploading to 4 to db')
+
+                except:
+                    log.info(f'exception:: on uploading to 4 to db')
 
             app['uploading'] = 0
 
@@ -467,8 +486,9 @@ if __name__ == '__main__':
     # app['youtube'] = youtube
     app['login_file'] = ''
     app['upload_que'] = od()
-    if os.path.exists('./login.json'):
-        app['login_file'] = json.loads(open('./login.json', 'r').read())
+    # if os.path.exists('./login.json'):
+    if os.path.exists(LOGIN_PATH):
+        app['login_file'] = json.loads(open(LOGIN_PATH, 'r').read())
         print(app['login_file'])
     else:
         exit('no json file')
