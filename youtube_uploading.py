@@ -123,6 +123,9 @@ async def monitor(app):
             #             title = res['title']
             #             log.info(f'js[file] {f}')
 
+
+            # 업로드 파일 존재시 유튜브 업로드를 진행합니다
+
             # if (res['file'] != 0):
             # if (res['file'] != '0'):
             if (cur_file != 0):
@@ -134,6 +137,7 @@ async def monitor(app):
                 # title = res['title']
 
                 app['uploading'] = 1
+
 
                 # db상 copying column을 2로 변경합니다
                 try:
@@ -149,7 +153,23 @@ async def monitor(app):
                 # asyncio.create_task(asyncupload(app, path, title))
                 # await yt.login()
                 # privacy='PUBLIC')
+
+                # 'sessionToken': self.cookies['SESSION_TOKEN'],
+                if os.path.exists(LOGIN_PATH):
+                    app['login_file'] = json.loads(open(LOGIN_PATH, 'r').read())
+                    # print(app['login_file'])
+                    sessionToken = app['login_file']['SESSION_TOKEN']
+                    sidCc =  app['login_file']['SIDCC']
+                    yt.cookies['SESSION_TOKEN'] = sessionToken
+                    yt.cookies['SIDCC'] = sidCc
+
+                    log.info(f'SESSION_TOKEN is {sessionToken}')
+                    log.info(f'SIDCC is {sidCc}')
+                else:
+                    exit('no json file')
+
                 try:
+                    await yt.login()
                     ret = await yt.uploadVideo(
                         path,
                         progress=progress,
@@ -487,6 +507,7 @@ if __name__ == '__main__':
     app['login_file'] = ''
     app['upload_que'] = od()
     # if os.path.exists('./login.json'):
+    # SESSION_TOKEN 을 고쳐도 에러가 나서 보니 SIDCC도 변경되었더군요
     if os.path.exists(LOGIN_PATH):
         app['login_file'] = json.loads(open(LOGIN_PATH, 'r').read())
         print(app['login_file'])
