@@ -53,8 +53,19 @@ async def monitor(app):
     app['Studio'] = Studio(app['login_file'])
     log.info('came into monitor function')
     yt = app['Studio']
-    await yt.login()
+    log.info(yt)
+    # result = await yt.login()
+    try:
+        result = await yt.login()
+        log.info(result)
+        print(result)
+    except Exception as e:
+        log.info('yt.login() excepted')
+        print('yt.login() excepted')
+        log.info(f'Exception: {e}')
+        print(f'Exception: {e}')
 
+    log.info('came into monitor function')
     engine = app['db']
     # 20초마다 api_backend 서버에 현재 대기중인 큐를 요구합니다
     # 유튜브 업로드 중이었다면 끝낸 후일 것이므로
@@ -158,17 +169,20 @@ async def monitor(app):
                 if os.path.exists(LOGIN_PATH):
                     app['login_file'] = json.loads(open(LOGIN_PATH, 'r').read())
                     # print(app['login_file'])
-                    sessionToken = app['login_file']['SESSION_TOKEN']
-                    sidCc =  app['login_file']['SIDCC']
-                    yt.cookies['SESSION_TOKEN'] = sessionToken
-                    yt.cookies['SIDCC'] = sidCc
+                    # sessionToken = app['login_file']['SESSION_TOKEN']
+                    # sidCc =  app['login_file']['SIDCC']
 
-                    log.info(f'SESSION_TOKEN is {sessionToken}')
-                    log.info(f'SIDCC is {sidCc}')
+                    # yt.cookies['SESSION_TOKEN'] = sessionToken
+                    # yt.cookies['SIDCC'] = sidCc
+
+                    # log.info(f'SESSION_TOKEN is {sessionToken}')
+                    # log.info(f'SIDCC is {sidCc}')
                 else:
                     exit('no json file')
 
                 try:
+                    yt = Studio(app['login_file'])
+
                     await yt.login()
                     ret = await yt.uploadVideo(
                         path,
@@ -186,8 +200,11 @@ async def monitor(app):
                     # 성공했을 경우
                     else:
                         ret = 0
-                except:
+                except Exception as e:
                     log.info(f'yt.uploadVideo upload excepted')
+                    log.info(f'Exception: {e}')
+                    print(f'yt.uploadVideo upload excepted')
+                    print(f'Exception: {e}')
                     ret = 1
                 # ret = json.loads(ret)
 
@@ -511,8 +528,11 @@ if __name__ == '__main__':
     if os.path.exists(LOGIN_PATH):
         app['login_file'] = json.loads(open(LOGIN_PATH, 'r').read())
         print(app['login_file'])
+        log.info('login file loaded')
+        log.info(app['login_file'])
     else:
         exit('no json file')
+        log.info('no json file')
 
     app.add_routes([
         web.post('/addque', addque),
