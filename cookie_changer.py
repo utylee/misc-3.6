@@ -4,6 +4,7 @@ import asyncio
 from js2py.pyjs import JSON
 import uvloop
 from aiofiles import open as open_async
+import pyperclip
 
 COOKIE_PATH = f'/mnt/c/Users/utylee/Downloads/cookies.txt'
 # COOKIE_PATH = f'/mnt/c/Users/utylee/Downloads/cookies.firefox-private.txt'
@@ -17,20 +18,26 @@ async def main():
 
 
     # 먼저 login.json 에서 SESSION_TOKEN 값은 저장해놓습니다
+    # --> pyperclip으로 클립보드 값을 넣어주는 것으로 변경합니다
+    # 실행시 번거롭지 않게 바로 login.json에 sessionToken을 반영하도록
     sessionToken = ''
-    try:
-        async with open_async(JSON_PATH, 'r') as f:
-            r = await f.readlines()
-            rr = "".join(r)
-            print(r)
-            print(rr)
-            p = json.loads(rr) 
-            print(p)
-            print(f'.sessionToken: {p["SESSION_TOKEN"]}')
-            sessionToken = p['SESSION_TOKEN']
-    except:
-        pass 
+    # try:
+    #     async with open_async(JSON_PATH, 'r') as f:
+    #         r = await f.readlines()
+    #         rr = "".join(r)
+    #         # print(r)
+    #         # print(rr)
+    #         p = json.loads(rr) 
+    #         # print(p)
+    #         print(f'.sessionToken: {p["SESSION_TOKEN"]}')
+    #         # sessionToken = p['SESSION_TOKEN']
 
+    # except:
+    #     pass 
+
+    # clipboard값을 sessionToken에 바로 넣어줍니다
+    pyperclip.ENCODING = 'cp949'
+    sessionToken = pyperclip.paste()
 
     # 쿠키파일을 엽니다
     async with open_async(COOKIE_PATH, 'r') as f:
@@ -46,9 +53,9 @@ async def main():
         # print(i)
         # print(res)
 
-    full_dict['SESSION_TOKEN'] = sessionToken 
-    # print(full_dict['VISITOR_INFO1_LIVE'])
-    print(full_dict)
+    # full_dict['SESSION_TOKEN'] = sessionToken 
+    # # print(full_dict['VISITOR_INFO1_LIVE'])
+    # print(full_dict)
 
     # 로긴파일을 작성합니다
     async with open_async(JSON_PATH, 'w') as f:
@@ -58,7 +65,8 @@ async def main():
         # await f.write(p)
 
         await f.write('{\n')
-        await f.write('\t"SESSION_TOKEN": ""')
+        # await f.write('\t"SESSION_TOKEN": ""')
+        await f.write(f'\t"SESSION_TOKEN": "{sessionToken}"')
         # f-string 최외각을 single-quote ' 로 감싸면 dict형식은 double-quote " 로 감싸면 되고
         #그 반대도 되네요. 검색해보니
         # i.e. https://stackoverflow.com/questions/43488137/how-can-i-do-a-dictionary-format-with-f-string-in-python-3-6
@@ -95,7 +103,18 @@ async def main():
         await f.write('\n}')
         '''
 
-    print('\n\nlogin.json wrote')
+    print('\nlogin.json wrote')
+
+    # 완성된 login.json 출력
+    try:
+        async with open_async(JSON_PATH, 'r') as f:
+            r = await f.readlines()
+            rr = "".join(r)
+            # print(r)
+            print(rr)
+
+    except:
+        pass 
 
     '''
 {
