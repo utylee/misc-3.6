@@ -17,18 +17,29 @@ from aiopg.sa import create_engine
 # import json
 import db_youtube as db
 
+PATHS = [
+        '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
+        '/mnt/c/Users/utylee/Videos/Apex Legends/',
+        '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
+        '/mnt/c/Users/utylee/Videos/Desktop/',
+        '/mnt/c/Users/utylee/Videos/Overwatch 2/',
+        '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/'   
+]
+
+TRUNCATE_DAYS = 3
 
 async def low(request):
     # print('low')
     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
-    request.app['cur_length'] = 8 * 1024 * 128
+    request.app['cur_length'] = 6 * 1024 * 128
     return web.Response(text='low')
 
 
 async def high(request):
     # print('high')
     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
-    request.app['cur_length'] = 48 * 1024 * 128
+    # request.app['cur_length'] = 48 * 1024 * 128
+    request.app['cur_length'] = 24 * 1024 * 128
     return web.Response(text='high')
 
 
@@ -62,7 +73,9 @@ async def truncate(app):
                     log.info(f'경과일:{diff.days}')
 
                     # 일주일 기간 이상은 삭제합니다
-                    if diff.days > 7:
+                    # 3일 기간 이상은 삭제합니다
+                    # if diff.days > 7:
+                    if diff.days > TRUNCATE_DAYS:
                         await conn.execute(db.tbl_youtube_files.delete()
                                            .where(db.tbl_youtube_files.c.filename == r[0]))
                         # candidate.append(r[0])
@@ -142,7 +155,8 @@ async def transfering(app):
                                 break
                             await dst.write(buf)
                             print(f'wrote:{len(buf)}')
-                            log.info(f'wrote:{len(buf)}')
+                            # log.info(f'wrote:{len(buf)}')
+                            log.info(f'{file}:{len(buf)} b')
                             await asyncio.sleep(0.5)
 
             except:
@@ -606,11 +620,12 @@ if __name__ == '__main__':
     app = web.Application()
     # app['log_path'] = f'/home/utylee/capture.log'
     app['cur_length'] = 8 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
-    app['paths'] = [
-        '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
-        '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
-        '/mnt/c/Users/utylee/Videos/Desktop/'
-    ]
+    # app['paths'] = [
+    #     '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
+    #     '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
+    #     '/mnt/c/Users/utylee/Videos/Desktop/'
+    # ]
+    app['paths'] = PATHS
     app['target'] = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
     app['transfer_que'] = dict(que=[],
                                status=0)  # status:: 0: 대기중, 1: 복사중, 2: 복사완료
