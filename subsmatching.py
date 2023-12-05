@@ -36,7 +36,7 @@ async def main():
     subs = ''
     subs_ext = ''
     for f in files:
-        r = re.search('((.*)\.(smi|srt))', f, re.I)
+        r = re.search('((.*)\.(smi|srt|ssa))', f, re.I)
         if r is not None:
             subs = r.group(1)
             subs_ext = r.group(3)
