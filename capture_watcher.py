@@ -23,6 +23,7 @@ PATHS = [
         '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
         '/mnt/c/Users/utylee/Videos/Desktop/',
         '/mnt/c/Users/utylee/Videos/Overwatch 2/',
+        '/mnt/c/Users/utylee/Videos/The Finals/', 
         '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/'   
 ]
 
@@ -146,6 +147,7 @@ async def transfering(app):
                 # 현재 복사 진행중인 파일명을 갖고 있기로 합니다
                 app['current_copying'] = file
 
+                sum = 0
                 async with aiofiles.open(start, mode='rb') as src:
                     async with aiofiles.open(desti, mode='wb') as dst:
                         while 1:
@@ -154,9 +156,14 @@ async def transfering(app):
                             if not buf:
                                 break
                             await dst.write(buf)
-                            print(f'wrote:{len(buf)}')
+                            sum = sum + cur_length
+                            sumk = round(sum / 1000000)
+                            wrote = round(len(buf)/1000)
+                            # print(f'wrote:{len(buf)}')
                             # log.info(f'wrote:{len(buf)}')
-                            log.info(f'{file}:{len(buf)} b')
+                            # print(f'{file}: {len(buf)} kb')
+                            # log.info(f'{file}: {len(buf)} b ')
+                            log.info(f'{file}: {wrote} K / {sumk} M')
                             await asyncio.sleep(0.5)
 
             except:
