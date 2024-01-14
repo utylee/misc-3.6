@@ -21,7 +21,7 @@ from aiohttp import web
 import db_youtube as db
 import json
 import logging
-from collections import OrderedDict as od
+from collections import OrderedDict as od, defaultdict
 import copy
 
 
@@ -32,6 +32,89 @@ LOGIN_PATH = '/home/utylee/login.json'
 def progress(yuklenen, toplam):
     # print(f"{round(round(yuklenen / toplam, 2) * 100)}% upload", end="\r")
     print(f"{round(yuklenen / toplam) * 100}% upload", end="\r")
+
+
+async def send_ws(ws, msg):
+    try:
+        log.info(f'trying websocket send:{msg} ...')
+        log.info(f'...to {ws.keys()}')
+        for ws_pair in ws.items():
+            log.info(f'{ws_pair[0]} send_str...')
+            bClosed = ws_pair[1].closed
+            log.info(f'{ws_pair[0]} closed is {bClosed}')
+            if (bClosed != True):
+                await ws_pair[1].send_str(msg)
+    except Exception as e:
+        log.info(f'exception in websocket send:{msg}: {e}')
+
+
+async def ws_refresh(request):
+    request.app['websockets']
+    await send_ws(request.app['websockets'], 'needRefresh')
+    '''
+    try:
+        log.info(f'trying websocket send:needRefresh ...')
+        log.info(f'...to {app["websockets"].keys()}')
+        for ws_pair in app['websockets'].items():
+            log.info(f'{ws_pair[0]} send_str...')
+            bClosed = ws_pair[1].closed
+            log.info(f'{ws_pair[0]} closed is {bClosed}')
+            if(bClosed != True):
+                await ws_pair[1].send_str('needRefresh')
+    except Exception as e:
+        log.info(f'exception in websocket send:needRefresh: {e}')
+        '''
+
+    return web.Response(text='ok')
+
+
+async def ws(request):
+    # transport 를 굳이 쓰지 않아도 되게끔 변경했다고 합니다
+    # eg)https://github.com/aio-libs/aiohttp/issues/4189
+    # peer_info = request.transport.get_extra_info('peername')
+    peer_info = request.get_extra_info('peername')
+    # (host, port) = request.transport.get_extra_info('peername')
+    remote = request.remote
+    # forward = request.headers.get('X-FORWARDED-FOR', 2)
+    # peer_info = f'{host}:{port}'
+    peer_info = f'{peer_info[0]}:{peer_info[1]}'
+    # peer_info = f'{remote}'
+    # peer_info = f'{host}:{port},{remote},{forward}'
+    log.info(f'came into websocket_handlers: {peer_info}')
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    # 최초 연결시 현재의 auth process 상태를 전달해줍니다
+    if request.app['process'] != 0:
+        await ws.send_str('processing')
+
+    # aiohttp 상 예제처럼 set형과 add가 아닌 그냥 int형과 append 조합으로 사용하기로 합니다
+    # request.app['websockets'][peer_info].add(ws)
+    request.app['websockets'].update({peer_info: ws})
+    log.info(f'sockets dict:{app["websockets"]}')
+
+    try:
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                if msg.data == 'close':
+                    await ws.close()
+                else:
+                    log.info(f'ws msg:{msg.data}')
+                    if msg.data == 'connect':
+                        await ws.send_str(msg.data + ':answer')
+
+                    else:
+                        await ws.send_str(msg.data + ':answer')
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                log.info(f'websocket msg type error: {ws.exception()})')
+
+    finally:
+        # pass
+        del request.app['websockets'][peer_info]
+
+    log.info(f'websocket from {peer_info} closed')
+
+    return ws
 
 
 async def asyncupload(app, path, title):
@@ -45,11 +128,54 @@ async def asyncupload(app, path, title):
         ret = 0
 
 
+async def monitor_subprocess(app):
+    while True:
+        # login.json 갱신 작업 종료 여부를 확인합니다
+        if app['process'] != 0:         # 작업중일 경우
+            # log.info(f'login.json 파일 갱신작업 중입니다.AutoHotkey')
+            # log.info(f'process 넘버: {app["process"]}')
+            # log.info(f'process return code: {app["process"].returncode}')
+            # 프로세스가 종료되면 returncode가 None이 아닌 반환값을 보냅니다. 여기선 0
+            # iex) https://docs.python.org/ko/3/library/asyncio-subprocess.html#asyncio.subprocess.Process.communicate
+            if app['process'].returncode == 0:
+                # await app['process'].wait()
+                log.info(f'login.json 파일 갱신작업 완료.')
+                # log.info(f'process 종료')
+                app['process'] = 0
+
+                await send_ws(app['websockets'], 'finished')
+
+                '''
+                try:
+                    log.info(f'trying websocket send:finished ...')
+                    log.info(f'...to {app["websockets"].keys()}')
+                    for ws_pair in app['websockets'].items():
+                        # log.info(f'{ws} send_str...')
+                        log.info(f'{ws_pair[0]} send_str...')
+                        bClosed = ws_pair[1].closed
+                        log.info(f'{ws_pair[0]} closed is {bClosed}')
+                        if(bClosed != True):
+                            await ws_pair[1].send_str('finished')
+                except Exception as e:
+                    log.info(f'exception in websocket send:finished: {e}')
+                    '''
+
+                # for ws in app['websockets']:
+                #     # log.info(f'{ws} send_str...')
+                #     log.info(f'{app["websockets"][ws]} send_str...')
+                #     for w in app['websockets'][ws]:
+                #         log.info(f'{w} send_str...')
+                #         await w.send_str('finished')
+
+        # log.info(f'[monitor]: {app["process"]}')
+        await asyncio.sleep(1)
+
+
 async def monitor(app):
     app['db'] = await create_engine(host='192.168.1.203',
-                                        user='postgres', 
-                                        password='sksmsqnwk11',
-                                        database='youtube_db')
+                                    user='postgres',
+                                    password='sksmsqnwk11',
+                                    database='youtube_db')
     app['Studio'] = Studio(app['login_file'])
     log.info('came into monitor function')
     yt = app['Studio']
@@ -72,13 +198,29 @@ async def monitor(app):
 
     # 업로드 성공여부 리턴값입니다
     ret = 1
-    url_gimme = 'http://192.168.1.102/uploader/api/gimme_que'
-    url_result = 'http://192.168.1.102/uploader/api/upload_complete'
+    #url_gimme = 'http://192.168.1.102/uploader/api/gimme_que'
+    #url_result = 'http://192.168.1.102/uploader/api/upload_complete'
 
     # 업로드 서버에 gimme que 요청에서 자체 que 탐색으로 변경합니다
     while True:
         que = app['upload_que']
 
+        # # login.json 갱신 작업 종료 여부를 확인합니다
+        # if app['process'] != 0:
+        #     # log.info(f'login.json 파일 갱신작업 중입니다.AutoHotkey')
+        #     # log.info(f'process 넘버: {app["process"]}')
+        #     # log.info(f'process return code: {app["process"].returncode}')
+        #     # 프로세스가 종료되면 returncode가 None이 아닌 반환값을 보냅니다. 여기선 0
+        #     # iex) https://docs.python.org/ko/3/library/asyncio-subprocess.html#asyncio.subprocess.Process.communicate
+        #     if app['process'].returncode == 0:
+        #     # await app['process'].wait()
+        #         log.info(f'login.json 파일 갱신작업 완료.')
+        #         # log.info(f'process 종료')
+        #         app['process'] = 0
+
+        # log.info(f'[monitor]: {app["process"]}')
+
+        # 5초마다 큐를 탐색합니다
         await asyncio.sleep(5)
 
         if app['uploading'] == 0 and len(que) > 0:
@@ -97,11 +239,12 @@ async def monitor(app):
             continue_ = 0
             async with engine.acquire() as conn:
                 async for r in conn.execute(db.tbl_youtube_files.select()
-                        .where(db.tbl_youtube_files.c.filename==temp_file)):
-                    #copying이  2 즉 완료가 아니면, 즉 아직 복사중이면 패스합니다
+                                            .where(db.tbl_youtube_files.c.filename == temp_file)):
+                    # copying이  2 즉 완료가 아니면, 즉 아직 복사중이면 패스합니다
                     log.info(f'{temp_file} copying check by db. r[4] is {r[4]}')
                     if int(r[4]) != 2:
-                        log.info(f'{temp_file} is currently copying. continue next')
+                        log.info(
+                            f'{temp_file} is currently copying. continue next')
                         continue_ = 1
             if (continue_ == 1):
                 continue
@@ -134,7 +277,6 @@ async def monitor(app):
             #             title = res['title']
             #             log.info(f'js[file] {f}')
 
-
             # 업로드 파일 존재시 유튜브 업로드를 진행합니다
 
             # if (res['file'] != 0):
@@ -149,17 +291,16 @@ async def monitor(app):
 
                 app['uploading'] = 1
 
-
                 # db상 copying column을 2로 변경합니다
                 try:
                     async with engine.acquire() as conn:
                         async with conn.execute(db.tbl_youtube_files.update()
-                                .where(db.tbl_youtube_files.c.filename==cur_file)
-                                .values(uploading=2)):
+                                                .where(db.tbl_youtube_files.c.filename == cur_file)
+                                                .values(uploading=2)):
                             log.info(f'db copying column to 2')
+                    await send_ws(app['websockets'], 'needRefresh')
                 except:
                     log.info(f'exception:db copying column to 2')
-
 
                 # asyncio.create_task(asyncupload(app, path, title))
                 # await yt.login()
@@ -222,8 +363,8 @@ async def monitor(app):
                 try:
                     async with engine.acquire() as conn:
                         async with conn.execute(db.tbl_youtube_files.update().
-                                where(db.tbl_youtube_files.c.filename==cur_file).
-                                values(uploading=3)):
+                                                where(db.tbl_youtube_files.c.filename == cur_file).
+                                                values(uploading=3)):
                             log.info(f'uploading to 3 to db')
                     ret = 1
 
@@ -239,19 +380,21 @@ async def monitor(app):
                 try:
                     async with engine.acquire() as conn:
                         async with conn.execute(db.tbl_youtube_files.update().
-                                where(db.tbl_youtube_files.c.filename==cur_file).
-                                values(uploading=4)):
+                                                where(db.tbl_youtube_files.c.filename == cur_file).
+                                                values(uploading=4)):
                             log.info(f'erro:uploading to 4 to db')
 
                 except:
                     log.info(f'exception:: on uploading to 4 to db')
 
+            
+            await send_ws(app['websockets'], 'needRefresh')
             app['uploading'] = 0
 
         # await asyncio.sleep(5)
         # await asyncio.sleep(20)
 
-
+'''
 def upload(app, res):
 
     ret = 0
@@ -279,10 +422,50 @@ def upload(app, res):
     ret = initialize_upload(youtube, args)
 
     return ret
+    '''
 
 
 async def create_bg_tasks(app):
     asyncio.create_task(monitor(app))
+    asyncio.create_task(monitor_subprocess(app))
+
+
+async def loginjson(request):
+    result = 'waiting'
+
+    # 작업중이 아닐 때만 실행 명령을 내립니다
+    if request.app['process'] == 0:
+        process = await asyncio.create_subprocess_exec(
+            '/mnt/c/Program Files/AutoHotkey/v1.1.37.01/AutoHotkeyU64.exe',
+            'c:\\Users\\utylee\\bin\\cookie_refresher_force.ahk')
+        # await process.wait()
+
+        log.info(f'login.json 파일 갱신작업 중입니다. {process}')
+        request.app['process'] = process
+
+        # websocket들에 작업중 메세지를 보냅니다
+        await send_ws(request.app['websockets'], 'processing')
+
+        '''
+        ws_dict = request.app['websockets']
+        try:
+            log.info(f'trying websocket send:processing...')
+            log.info(f'...to {ws_dict.keys()}')
+            for ws_pair in ws_dict.items():
+                # log.info(f'{ws} send_str...')
+                log.info(f'{ws_pair[0]} send_str...')
+                bClosed = ws_pair[1].closed
+                log.info(f'{ws_pair[0]} closed is {bClosed}')
+                if(bClosed != True):
+                    await ws_pair[1].send_str('processing')
+        except Exception as e:
+            log.info(f'exception in websocket sends:processing: {e}')
+        '''
+
+    else:
+        log.info('already working... exec passed')
+
+    return web.Response(text=result)
 
 
 async def addque(request):
@@ -523,6 +706,9 @@ if __name__ == '__main__':
     # app['youtube'] = youtube
     app['login_file'] = ''
     app['upload_que'] = od()
+    app['process'] = 0
+    app['websockets'] = defaultdict(int)
+
     # if os.path.exists('./login.json'):
     # SESSION_TOKEN 을 고쳐도 에러가 나서 보니 SIDCC도 변경되었더군요
     if os.path.exists(LOGIN_PATH):
@@ -536,6 +722,9 @@ if __name__ == '__main__':
 
     app.add_routes([
         web.post('/addque', addque),
+        web.get('/loginjson', loginjson),
+        web.get('/ws', ws),
+        web.get('/ws_refresh', ws_refresh),
         web.get('/', handle)
     ])
 
