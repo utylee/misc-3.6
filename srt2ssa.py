@@ -95,7 +95,8 @@ def convert(srt): # written by utylee
                 l = re.sub('\n', r'\\N', l, flags=re.I)
                 cur_ssa += l
 
-            #print(cur_ssa)
+            # 현재 라인을 출력합니다
+            # print(cur_ssa)
             ssa += cur_ssa + '\n'
 
             ticktock *= -1
@@ -137,16 +138,27 @@ async def main():
                     with open(os.path.join(p,file_name),'rb') as srt_file:
                         srt_raw = srt_file.read()
                         encoding = cchardet.detect(srt_raw)
-                    srt = srt_raw.decode(encoding['encoding'], errors=DECODE_ERRORS)
+                    # print(f'1: {encoding}')
+                    # srt = srt_raw.encode('utf-8')
+                    # print('2')
+
+                    # dos encoding srt 파일에서 exception이 발생하는 문제가 있었습니다.
+                    # https://stackoverflow.com/a/51351417 해당 해법을 적용해보니 통과가
+                    # 되었습니다
+                    # srt = srt_raw.decode(encoding['encoding'], errors=DECODE_ERRORS)
+                    srt = srt_raw.decode(encoding['encoding'], errors='replace')
+                    # print('3')
                     ssa_file = codecs.open(os.path.join(p,os.path.splitext(file_name)[0]+SUFFIX+'.ssa'),'w',encoding='utf-8')
                     #ssa_file.write(convert_ssa(parse(smi),LANG))
                     #convert(srt)
+                    # print('4')
                     ssa_file.write(convert(srt))
                     success.append(file_name)
                     if REMOVE_OPTION:
                         os.remove(os.path.join(p,file_name))
-                except:
+                except Exception as e:
                     fail.append(file_name)
+                    print(f'excepted by: \n {e}')
 
     srt_list = list(set(success) | set(fail))
     print('\nfound .srt subtitles:')

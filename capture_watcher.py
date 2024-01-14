@@ -17,18 +17,32 @@ from aiopg.sa import create_engine
 # import json
 import db_youtube as db
 
+PATHS = [
+        '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
+        '/mnt/c/Users/utylee/Videos/Apex Legends/',
+        '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
+        '/mnt/c/Users/utylee/Videos/Desktop/',
+        '/mnt/c/Users/utylee/Videos/Overwatch 2/',
+        '/mnt/c/Users/utylee/Videos/The Finals/', 
+        '/mnt/c/Users/utylee/Videos/Counter-strike 2/', 
+        '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/'   
+]
+
+TRUNCATE_DAYS = 3
 
 async def low(request):
     # print('low')
     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
-    request.app['cur_length'] = 8 * 1024 * 128
+    # request.app['cur_length'] = 6 * 1024 * 128
+    request.app['cur_length'] = 5 * 1024 * 128
     return web.Response(text='low')
 
 
 async def high(request):
     # print('high')
     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
-    request.app['cur_length'] = 48 * 1024 * 128
+    # request.app['cur_length'] = 48 * 1024 * 128
+    request.app['cur_length'] = 24 * 1024 * 128
     return web.Response(text='high')
 
 
@@ -62,7 +76,9 @@ async def truncate(app):
                     log.info(f'경과일:{diff.days}')
 
                     # 일주일 기간 이상은 삭제합니다
-                    if diff.days > 7:
+                    # 3일 기간 이상은 삭제합니다
+                    # if diff.days > 7:
+                    if diff.days > TRUNCATE_DAYS:
                         await conn.execute(db.tbl_youtube_files.delete()
                                            .where(db.tbl_youtube_files.c.filename == r[0]))
                         # candidate.append(r[0])
@@ -133,6 +149,7 @@ async def transfering(app):
                 # 현재 복사 진행중인 파일명을 갖고 있기로 합니다
                 app['current_copying'] = file
 
+                sum = 0
                 async with aiofiles.open(start, mode='rb') as src:
                     async with aiofiles.open(desti, mode='wb') as dst:
                         while 1:
@@ -141,8 +158,14 @@ async def transfering(app):
                             if not buf:
                                 break
                             await dst.write(buf)
-                            print(f'wrote:{len(buf)}')
-                            log.info(f'wrote:{len(buf)}')
+                            sum = sum + cur_length
+                            sumk = round(sum / 1000000)
+                            wrote = round(len(buf)/1000)
+                            # print(f'wrote:{len(buf)}')
+                            # log.info(f'wrote:{len(buf)}')
+                            # print(f'{file}: {len(buf)} kb')
+                            # log.info(f'{file}: {len(buf)} b ')
+                            log.info(f'{file}: {wrote} K / {sumk} M')
                             await asyncio.sleep(0.5)
 
             except:
@@ -158,6 +181,21 @@ async def transfering(app):
                 # exception이 안났을 경우에만 삭제합니다. 5초 후
                 # time.sleep(5)
                 await asyncio.sleep(5)
+
+                # 영상을 감상중이라던가해서 삭제가 안될경우 db업데이트 문제로
+                # youtube 업로드가 시작되지 않습니다. 따라서 삭제전 나머지 플래그는
+                # 설정해주도록 합니다. 로컬 삭제는 안되어도 리모트에서 업로드는 되도록
+                try:
+                    async with engine.acquire() as conn:
+                        # completed 즉 3일 경우
+                        log.info(f'status=3')
+                        await conn.execute(db.tbl_youtube_files.update().where(
+                            db.tbl_youtube_files.c.filename == file)
+                            .values(copying=2, uploading=1, queueing=0))
+
+                except:
+                    pass
+
                 os.remove(start)
 
                 # db 에 completed 플래그를 넣어줍니다
@@ -166,11 +204,10 @@ async def transfering(app):
 
                 try:
                     async with engine.acquire() as conn:
-                        # completed 즉 3일 경우
-                        log.info(f'status=3')
+                        log.info(f'set db local=0')
                         await conn.execute(db.tbl_youtube_files.update().where(
                             db.tbl_youtube_files.c.filename == file)
-                            .values(copying=2, local=0, uploading=1, queueing=0))
+                            .values(local=0))
 
                 except:
                     pass
@@ -606,11 +643,12 @@ if __name__ == '__main__':
     app = web.Application()
     # app['log_path'] = f'/home/utylee/capture.log'
     app['cur_length'] = 8 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
-    app['paths'] = [
-        '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
-        '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
-        '/mnt/c/Users/utylee/Videos/Desktop/'
-    ]
+    # app['paths'] = [
+    #     '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
+    #     '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
+    #     '/mnt/c/Users/utylee/Videos/Desktop/'
+    # ]
+    app['paths'] = PATHS
     app['target'] = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
     app['transfer_que'] = dict(que=[],
                                status=0)  # status:: 0: 대기중, 1: 복사중, 2: 복사완료
