@@ -138,6 +138,10 @@ async def transfering(app):
                         log.info(f'status=2')
                         await conn.execute(db.tbl_youtube_files.update().where(
                             db.tbl_youtube_files.c.filename == file).values(copying=1, making=2))
+                    # 또한 needRefresh를 호출해줍니다
+                    async with aiohttp.ClientSession() as sess:
+                        async with sess.get('http://192.168.1.204:9993/ws_refresh'):
+                            log.info('call needRefresh')
 
                 except:
                     pass
@@ -193,15 +197,29 @@ async def transfering(app):
                             db.tbl_youtube_files.c.filename == file)
                             .values(copying=2, uploading=1, queueing=0))
 
-                except:
-                    pass
+                except Exception as e:
+                    log.info(f'exception {e}')
 
-                os.remove(start)
+                try:
+                    os.remove(start)
+                    async with engine.acquire() as conn:
+                        log.info(f'set db local=0')
+                        await conn.execute(db.tbl_youtube_files.update().where(
+                            db.tbl_youtube_files.c.filename == file)
+                            .values(local=0))
+                    # 또한 needRefresh를 호출해줍니다
+                    async with aiohttp.ClientSession() as sess:
+                        async with sess.get('http://192.168.1.204:9993/ws_refresh'):
+                            log.info('call needRefresh after removing')
+                except Exception as e:
+                    log.info(f'exception in file deleting... {e}')
 
                 # db 에 completed 플래그를 넣어줍니다
                 # payload = {'file': file, 'status': 3}
                 # ret = await send_current_status(payload)
 
+                # os.remove 와 try내에 통합합니다
+                '''
                 try:
                     async with engine.acquire() as conn:
                         log.info(f'set db local=0')
@@ -211,6 +229,7 @@ async def transfering(app):
 
                 except:
                     pass
+                '''
 
         await asyncio.sleep(10)
 
@@ -286,11 +305,18 @@ async def watching(app):
     afters = []
     addeds = []
     removeds = []
+    # befores = dict()
+    # afters = dict()
+    # addeds = dict()
+    # removeds = dict() 
     # log.info('come')
     for n in range(len(paths)):
         befores_dict = dict()
-        befores_dict.update(dict([(f, datetime.datetime.fromtimestamp(
-            os.path.getmtime(paths[n] + f)).strftime("%y%m%d%H%M%S")) for f in os.listdir(paths[n])]))
+        
+        # 해당 디렉토리가 있을 경우만 실행합니다
+        if os.path.exists(paths[n]) == True:
+            befores_dict.update(dict([(f, datetime.datetime.fromtimestamp(
+                os.path.getmtime(paths[n] + f)).strftime("%y%m%d%H%M%S")) for f in os.listdir(paths[n])]))
         # log.info(f'{befores_dict}')
         # timestamp에 따라 내림차순 정렬을 합니다
         files_dict = dict(sorted(befores_dict.items(),
@@ -315,9 +341,11 @@ async def watching(app):
                     # playlist='',
                     # status='',
                     # await conn.execute(db.tbl_youtube_files.insert().values(filename=f))
+                    log.info(f'success')
                 except:
                     print('exception on inserting db!')
                     log.info('exception on inserting db!')
+
 
         # befores[n] = paths[n]
         # befores.append(dict([(f, None) for f in os.listdir(paths[n])]))
@@ -338,9 +366,13 @@ async def watching(app):
             await asyncio.sleep(5)
 
             afters_dict = dict()
-            afters_dict.update(dict([(f, datetime.datetime.fromtimestamp(
-                os.path.getmtime(paths[n] + f)).strftime("%y%m%d%H%M%S"))
-                for f in os.listdir(paths[n])]))
+
+            # 해당 디렉토리가 있을 경우만 실행합니다
+            if os.path.exists(paths[n]) == True:
+                afters_dict.update(dict([(f, datetime.datetime.fromtimestamp(
+                    os.path.getmtime(paths[n] + f)).strftime("%y%m%d%H%M%S"))
+                    for f in os.listdir(paths[n])]))
+
             # timestamp에 따라 내림차순 정렬을 합니다
             afters[n] = dict(sorted(afters_dict.items(),
                                     key=lambda x: x[1], reverse=True))
@@ -377,9 +409,15 @@ async def watching(app):
                                                        making=1, remote=0, copying=0,
                                                        start_path=paths[n],
                                                        dest_path=target))
-                        except:
-                            print('exception on inserting db!')
-                            log.info('exception on inserting db!')
+                            # 또한 needRefresh를 호출해줍니다
+                            async with aiohttp.ClientSession() as sess:
+                                async with sess.get(
+                                        'http://192.168.1.204:9993/ws_refresh') as resp:
+                                    result = await resp.text()
+                                    log.info(f'call needRefresh: {result}')
+                        except Exception as e:
+                            print(f'exception {e} on inserting db!')
+                            log.info(f'exception {e} on inserting db!')
 
                     # 5초마다 녹화가 끝났는지 용량을 확인합니다
                     # 5초 후 전송을 시작합니다
@@ -462,9 +500,14 @@ async def watching(app):
                                                            == i)
                                                        .values(copying=0, making=2,
                                                                uploading=0, remote=0))
+                                    # 또한 needRefresh를 호출해줍니다
+                                    async with aiohttp.ClientSession() as sess:
+                                        async with sess.get(
+                                                'http://192.168.1.204:9993/ws_refresh'):
+                                            log.info('call needRefresh')
 
-                            except:
-                                pass
+                            except Exception as e:
+                                log.info(f'exception {e}')
 
                             #  파일,경로 등을 app['transfering'] 큐에 넣고,
                             app['transfer_que']['que'].append(
