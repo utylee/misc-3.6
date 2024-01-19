@@ -5,6 +5,7 @@ import os
 import random
 import sys
 import time
+import datetime
 
 from ytstudio import Studio
 
@@ -141,8 +142,23 @@ async def monitor_subprocess(app):
                 # await app['process'].wait()
                 log.info(f'login.json 파일 갱신작업 완료.')
                 # log.info(f'process 종료')
+
+                # 파일 변경일도 수집합니다
+                float_time = os.stat(LOGIN_PATH).st_mtime
+                readable_time = datetime.datetime.fromtimestamp(float_time)
+                readable_time = readable_time.strftime('%y%m%d-%H:%M:%S')
+                log.info(f'login.json date: {readable_time}')
+                app['login_file_date'] = readable_time
+
+                # api에 해당시간을 전달해줍니다
+                async with aiohttp.ClientSession() as sess:
+                    async with sess.post(
+                            'http://localhost/youtube/api/report_loginjson_date', data=readable_time):
+                        log.info(f'report loginjson date:{readable_time}')
+
                 app['process'] = 0
 
+                await send_ws(app['websockets'], 'needRefresh')
                 await send_ws(app['websockets'], 'finished')
 
                 '''
@@ -196,6 +212,24 @@ async def monitor(app):
     # 20초마다 api_backend 서버에 현재 대기중인 큐를 요구합니다
     # 유튜브 업로드 중이었다면 끝낸 후일 것이므로
 
+    # login.json파일 변경일도 수집합니다
+    float_time = os.stat(LOGIN_PATH).st_mtime
+    readable_time = datetime.datetime.fromtimestamp(float_time)
+    # .strftime('%y%m%d-%H:%M:%S')
+    readable_time = readable_time.strftime('%y%m%d-%H:%M:%S')
+    log.info(f'login.json date: {readable_time}')
+
+    app['login_file_date'] = readable_time
+
+    # youtube api 에 login_file_date 를 보고합니다
+    try:
+        async with aiohttp.ClientSession() as sess:
+            async with sess.post('http://localhost/youtube/api/loginjson_date', data=readable_time):
+                pass
+
+    except Exception as e:
+        log.info(f'exception in loginjson_date post::{e}')
+
     # 업로드 성공여부 리턴값입니다
     ret = 1
     #url_gimme = 'http://192.168.1.102/uploader/api/gimme_que'
@@ -241,7 +275,8 @@ async def monitor(app):
                 async for r in conn.execute(db.tbl_youtube_files.select()
                                             .where(db.tbl_youtube_files.c.filename == temp_file)):
                     # copying이  2 즉 완료가 아니면, 즉 아직 복사중이면 패스합니다
-                    log.info(f'{temp_file} copying check by db. r[4] is {r[4]}')
+                    log.info(
+                        f'{temp_file} copying check by db. r[4] is {r[4]}')
                     if int(r[4]) != 2:
                         log.info(
                             f'{temp_file} is currently copying. continue next')
@@ -298,6 +333,7 @@ async def monitor(app):
                                                 .where(db.tbl_youtube_files.c.filename == cur_file)
                                                 .values(uploading=2)):
                             log.info(f'db copying column to 2')
+                    # 변경후 클라이언트들에 리프레시 신호를 보냅니다
                     await send_ws(app['websockets'], 'needRefresh')
                 except:
                     log.info(f'exception:db copying column to 2')
@@ -308,7 +344,8 @@ async def monitor(app):
 
                 # 'sessionToken': self.cookies['SESSION_TOKEN'],
                 if os.path.exists(LOGIN_PATH):
-                    app['login_file'] = json.loads(open(LOGIN_PATH, 'r').read())
+                    app['login_file'] = json.loads(
+                        open(LOGIN_PATH, 'r').read())
                     # print(app['login_file'])
                     # sessionToken = app['login_file']['SESSION_TOKEN']
                     # sidCc =  app['login_file']['SIDCC']
@@ -387,7 +424,7 @@ async def monitor(app):
                 except:
                     log.info(f'exception:: on uploading to 4 to db')
 
-            
+            # 업로드 성공/실패 후  클라이언트들에 리프레시 신호를 보냅니다
             await send_ws(app['websockets'], 'needRefresh')
             app['uploading'] = 0
 
@@ -430,7 +467,10 @@ async def create_bg_tasks(app):
     asyncio.create_task(monitor_subprocess(app))
 
 
+# ahk를 실행시키는 명령하는 함수입니다
+# **작업완료는 monitor_subprocess 함수에서 점검해서 처리합니다
 async def loginjson(request):
+
     result = 'waiting'
 
     # 작업중이 아닐 때만 실행 명령을 내립니다
@@ -705,6 +745,7 @@ if __name__ == '__main__':
     app['uploading'] = 0
     # app['youtube'] = youtube
     app['login_file'] = ''
+    app['login_file_date'] = ''
     app['upload_que'] = od()
     app['process'] = 0
     app['websockets'] = defaultdict(int)
