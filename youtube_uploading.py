@@ -7,6 +7,11 @@ import sys
 import time
 import datetime
 
+# cook 루틴을 추가하기 위한 라이브러리들입니다
+from aiofiles import open as open_async
+import pyperclip
+import re
+
 from ytstudio import Studio
 
 from apiclient.discovery import build
@@ -27,12 +32,128 @@ import copy
 
 
 FIXED_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture/'
-LOGIN_PATH = '/home/utylee/login.json'
+JSON_PATH = '/home/utylee/login.json'
+COOKIE_PATH = f'/mnt/c/Users/utylee/Downloads/cookies.txt'
 
 
 def progress(yuklenen, toplam):
     # print(f"{round(round(yuklenen / toplam, 2) * 100)}% upload", end="\r")
     print(f"{round(yuklenen / toplam) * 100}% upload", end="\r")
+
+async def cook(request):
+    full = []
+    full_dict = dict()
+
+    # 먼저 login.json 에서 SESSION_TOKEN 값은 저장해놓습니다
+    # --> pyperclip으로 클립보드 값을 넣어주는 것으로 변경합니다
+    # 실행시 번거롭지 않게 바로 login.json에 sessionToken을 반영하도록
+    sessionToken = ''
+    # try:
+    #     async with open_async(JSON_PATH, 'r') as f:
+    #         r = await f.readlines()
+    #         rr = "".join(r)
+    #         # print(r)
+    #         # print(rr)
+    #         p = json.loads(rr)
+    #         # print(p)
+    #         print(f'.sessionToken: {p["SESSION_TOKEN"]}')
+    #         # sessionToken = p['SESSION_TOKEN']
+
+    # except:
+    #     pass
+
+    # clipboard값을 sessionToken에 바로 넣어줍니다
+    log.info('pyperclipping')
+    try:
+        pyperclip.ENCODING = 'cp949'
+        sessionToken = pyperclip.paste()
+
+    except Exception as e:
+        log.info(f'pyperclip exception: {e}')
+
+    log.info('opening cookies.txt')
+    # 쿠키파일을 엽니다
+    async with open_async(COOKIE_PATH, 'r') as f:
+        full = await f.readlines()
+
+    log.info('cookies.txt read')
+    # 파싱하여 dict를 만듭니다
+    res = ()
+    for i in full:
+        s = re.search(r'\S+\s+\S+\s+/\s+\S+\s+\S+\s+(.*)\t(.*)', i)
+        if (s):
+            res = (s.group(1), s.group(2))
+            full_dict[s.group(1)] = s.group(2)
+        # print(i)
+        # print(res)
+
+    # full_dict['SESSION_TOKEN'] = sessionToken
+    # # print(full_dict['VISITOR_INFO1_LIVE'])
+    # print(full_dict)
+
+    # 로긴파일을 작성합니다
+    async with open_async(JSON_PATH, 'w') as f:
+        # await f.write('{\n\t"SESSION_TOKEN": "",')
+
+        # p = json.dumps(full_dict, indent=4)
+        # await f.write(p)
+
+        await f.write('{\n')
+        # await f.write('\t"SESSION_TOKEN": ""')
+        await f.write(f'\t"SESSION_TOKEN": "{sessionToken}"')
+        # f-string 최외각을 single-quote ' 로 감싸면 dict형식은 double-quote " 로 감싸면 되고
+        # 그 반대도 되네요. 검색해보니
+        # i.e. https://stackoverflow.com/questions/43488137/how-can-i-do-a-dictionary-format-with-f-string-in-python-3-6
+        # await f.write(f',\n\t"LOGIN_INFO": "{full_dict["LOGIN_INFO"]}"')
+        await f.write(f',\n\t"SID": "{full_dict["SID"]}"')
+        await f.write(f',\n\t"HSID": "{full_dict["HSID"]}"')
+        await f.write(f',\n\t"SSID": "{full_dict["SSID"]}"')
+        await f.write(f',\n\t"APISID": "{full_dict["APISID"]}"')
+        await f.write(f',\n\t"SAPISID": "{full_dict["SAPISID"]}"')
+        await f.write(f',\n\t"LOGIN_INFO": "{full_dict["LOGIN_INFO"]}"')
+        await f.write(f',\n\t"__Secure-1PSIDTS": "{full_dict["__Secure-1PSIDTS"]}"')
+        await f.write('\n}')
+
+        '''
+        await f.write('{\n')
+        await f.write('\t"SESSION_TOKEN": ""')
+        # f-string 최외각을 single-quote ' 로 감싸면 dict형식은 double-quote " 로 감싸면 되고
+        #그 반대도 되네요. 검색해보니
+        # i.e. https://stackoverflow.com/questions/43488137/how-can-i-do-a-dictionary-format-with-f-string-in-python-3-6
+        await f.write(f',\n\t"VISITOR_INFO1_LIVE": "{full_dict["VISITOR_INFO1_LIVE"]}"')
+        # await f.write(f',\n\t"PREF": "{full_dict["PREF"]}"')
+        await f.write(f',\n\t"PREF": "f6=40000000&tz=Asia.Seoul"')
+        await f.write(f',\n\t"LOGIN_INFO": "{full_dict["LOGIN_INFO"]}"')
+        await f.write(f',\n\t"SID": "{full_dict["SID"]}"')
+        await f.write(f',\n\t"__Secure-3PSID": "{full_dict["__Secure-3PSID"]}"')
+        await f.write(f',\n\t"HSID": "{full_dict["HSID"]}"')
+        await f.write(f',\n\t"SSID": "{full_dict["SSID"]}"')
+        await f.write(f',\n\t"APISID": "{full_dict["APISID"]}"')
+        await f.write(f',\n\t"SAPISID": "{full_dict["SAPISID"]}"')
+        await f.write(f',\n\t"__Secure-3PAPISID": "{full_dict["__Secure-3PAPISID"]}"')
+        await f.write(f',\n\t"YSC": "{full_dict["YSC"]}"')
+        await f.write(f',\n\t"SIDCC": "{full_dict["SIDCC"]}"')
+        await f.write('\n}')
+        '''
+
+    print('\nlogin.json wrote')
+    log.info('login.json wrote')
+
+
+    r = ''
+    rr = ''
+    # 완성된 login.json 출력
+    try:
+        async with open_async(JSON_PATH, 'r') as f:
+            r = await f.readlines()
+            rr = "".join(r)
+            # print(r)
+            # print(rr)
+    except Exception as e:
+        print(f'Exception:{e}')
+        log.info(f'Exception:{e}')
+
+    return web.Response(text=rr) 
 
 
 async def send_ws(ws, msg):
@@ -144,7 +265,7 @@ async def monitor_subprocess(app):
                 # log.info(f'process 종료')
 
                 # 파일 변경일도 수집합니다
-                float_time = os.stat(LOGIN_PATH).st_mtime
+                float_time = os.stat(JSON_PATH).st_mtime
                 readable_time = datetime.datetime.fromtimestamp(float_time)
                 readable_time = readable_time.strftime('%y%m%d-%H:%M:%S')
                 log.info(f'login.json date: {readable_time}')
@@ -213,7 +334,7 @@ async def monitor(app):
     # 유튜브 업로드 중이었다면 끝낸 후일 것이므로
 
     # login.json파일 변경일도 수집합니다
-    float_time = os.stat(LOGIN_PATH).st_mtime
+    float_time = os.stat(JSON_PATH).st_mtime
     readable_time = datetime.datetime.fromtimestamp(float_time)
     # .strftime('%y%m%d-%H:%M:%S')
     readable_time = readable_time.strftime('%y%m%d-%H:%M:%S')
@@ -343,9 +464,9 @@ async def monitor(app):
                 # privacy='PUBLIC')
 
                 # 'sessionToken': self.cookies['SESSION_TOKEN'],
-                if os.path.exists(LOGIN_PATH):
+                if os.path.exists(JSON_PATH):
                     app['login_file'] = json.loads(
-                        open(LOGIN_PATH, 'r').read())
+                        open(JSON_PATH, 'r').read())
                     # print(app['login_file'])
                     # sessionToken = app['login_file']['SESSION_TOKEN']
                     # sidCc =  app['login_file']['SIDCC']
@@ -752,8 +873,8 @@ if __name__ == '__main__':
 
     # if os.path.exists('./login.json'):
     # SESSION_TOKEN 을 고쳐도 에러가 나서 보니 SIDCC도 변경되었더군요
-    if os.path.exists(LOGIN_PATH):
-        app['login_file'] = json.loads(open(LOGIN_PATH, 'r').read())
+    if os.path.exists(JSON_PATH):
+        app['login_file'] = json.loads(open(JSON_PATH, 'r').read())
         print(app['login_file'])
         log.info('login file loaded')
         log.info(app['login_file'])
@@ -764,6 +885,7 @@ if __name__ == '__main__':
     app.add_routes([
         web.post('/addque', addque),
         web.get('/loginjson', loginjson),
+        web.get('/cook', cook),
         web.get('/ws', ws),
         web.get('/ws_refresh', ws_refresh),
         web.get('/', handle)
