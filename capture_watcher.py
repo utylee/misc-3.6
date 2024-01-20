@@ -13,22 +13,153 @@ import datetime
 import time
 
 from aiopg.sa import create_engine
+from sqlalchemy import false
 # http post 로 신호 전달을 위해 json 객체가 필요합니다
 # import json
 import db_youtube as db
 
+URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
+TRUNCATE_DAYS = 3
 PATHS = [
-        '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
-        '/mnt/c/Users/utylee/Videos/Apex Legends/',
-        '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
-        '/mnt/c/Users/utylee/Videos/Desktop/',
-        '/mnt/c/Users/utylee/Videos/Overwatch 2/',
-        '/mnt/c/Users/utylee/Videos/The Finals/', 
-        '/mnt/c/Users/utylee/Videos/Counter-strike 2/', 
-        '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/'   
+    '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
+    '/mnt/c/Users/utylee/Videos/Apex Legends/',
+    '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
+    '/mnt/c/Users/utylee/Videos/Desktop/',
+    '/mnt/c/Users/utylee/Videos/Overwatch 2/',
+    '/mnt/c/Users/utylee/Videos/The Finals/',
+    '/mnt/c/Users/utylee/Videos/Counter-strike 2/',
+    '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/'
 ]
 
-TRUNCATE_DAYS = 3
+
+async def deletefile(request):
+    js = await request.json()
+    js = json.loads(js)
+    log.info(f'came into deletefile. js is {js}')
+    # log.info(f'js.filename is {js["filename"]}')
+
+    start_path = ''
+    dest_path = ''
+
+    # start_removed = 0
+    # dest_removed = 0
+
+    start_exists = 1
+    dest_exists = 1
+
+    # db에서 해당파일의 로컬 및 리모트의 폴더를 가져옵니다
+    engine = request.app['db']
+    try:
+        async with engine.acquire() as conn:
+            async for r in conn.execute(db.tbl_youtube_files.select()
+                                        .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+                                                          db.tbl_youtube_files.c.timestamp == js['timestamp']))):
+                # db.tbl_youtube_files.c.timestamp == '3'))):
+                start_path = r[8]
+                dest_path = r[9]
+                log.info(f'deletefile::selected::{start_path}, {dest_path}')
+
+    except Exception as e:
+        log.info(f'exception {e}')
+
+    # 만약 start_path, dest_path 가 없으면 응급조치를 실행합니다
+
+    # 파일이름과 폴더를 합칩니다 
+    # start_path = os.path.join(start_path, js['filename'])
+    # dest_path = os.path.join(dest_path, js['filename'])
+
+    log.info(f'deletefile::fetched::start:{start_path}')
+    log.info(f'deletefile::fetched::dest:{dest_path}')
+
+    try:
+        # db에 패스가 없기에 모든 폴더를 적용해지워봅니다
+        if (start_path == None):
+            for p in PATHS:
+                log.info(f'p: {p}')
+                temp_path = os.path.join(p, js['filename'])
+                if (os.path.exists(temp_path)):
+                    start_path = p
+                    break
+
+            # 모든 폴더에 해당파일이 없다면 지워졌다고 보면됩니다
+            # 아무거나 넣어주면 이후에 당연히 지워졌다고 판단되고 진행될 것입니다
+            if(start_path == None):
+                start_path = PATHS[0]
+                # start_exists = 0
+        log.info(f'start_path: {start_path}')
+
+        # if(start_removed == 0 
+        # if(start_exists == 1
+            # and os.path.exists(os.path.join(start_path, js['filename']))):
+        if(os.path.exists(os.path.join(start_path, js['filename']))):
+            os.remove(os.path.join(start_path, js['filename']))
+        # else:
+        #     if(os.path.exists(os.path.join(start_path, js['filename']))):
+        #         os.remove(os.path.join(start_path, js['filename']))
+        
+        log.info(f'deleted start paths {js["filename"]}')
+    except Exception as e:
+        log.info(f'exception while deleting start {js["filename"]}, {e}')
+
+    try:
+        if (dest_path == None):
+            dest_path = request.app['target']
+        if(os.path.exists(os.path.join(dest_path, js['filename']))):
+            os.remove(os.path.join(dest_path, js['filename']))
+
+        log.info(f'deleted dest paths {js["filename"]}')
+    except Exception as e:
+        log.info(f'exception while deleting dest {js["filename"]}, {e}')
+
+    # 삭제됐으면 db의 local과 remote도 업데이트해줍니다
+    # if (start_exists == 0 
+    #         or os.path.exists(os.path.join(start_path, js['filename'])) == False):
+    if(os.path.exists(os.path.join(start_path, js['filename'])) == False):
+        # start_removed = 1
+        start_exists = 0
+        log.info('start no exists')
+        try:
+            async with engine.acquire() as conn:
+                await conn.execute(db.tbl_youtube_files.update()
+                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+                                                     db.tbl_youtube_files.c.timestamp == js['timestamp']))
+                                   .values(local=0))
+        except Exception as e:
+            log.info(f'{e}')
+
+    if (os.path.exists(os.path.join(dest_path, js['filename'])) == False):
+        # dest_removed = 1
+        dest_exists = 0
+        log.info('dest no exists')
+        try:
+            async with engine.acquire() as conn:
+                await conn.execute(db.tbl_youtube_files.update()
+                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+                                                     db.tbl_youtube_files.c.timestamp == js['timestamp']))
+                                   .values(remote=0))
+        except Exception as e:
+            log.info(f'{e}')
+
+    # 둘다 없을 경우에만 db의 해당파일 튜플을 삭제합니다
+    # if(start_removed == 1 and dest_removed == 1):
+    if(start_exists == 0 and dest_exists == 0):
+        try:
+            async with engine.acquire() as conn:
+                await conn.execute(db.tbl_youtube_files.delete()
+                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+                                                     db.tbl_youtube_files.c.timestamp == js['timestamp'])))
+                                   
+            # 클라이언트에 needRefresh 를 보냅니다
+            async with aiohttp.ClientSession() as sess:
+                async with sess.get(URL_UPLOADER_WS_REFRESH):
+                    log.info('call needRefresh')
+
+        except Exception as e:
+            log.info(f'{e}')
+
+
+    return web.Response(text='ok')
+
 
 async def low(request):
     # print('low')
@@ -140,7 +271,7 @@ async def transfering(app):
                             db.tbl_youtube_files.c.filename == file).values(copying=1, making=2))
                     # 또한 needRefresh를 호출해줍니다
                     async with aiohttp.ClientSession() as sess:
-                        async with sess.get('http://192.168.1.204:9993/ws_refresh'):
+                        async with sess.get(URL_UPLOADER_WS_REFRESH):
                             log.info('call needRefresh')
 
                 except:
@@ -195,7 +326,9 @@ async def transfering(app):
                         log.info(f'status=3')
                         await conn.execute(db.tbl_youtube_files.update().where(
                             db.tbl_youtube_files.c.filename == file)
-                            .values(copying=2, uploading=1, queueing=0))
+                            .values(copying=2, uploading=1, queueing=0, remote=1))
+                        # remote = 1을 추가합니다. 삭제프로세스 보다보니 없어서
+                        # .values(copying=2, uploading=1, queueing=0))
 
                 except Exception as e:
                     log.info(f'exception {e}')
@@ -209,7 +342,7 @@ async def transfering(app):
                             .values(local=0))
                     # 또한 needRefresh를 호출해줍니다
                     async with aiohttp.ClientSession() as sess:
-                        async with sess.get('http://192.168.1.204:9993/ws_refresh'):
+                        async with sess.get(URL_UPLOADER_WS_REFRESH):
                             log.info('call needRefresh after removing')
                 except Exception as e:
                     log.info(f'exception in file deleting... {e}')
@@ -308,11 +441,11 @@ async def watching(app):
     # befores = dict()
     # afters = dict()
     # addeds = dict()
-    # removeds = dict() 
+    # removeds = dict()
     # log.info('come')
     for n in range(len(paths)):
         befores_dict = dict()
-        
+
         # 해당 디렉토리가 있을 경우만 실행합니다
         if os.path.exists(paths[n]) == True:
             befores_dict.update(dict([(f, datetime.datetime.fromtimestamp(
@@ -345,7 +478,6 @@ async def watching(app):
                 except:
                     print('exception on inserting db!')
                     log.info('exception on inserting db!')
-
 
         # befores[n] = paths[n]
         # befores.append(dict([(f, None) for f in os.listdir(paths[n])]))
@@ -412,7 +544,7 @@ async def watching(app):
                             # 또한 needRefresh를 호출해줍니다
                             async with aiohttp.ClientSession() as sess:
                                 async with sess.get(
-                                        'http://192.168.1.204:9993/ws_refresh') as resp:
+                                        URL_UPLOADER_WS_REFRESH) as resp:
                                     result = await resp.text()
                                     log.info(f'call needRefresh: {result}')
                         except Exception as e:
@@ -503,7 +635,7 @@ async def watching(app):
                                     # 또한 needRefresh를 호출해줍니다
                                     async with aiohttp.ClientSession() as sess:
                                         async with sess.get(
-                                                'http://192.168.1.204:9993/ws_refresh'):
+                                                URL_UPLOADER_WS_REFRESH):
                                             log.info('call needRefresh')
 
                             except Exception as e:
@@ -704,7 +836,9 @@ if __name__ == '__main__':
     # 웹서버를 엽니다. 히오스가 활성상태인지 확인하는 정보를 받습니다
     app.add_routes([
         web.get('/low', low),
-        web.get('/high', high)
+        web.get('/high', high),
+        web.post('/deletefile', deletefile)
+        # web.get('/deletefile', deletefile)
     ])
 
     web.run_app(app, port=8007)
