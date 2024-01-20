@@ -5,6 +5,12 @@ import os
 import random
 import sys
 import time
+import datetime
+
+# cook 루틴을 추가하기 위한 라이브러리들입니다
+from aiofiles import open as open_async
+import pyperclip
+import re
 
 from ytstudio import Studio
 
@@ -26,12 +32,128 @@ import copy
 
 
 FIXED_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture/'
-LOGIN_PATH = '/home/utylee/login.json'
+JSON_PATH = '/home/utylee/login.json'
+COOKIE_PATH = f'/mnt/c/Users/utylee/Downloads/cookies.txt'
 
 
 def progress(yuklenen, toplam):
     # print(f"{round(round(yuklenen / toplam, 2) * 100)}% upload", end="\r")
     print(f"{round(yuklenen / toplam) * 100}% upload", end="\r")
+
+async def cook(request):
+    full = []
+    full_dict = dict()
+
+    # 먼저 login.json 에서 SESSION_TOKEN 값은 저장해놓습니다
+    # --> pyperclip으로 클립보드 값을 넣어주는 것으로 변경합니다
+    # 실행시 번거롭지 않게 바로 login.json에 sessionToken을 반영하도록
+    sessionToken = ''
+    # try:
+    #     async with open_async(JSON_PATH, 'r') as f:
+    #         r = await f.readlines()
+    #         rr = "".join(r)
+    #         # print(r)
+    #         # print(rr)
+    #         p = json.loads(rr)
+    #         # print(p)
+    #         print(f'.sessionToken: {p["SESSION_TOKEN"]}')
+    #         # sessionToken = p['SESSION_TOKEN']
+
+    # except:
+    #     pass
+
+    # clipboard값을 sessionToken에 바로 넣어줍니다
+    log.info('pyperclipping')
+    try:
+        pyperclip.ENCODING = 'cp949'
+        sessionToken = pyperclip.paste()
+
+    except Exception as e:
+        log.info(f'pyperclip exception: {e}')
+
+    log.info('opening cookies.txt')
+    # 쿠키파일을 엽니다
+    async with open_async(COOKIE_PATH, 'r') as f:
+        full = await f.readlines()
+
+    log.info('cookies.txt read')
+    # 파싱하여 dict를 만듭니다
+    res = ()
+    for i in full:
+        s = re.search(r'\S+\s+\S+\s+/\s+\S+\s+\S+\s+(.*)\t(.*)', i)
+        if (s):
+            res = (s.group(1), s.group(2))
+            full_dict[s.group(1)] = s.group(2)
+        # print(i)
+        # print(res)
+
+    # full_dict['SESSION_TOKEN'] = sessionToken
+    # # print(full_dict['VISITOR_INFO1_LIVE'])
+    # print(full_dict)
+
+    # 로긴파일을 작성합니다
+    async with open_async(JSON_PATH, 'w') as f:
+        # await f.write('{\n\t"SESSION_TOKEN": "",')
+
+        # p = json.dumps(full_dict, indent=4)
+        # await f.write(p)
+
+        await f.write('{\n')
+        # await f.write('\t"SESSION_TOKEN": ""')
+        await f.write(f'\t"SESSION_TOKEN": "{sessionToken}"')
+        # f-string 최외각을 single-quote ' 로 감싸면 dict형식은 double-quote " 로 감싸면 되고
+        # 그 반대도 되네요. 검색해보니
+        # i.e. https://stackoverflow.com/questions/43488137/how-can-i-do-a-dictionary-format-with-f-string-in-python-3-6
+        # await f.write(f',\n\t"LOGIN_INFO": "{full_dict["LOGIN_INFO"]}"')
+        await f.write(f',\n\t"SID": "{full_dict["SID"]}"')
+        await f.write(f',\n\t"HSID": "{full_dict["HSID"]}"')
+        await f.write(f',\n\t"SSID": "{full_dict["SSID"]}"')
+        await f.write(f',\n\t"APISID": "{full_dict["APISID"]}"')
+        await f.write(f',\n\t"SAPISID": "{full_dict["SAPISID"]}"')
+        await f.write(f',\n\t"LOGIN_INFO": "{full_dict["LOGIN_INFO"]}"')
+        await f.write(f',\n\t"__Secure-1PSIDTS": "{full_dict["__Secure-1PSIDTS"]}"')
+        await f.write('\n}')
+
+        '''
+        await f.write('{\n')
+        await f.write('\t"SESSION_TOKEN": ""')
+        # f-string 최외각을 single-quote ' 로 감싸면 dict형식은 double-quote " 로 감싸면 되고
+        #그 반대도 되네요. 검색해보니
+        # i.e. https://stackoverflow.com/questions/43488137/how-can-i-do-a-dictionary-format-with-f-string-in-python-3-6
+        await f.write(f',\n\t"VISITOR_INFO1_LIVE": "{full_dict["VISITOR_INFO1_LIVE"]}"')
+        # await f.write(f',\n\t"PREF": "{full_dict["PREF"]}"')
+        await f.write(f',\n\t"PREF": "f6=40000000&tz=Asia.Seoul"')
+        await f.write(f',\n\t"LOGIN_INFO": "{full_dict["LOGIN_INFO"]}"')
+        await f.write(f',\n\t"SID": "{full_dict["SID"]}"')
+        await f.write(f',\n\t"__Secure-3PSID": "{full_dict["__Secure-3PSID"]}"')
+        await f.write(f',\n\t"HSID": "{full_dict["HSID"]}"')
+        await f.write(f',\n\t"SSID": "{full_dict["SSID"]}"')
+        await f.write(f',\n\t"APISID": "{full_dict["APISID"]}"')
+        await f.write(f',\n\t"SAPISID": "{full_dict["SAPISID"]}"')
+        await f.write(f',\n\t"__Secure-3PAPISID": "{full_dict["__Secure-3PAPISID"]}"')
+        await f.write(f',\n\t"YSC": "{full_dict["YSC"]}"')
+        await f.write(f',\n\t"SIDCC": "{full_dict["SIDCC"]}"')
+        await f.write('\n}')
+        '''
+
+    print('\nlogin.json wrote')
+    log.info('login.json wrote')
+
+
+    r = ''
+    rr = ''
+    # 완성된 login.json 출력
+    try:
+        async with open_async(JSON_PATH, 'r') as f:
+            r = await f.readlines()
+            rr = "".join(r)
+            # print(r)
+            # print(rr)
+    except Exception as e:
+        print(f'Exception:{e}')
+        log.info(f'Exception:{e}')
+
+    return web.Response(text=rr) 
 
 
 async def send_ws(ws, msg):
@@ -141,8 +263,23 @@ async def monitor_subprocess(app):
                 # await app['process'].wait()
                 log.info(f'login.json 파일 갱신작업 완료.')
                 # log.info(f'process 종료')
+
+                # 파일 변경일도 수집합니다
+                float_time = os.stat(JSON_PATH).st_mtime
+                readable_time = datetime.datetime.fromtimestamp(float_time)
+                readable_time = readable_time.strftime('%y%m%d-%H:%M:%S')
+                log.info(f'login.json date: {readable_time}')
+                app['login_file_date'] = readable_time
+
+                # api에 해당시간을 전달해줍니다
+                async with aiohttp.ClientSession() as sess:
+                    async with sess.post(
+                            'http://localhost/youtube/api/report_loginjson_date', data=readable_time):
+                        log.info(f'report loginjson date:{readable_time}')
+
                 app['process'] = 0
 
+                await send_ws(app['websockets'], 'needRefresh')
                 await send_ws(app['websockets'], 'finished')
 
                 '''
@@ -196,6 +333,24 @@ async def monitor(app):
     # 20초마다 api_backend 서버에 현재 대기중인 큐를 요구합니다
     # 유튜브 업로드 중이었다면 끝낸 후일 것이므로
 
+    # login.json파일 변경일도 수집합니다
+    float_time = os.stat(JSON_PATH).st_mtime
+    readable_time = datetime.datetime.fromtimestamp(float_time)
+    # .strftime('%y%m%d-%H:%M:%S')
+    readable_time = readable_time.strftime('%y%m%d-%H:%M:%S')
+    log.info(f'login.json date: {readable_time}')
+
+    app['login_file_date'] = readable_time
+
+    # youtube api 에 login_file_date 를 보고합니다
+    try:
+        async with aiohttp.ClientSession() as sess:
+            async with sess.post('http://localhost/youtube/api/loginjson_date', data=readable_time):
+                pass
+
+    except Exception as e:
+        log.info(f'exception in loginjson_date post::{e}')
+
     # 업로드 성공여부 리턴값입니다
     ret = 1
     #url_gimme = 'http://192.168.1.102/uploader/api/gimme_que'
@@ -241,7 +396,8 @@ async def monitor(app):
                 async for r in conn.execute(db.tbl_youtube_files.select()
                                             .where(db.tbl_youtube_files.c.filename == temp_file)):
                     # copying이  2 즉 완료가 아니면, 즉 아직 복사중이면 패스합니다
-                    log.info(f'{temp_file} copying check by db. r[4] is {r[4]}')
+                    log.info(
+                        f'{temp_file} copying check by db. r[4] is {r[4]}')
                     if int(r[4]) != 2:
                         log.info(
                             f'{temp_file} is currently copying. continue next')
@@ -298,6 +454,7 @@ async def monitor(app):
                                                 .where(db.tbl_youtube_files.c.filename == cur_file)
                                                 .values(uploading=2)):
                             log.info(f'db copying column to 2')
+                    # 변경후 클라이언트들에 리프레시 신호를 보냅니다
                     await send_ws(app['websockets'], 'needRefresh')
                 except:
                     log.info(f'exception:db copying column to 2')
@@ -307,8 +464,9 @@ async def monitor(app):
                 # privacy='PUBLIC')
 
                 # 'sessionToken': self.cookies['SESSION_TOKEN'],
-                if os.path.exists(LOGIN_PATH):
-                    app['login_file'] = json.loads(open(LOGIN_PATH, 'r').read())
+                if os.path.exists(JSON_PATH):
+                    app['login_file'] = json.loads(
+                        open(JSON_PATH, 'r').read())
                     # print(app['login_file'])
                     # sessionToken = app['login_file']['SESSION_TOKEN']
                     # sidCc =  app['login_file']['SIDCC']
@@ -387,7 +545,7 @@ async def monitor(app):
                 except:
                     log.info(f'exception:: on uploading to 4 to db')
 
-            
+            # 업로드 성공/실패 후  클라이언트들에 리프레시 신호를 보냅니다
             await send_ws(app['websockets'], 'needRefresh')
             app['uploading'] = 0
 
@@ -430,7 +588,10 @@ async def create_bg_tasks(app):
     asyncio.create_task(monitor_subprocess(app))
 
 
+# ahk를 실행시키는 명령하는 함수입니다
+# **작업완료는 monitor_subprocess 함수에서 점검해서 처리합니다
 async def loginjson(request):
+
     result = 'waiting'
 
     # 작업중이 아닐 때만 실행 명령을 내립니다
@@ -705,14 +866,15 @@ if __name__ == '__main__':
     app['uploading'] = 0
     # app['youtube'] = youtube
     app['login_file'] = ''
+    app['login_file_date'] = ''
     app['upload_que'] = od()
     app['process'] = 0
     app['websockets'] = defaultdict(int)
 
     # if os.path.exists('./login.json'):
     # SESSION_TOKEN 을 고쳐도 에러가 나서 보니 SIDCC도 변경되었더군요
-    if os.path.exists(LOGIN_PATH):
-        app['login_file'] = json.loads(open(LOGIN_PATH, 'r').read())
+    if os.path.exists(JSON_PATH):
+        app['login_file'] = json.loads(open(JSON_PATH, 'r').read())
         print(app['login_file'])
         log.info('login file loaded')
         log.info(app['login_file'])
@@ -723,6 +885,7 @@ if __name__ == '__main__':
     app.add_routes([
         web.post('/addque', addque),
         web.get('/loginjson', loginjson),
+        web.get('/cook', cook),
         web.get('/ws', ws),
         web.get('/ws_refresh', ws_refresh),
         web.get('/', handle)
