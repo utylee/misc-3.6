@@ -31,6 +31,9 @@ PATHS = [
     '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/'
 ]
 
+SPEED_LOW = 5 * 1024 * 128     # 5K * 128 = 0.6M /sec => 초당 0.6M 입니다
+SPEED_HIGH = 24 * 1024 * 128     # 24K * 128 = 3.2M /sec => 초당 3.2M 입니다
+
 
 async def deletefile(request):
     js = await request.json()
@@ -165,7 +168,8 @@ async def low(request):
     # print('low')
     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
     # request.app['cur_length'] = 6 * 1024 * 128
-    request.app['cur_length'] = 5 * 1024 * 128
+    # request.app['cur_length'] = 5 * 1024 * 128
+    request.app['cur_length'] = SPEED_LOW
     return web.Response(text='low')
 
 
@@ -173,7 +177,8 @@ async def high(request):
     # print('high')
     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
     # request.app['cur_length'] = 48 * 1024 * 128
-    request.app['cur_length'] = 24 * 1024 * 128
+    # request.app['cur_length'] = 24 * 1024 * 128
+    request.app['cur_length'] = SPEED_HIGH
     return web.Response(text='high')
 
 
@@ -278,7 +283,7 @@ async def transfering(app):
                     pass
 
                 print(f'start: {start}\ndesti: {desti}')
-                log.info(f'copying startging...')
+                log.info(f'copying starting...')
                 log.info(f'start: {start}\ndesti: {desti}')
 
                 # 현재 복사 진행중인 파일명을 갖고 있기로 합니다
@@ -559,7 +564,8 @@ async def watching(app):
                     # if added[0][-7:] == 'torrent' :
                     # if i[-7:] == 'torrent':
                     # if i[-3:] == 'mp4':
-                    if i[-3:] == 'mp4' or i[-4:] == 'webm':
+                    # if i[-3:] == 'mp4' or i[-4:] == 'webm':
+                    if i[-3:] == 'mp4' or i[-3:] == 'mkv'  or i[-4:] == 'webm':
                         exct = 0
                         a = f'{paths[n]}{i}'
                         # /mnt 이 아닌 \\192..xxx 방식의 위치를 사용해봅니다
@@ -817,7 +823,8 @@ if __name__ == '__main__':
 
     app = web.Application()
     # app['log_path'] = f'/home/utylee/capture.log'
-    app['cur_length'] = 8 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+    # app['cur_length'] = 8 * 1024 * 128    # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+    app['cur_length'] = SPEED_HIGH           # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
     # app['paths'] = [
     #     '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
     #     '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
