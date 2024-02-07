@@ -41,7 +41,7 @@ REMOTE_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
 
 # SUDO = 'sudo'
 DAVINCI_PATH = '/mnt/c/Program Files/Blackmagic Design/DaVinci Resolve/Resolve.exe'
-PYTHONW_PATH = '/mnt/c/Program Files/Python36/python.exe'   # DaVinci 공식지원이 3.6이랍니다
+PYTHONW_PATH = '/mnt/c/Program Files/Python38/python.exe'   # DaVinci 공식지원이 3.6이랍니다
 KILL_DAVINCI_PY_PATH = '/home/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
 DAVINCI_UPSCALE_PY_PATH = '/home/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
 UPSCALED_FILE_NAME = '/mnt/c/Users/utylee/Videos/MainTimeline.mp4'
@@ -213,6 +213,7 @@ async def deletefile(request):
 
 async def low(request):
     # print('low')
+    log.info('httpget: upload low speed')
     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
     # request.app['cur_length'] = 6 * 1024 * 128
     # request.app['cur_length'] = 5 * 1024 * 128
@@ -222,6 +223,7 @@ async def low(request):
 
 async def high(request):
     # print('high')
+    log.info('httpget: upload high speed')
     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
     # request.app['cur_length'] = 48 * 1024 * 128
     # request.app['cur_length'] = 24 * 1024 * 128
