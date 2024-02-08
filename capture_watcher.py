@@ -42,10 +42,32 @@ REMOTE_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
 # SUDO = 'sudo'
 DAVINCI_PATH = '/mnt/c/Program Files/Blackmagic Design/DaVinci Resolve/Resolve.exe'
 PYTHONW_PATH = '/mnt/c/Program Files/Python38/python.exe'   # DaVinci 공식지원이 3.6이랍니다
-KILL_DAVINCI_PY_PATH = '/home/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
-DAVINCI_UPSCALE_PY_PATH = '/home/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
+# DAVINCI_UPSCALE_PY_PATH = '/home/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
+DAVINCI_UPSCALE_PY_PATH = 'c:/Users/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
+# KILL_DAVINCI_PY_PATH = '/home/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
+KILL_DAVINCI_PY_PATH = 'c:/Users/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
 UPSCALED_FILE_NAME = '/mnt/c/Users/utylee/Videos/MainTimeline.mp4'
 UPSCALED_GATHER_PATH = '/mnt/c/Users/utylee/Videos/_Upscaled/'
+
+
+async def report_upscale(request):
+    js = await request.json()
+
+    js =json.loads(js)
+    # log.info(f'report_upscale::{js}')
+
+    pct = js['CompletionPercentage']
+    eta = 0
+    if 'EstimatedTimeRemainingInMs' in js.keys():
+        eta = round(js['EstimatedTimeRemainingInMs'] / 1000)
+        log.info(f'Upscaling: {pct}%,\tETA: {eta} sec')
+    elif 'TimeTakenToRenderInMs' in js.keys():
+        eta = round(js['TimeTakenToRenderInMs'] / 1000)
+        log.info(f'Upscaling: Complete!,\tTOT: {eta} sec taken')
+    # eta = round(js['TimeTakenToRenderInMs'] / 1000)
+    #{'JobStatus': Complete'', 'CompletionPercentage': 100, 'TimeTakenToRenderInMs': 17243}
+
+    return web.json_response([])
 
 
 async def UpscalingProc(file, app):
@@ -626,7 +648,7 @@ async def watching(app):
                                 #     split_ext[0] + '_up' + split_ext[1]
                                 new_filepath = UPSCALED_GATHER_PATH + i
                                 log.info(f'new_filepath is {new_filepath}')
-                                #생성된파일을 _Upscaled 폴더로 옮기고 변환전 파일도 삭제합니다
+                                # 생성된파일을 _Upscaled 폴더로 옮기고 변환전 파일도 삭제합니다
                                 try:
                                     os.rename(UPSCALED_FILE_NAME, new_filepath)
                                     os.remove(a)
@@ -661,10 +683,9 @@ async def watching(app):
                             # transfering()에서 전송을 담당합니다
                             log.info('inserting que')
 
-
                             # upscaled 이면 _Upscaled 폴더로 변경지정합니다
                             folder = UPSCALED_GATHER_PATH if app['bool_upscale'] \
-                                    else paths[n]
+                                else paths[n]
 
                             app['transfer_que']['que'].append(
                                 (i, folder, target))
@@ -769,7 +790,8 @@ if __name__ == '__main__':
     app.add_routes([
         web.get('/low', low),
         web.get('/high', high),
-        web.post('/deletefile', deletefile)
+        web.post('/deletefile', deletefile),
+        web.post('/report_upscale', report_upscale)
         # web.get('/deletefile', deletefile)
     ])
 

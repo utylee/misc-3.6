@@ -1,9 +1,14 @@
 import sys
 import time
 import psutil
+import asyncio
+import aiohttp
+import json
 import DaVinciResolveScript as dvr_script
 
-def upscale(path):
+REPORT_URL = 'http://localhost:8007/report_upscale'
+
+async def upscale(path):
     resolve = dvr_script.scriptapp("Resolve")
     fusion = resolve.Fusion()
     prjManager = resolve.GetProjectManager()
@@ -28,10 +33,10 @@ def upscale(path):
     print(mediapool)
     # items = mediapool.ImportMedia(
     #     "d:\\Videos\\The Finals 2024.02.02 - 21.18.56.19.mp4")
-    items = mediapool.ImportMedia(
+    item = mediapool.ImportMedia(
         path)
     # "d:\\Videos\\Test.mp4")
-    print(items)
+    print(item)
 
     timeline_count = prj.GetTimelineCount()
     print(timeline_count)
@@ -42,7 +47,7 @@ def upscale(path):
 
     try:
         ret = mediapool.CreateTimelineFromClips(
-            "MainTimeline", items)
+            "MainTimeline", item)
         print(ret)
     except:
         pass
@@ -65,19 +70,36 @@ def upscale(path):
     print('render_id' + render_id)
     prj.StartRendering(render_id)
 
+
+    even = 0
+    #{'JobStatus': Complete'', 'CompletionPercentage': 100, 'TimeTakenToRenderInMs': 17243}
     while True:
         status = prj.GetRenderJobStatus(render_id)
         print(status)
         time.sleep(2)
         if status['JobStatus'] == 'Complete':
             print('Completed!!')
+            # 완료시에도 post하기로 합니다
+            async with aiohttp.ClientSession() as sess:
+                await sess.post(REPORT_URL, json=json.dumps(status))
             break
+        if(even >= 5):          # 2*5초에 한번씩 퍼센테이지를 보고합니다
+            even = 0
+            async with aiohttp.ClientSession() as sess:
+                await sess.post(REPORT_URL, json=json.dumps(status))
+        even += 1
 
-    prjManager.CloseProject(prj)
+    #타임라인과 클립을 모두 삭제합니다
+    b = mediapool.DeleteTimelines(prj.GetTimelineByIndex(1))
+    print(f'delete timeline result : {b}')
+    # mediapool.DeleteClips([item])
+    mediapool.DeleteClips(item)
+    print(f'delete clips result : {b}')
 
+    # 프로젝트를 닫습니다
+    # prjManager.CloseProject(prj)
 
-if __name__ == "__main__":
-    # path를 넘겨받습니다
+async def main():
     if len(sys.argv) > 1:
         print(sys.argv[1])
         # Resolve.exe가 완전히 실행될 때까지(fuscript.exe 가 확인될 때까지)기다립니다
@@ -94,4 +116,27 @@ if __name__ == "__main__":
 
             time.sleep(2)
 
-        upscale(sys.argv[1])
+        await upscale(sys.argv[1])
+
+asyncio.run(main())
+
+# if __name__ == "__main__":
+#     # path를 넘겨받습니다
+#     if len(sys.argv) > 1:
+#         print(sys.argv[1])
+#         # Resolve.exe가 완전히 실행될 때까지(fuscript.exe 가 확인될 때까지)기다립니다
+#         while True:
+#             bFound = 0
+#             for proc in psutil.process_iter():
+#                 print(proc.name())
+#                 if proc.name().lower() == 'fuscript.exe':
+#                     print(f'found fuscript.exe!')
+#                     bFound = 1
+#                     break
+#             if bFound == 1:
+#                 break
+
+#             time.sleep(2)
+
+#         upscale(sys.argv[1])
+
