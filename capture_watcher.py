@@ -44,6 +44,8 @@ DAVINCI_PATH = '/mnt/c/Program Files/Blackmagic Design/DaVinci Resolve/Resolve.e
 PYTHONW_PATH = '/mnt/c/Program Files/Python38/python.exe'   # DaVinci 공식지원이 3.6이랍니다
 # DAVINCI_UPSCALE_PY_PATH = '/home/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
 DAVINCI_UPSCALE_PY_PATH = 'c:/Users/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
+UPSCALING_RES = "2160"
+# UPSCALING_RES = "1440"
 # KILL_DAVINCI_PY_PATH = '/home/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
 KILL_DAVINCI_PY_PATH = 'c:/Users/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
 UPSCALED_FILE_NAME = '/mnt/c/Users/utylee/Videos/MainTimeline.mp4'
@@ -83,7 +85,7 @@ async def UpscalingProc(file, app):
     file_win = 'c:' + file[6:]  # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
     log.info(f'file_win:{file_win}')
     log.info(f'davinci upscale executing with pythonw...')
-    proc_upscale = await asyncio.create_subprocess_exec(PYTHONW_PATH, DAVINCI_UPSCALE_PY_PATH, file_win, stdout=None)
+    proc_upscale = await asyncio.create_subprocess_exec(PYTHONW_PATH, DAVINCI_UPSCALE_PY_PATH, file_win, UPSCALING_RES, stdout=None)
 
     ret = await proc_upscale.wait()
     log.info(f'davinci upscale return code: {ret}')
