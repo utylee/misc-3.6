@@ -40,6 +40,53 @@ def progress(yuklenen, toplam):
     # print(f"{round(round(yuklenen / toplam, 2) * 100)}% upload", end="\r")
     print(f"{round(yuklenen / toplam) * 100}% upload", end="\r")
 
+
+async def edit_playlist(app, yt, vid, playlist):
+    # playlist=["PLT7rBpvz4qpqHv8R2SOgimIorltkbH230",
+    #           "PLT7rBpvz4qpqGkFPec5CQkx0v90fVmbQj"],
+
+    # .where(db.tbl_youtube_playlists.c.nickname==playlist)):
+    playlists = []
+    engine = app['db']
+    async with engine.acquire() as conn:
+        async for r in conn.execute(db.tbl_youtube_playlists.select()):
+            #  playlist_id index: 3
+            playlists.append(dict(r))
+    log.info(f'playlists from db: {playlists}')
+    # [ {'nickname':'...',  'id': '...'}, {}, {}... ]
+
+    # etc 의 id를 저장합니다
+    etc_id = ''
+    for p in playlists:
+        if p['nickname'] == 'etc':
+            etc_id = p['playlist_id']
+    # 본 작업
+    for p in playlists:
+        # 다른플레이리스트에서는 모두 제거를 해주고
+        if p['nickname'].strip() != playlist.strip():
+            log.info(f'video {vid} remove from playlist {p["nickname"]}')
+            sonuc = await yt.editVideo(
+                video_id=vid,
+                # new playlist, gamelog finals
+                removeFromPlaylist=[p['playlist_id']],
+            )
+        # 같은 경우엔 최조의 etc와 함께 추가해줍니다
+        else:
+            log.info(f'video {vid} move playlist from etc to {p["nickname"]}')
+            sonuc = await yt.editVideo(
+                video_id=vid,
+                # new playlist, gamelog finals
+                playlist=[etc_id, p['playlist_id']])
+
+    # # etc 에서 제거하는 식으로 변경하는 방법이 제일 나은 것 같습니다.
+    # # 혹은 각 게임 플레이리스트에서 모두 한번씩 제거하는 방법도 괜찮은 것 같습니다
+    # sonuc = await yt.editVideo(
+    #     video_id=vid,
+    #     # new playlist, gamelog finals
+    #     removeFromPlaylist=["PLT7rBpvz4qpqGkFPec5CQkx0v90fVmbQj"],
+    # )
+
+
 async def cook(request):
     full = []
     full_dict = dict()
@@ -139,7 +186,6 @@ async def cook(request):
     print('\nlogin.json wrote')
     log.info('login.json wrote')
 
-
     r = ''
     rr = ''
     # 완성된 login.json 출력
@@ -153,7 +199,7 @@ async def cook(request):
         print(f'Exception:{e}')
         log.info(f'Exception:{e}')
 
-    return web.Response(text=rr) 
+    return web.Response(text=rr)
 
 
 async def send_ws(ws, msg):
@@ -328,7 +374,6 @@ async def monitor(app):
         log.info(f'Exception: {e}')
         print(f'Exception: {e}')
 
-    log.info('came into monitor function')
     engine = app['db']
     # 20초마다 api_backend 서버에 현재 대기중인 큐를 요구합니다
     # 유튜브 업로드 중이었다면 끝낸 후일 것이므로
@@ -359,6 +404,7 @@ async def monitor(app):
     # 업로드 서버에 gimme que 요청에서 자체 que 탐색으로 변경합니다
     while True:
         que = app['upload_que']
+        video_id = ''
 
         # # login.json 갱신 작업 종료 여부를 확인합니다
         # if app['process'] != 0:
@@ -387,9 +433,11 @@ async def monitor(app):
 
             tup_c = que_c.popitem(last=False)
             temp_file = tup_c[0]
-            temp_title = tup_c[1]
+            temp_title = tup_c[1][0]
+            temp_playlist = tup_c[1][1]
 
-            log.info(f'tup_c: {tup_c}, {temp_file}, {temp_title}')
+            log.info(
+                f'tup_c: {tup_c}, {temp_file}, {temp_title}, {temp_playlist}')
 
             continue_ = 0
             async with engine.acquire() as conn:
@@ -398,7 +446,8 @@ async def monitor(app):
                     # copying이  2 즉 완료가 아니면, 즉 아직 복사중이면 패스합니다
                     log.info(
                         f'{temp_file} copying check by db. r[4] is {r[4]}')
-                    if int(r[4]) != 2:
+                    # if int(r[4]) != 2:
+                    if r[4] != 2:
                         log.info(
                             f'{temp_file} is currently copying. continue next')
                         continue_ = 1
@@ -407,8 +456,9 @@ async def monitor(app):
 
             tup = que.popitem(last=False)
             cur_file = tup[0]
-            title = tup[1]
-            log.info(f'tup: {tup}, {cur_file}, {title}')
+            title = tup[1][0]
+            playlist = tup[1][1]
+            log.info(f'tup: {tup}, {cur_file}, {title}, {playlist}')
 
             # async with aiohttp.ClientSession() as sess:
             #     async with sess.get(url_gimme) as resp:
@@ -480,17 +530,26 @@ async def monitor(app):
                     exit('no json file')
 
                 try:
+                    log.info(f'app["login_file"]')
                     yt = Studio(app['login_file'])
 
                     await yt.login()
+                    log.info(f'yt.login() succeed')
                     ret = await yt.uploadVideo(
                         path,
                         progress=progress,
                         description='',
                         privacy='PUBLIC',
                         title=title)
+                    # ret = json.loads(ret)
                     # log.info(f'upload completed. ret was {ret}')
                     log.info(f'upload completed. ')
+
+                    video_id = ret["videoId"]
+                    log.info(f'-- videoid: {video_id}')
+
+                    # 업로드후 playlist에 따라 옮겨줍니다
+                    await edit_playlist(app, yt, video_id, playlist)
 
                     # error 발생했을 경우
                     if 'error' in ret.keys():
@@ -630,7 +689,6 @@ async def loginjson(request):
 
 
 async def addque(request):
-    log.info(f'came into addque')
     res = await request.json()
     res = json.loads(res)
     log.info('came into handle addque')
@@ -638,9 +696,11 @@ async def addque(request):
     # title1 = res["title"]
     filename = res["file"]
     title = res["title"]
+    playlist = res["playlist"]
     # filename = f'{FIXED_PATH}{filename}'
 
-    request.app['upload_que'].update({filename: title})
+    # request.app['upload_que'].update({filename: title})
+    request.app['upload_que'].update({filename: [title, playlist]})
 
     # args = request.app['args']
     # youtube = get_authenticated_service(args)
