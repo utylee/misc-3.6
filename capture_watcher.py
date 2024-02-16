@@ -13,36 +13,245 @@ import datetime
 import time
 
 from aiopg.sa import create_engine
+from sqlalchemy import false
 # http post 로 신호 전달을 위해 json 객체가 필요합니다
 # import json
 import db_youtube as db
 
+URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
+TRUNCATE_DAYS = 3
 PATHS = [
-        '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
-        '/mnt/c/Users/utylee/Videos/Apex Legends/',
-        '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
-        '/mnt/c/Users/utylee/Videos/Desktop/',
-        '/mnt/c/Users/utylee/Videos/Overwatch 2/',
-        '/mnt/c/Users/utylee/Videos/The Finals/', 
-        '/mnt/c/Users/utylee/Videos/Counter-strike 2/', 
-        '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/'   
+    '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
+    '/mnt/c/Users/utylee/Videos/Apex Legends/',
+    '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
+    '/mnt/c/Users/utylee/Videos/Desktop/',
+    '/mnt/c/Users/utylee/Videos/Overwatch 2/',
+    '/mnt/c/Users/utylee/Videos/The Finals/',
+    '/mnt/c/Users/utylee/Videos/Counter-strike 2/',
+    '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/'
 ]
 
-TRUNCATE_DAYS = 3
+BOOL_UPSCALE = 1            # 0:None,  1:1440p,  2:2160p
+VIDEO_EXT_LIST = ['mp4', 'mkv', 'webm', 'avi', 'mov', 'mpg', 'mpeg', 'wmv']
+
+SPEED_LOW = 5 * 1024 * 128     # 5K * 128 = 0.6M /sec => 초당 0.6M 입니다
+SPEED_HIGH = 24 * 1024 * 128     # 24K * 128 = 3.2M /sec => 초당 3.2M 입니다
+
+REMOTE_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
+
+# SUDO = 'sudo'
+DAVINCI_PATH = '/mnt/c/Program Files/Blackmagic Design/DaVinci Resolve/Resolve.exe'
+PYTHONW_PATH = '/mnt/c/Program Files/Python38/python.exe'   # DaVinci 공식지원이 3.6이랍니다
+# DAVINCI_UPSCALE_PY_PATH = '/home/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
+DAVINCI_UPSCALE_PY_PATH = 'c:/Users/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
+UPSCALING_RES = "2160"
+# UPSCALING_RES = "1440"
+# KILL_DAVINCI_PY_PATH = '/home/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
+KILL_DAVINCI_PY_PATH = 'c:/Users/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
+UPSCALED_FILE_NAME = '/mnt/c/Users/utylee/Videos/MainTimeline.mp4'
+UPSCALED_GATHER_PATH = '/mnt/c/Users/utylee/Videos/_Upscaled/'
+
+
+async def report_upscale(request):
+    js = await request.json()
+
+    js =json.loads(js)
+    # log.info(f'report_upscale::{js}')
+
+    pct = js['CompletionPercentage']
+    eta = 0
+    if 'EstimatedTimeRemainingInMs' in js.keys():
+        eta = round(js['EstimatedTimeRemainingInMs'] / 1000)
+        log.info(f'Upscaling: {pct}%,\tETA: {eta} sec')
+    elif 'TimeTakenToRenderInMs' in js.keys():
+        eta = round(js['TimeTakenToRenderInMs'] / 1000)
+        log.info(f'Upscaling: Complete!,\tTOT: {eta} sec taken')
+    # eta = round(js['TimeTakenToRenderInMs'] / 1000)
+    #{'JobStatus': Complete'', 'CompletionPercentage': 100, 'TimeTakenToRenderInMs': 17243}
+
+    return web.json_response([])
+
+
+async def UpscalingProc(file, app):
+    log.info(f'UpscalingProc::executing davinci resolve -nogui...')
+    app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, '-nogui', stdout=None)
+    # app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, stdout=None)
+    log.info(f'davinci_proc: {app["davinci_proc"]}')
+    await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+    # await app['davinci_proc'].wait()
+
+    # 업스케일을 실행합니다
+    log.info(f'file:{file}')
+    file_win = 'c:' + file[6:]  # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
+    log.info(f'file_win:{file_win}')
+    log.info(f'davinci upscale executing with pythonw...')
+    proc_upscale = await asyncio.create_subprocess_exec(PYTHONW_PATH, DAVINCI_UPSCALE_PY_PATH, file_win, UPSCALING_RES, stdout=None)
+
+    ret = await proc_upscale.wait()
+    log.info(f'davinci upscale return code: {ret}')
+    if ret == 0:
+        log.info(f'Upscale Successed!')
+    # await asyncio.sleep(20)
+
+    log.info(f'UpscalingProc::killing davinci resolve by win python.exe ...')
+    # await asyncio.create_subprocess_exec('sudo', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
+    # proc = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=asyncio.subprocess.PIPE)
+    # proc = await asyncio.create_subprocess_exec('sudo', '-S', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
+    proc_killresolve = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
+
+    # import psutil
+    # for proc in psutil.process_iter():
+    #     log.info(f'proc: {proc.name()}')
+
+    await proc_killresolve.wait()
+    # await asyncio.sleep(5)
+
+
+async def deletefile(request):
+    js = await request.json()
+    js = json.loads(js)
+    log.info(f'came into deletefile. js is {js}')
+    # log.info(f'js.filename is {js["filename"]}')
+
+    start_path = ''
+    dest_path = ''
+
+    # start_removed = 0
+    # dest_removed = 0
+
+    start_exists = 1
+    dest_exists = 1
+
+    # db에서 해당파일의 로컬 및 리모트의 폴더를 가져옵니다
+    engine = request.app['db']
+    try:
+        async with engine.acquire() as conn:
+            async for r in conn.execute(db.tbl_youtube_files.select()
+                                        .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+                                                          db.tbl_youtube_files.c.timestamp == js['timestamp']))):
+                # db.tbl_youtube_files.c.timestamp == '3'))):
+                start_path = r[8]
+                dest_path = r[9]
+                log.info(f'deletefile::DB selected::{start_path}, {dest_path}')
+
+    except Exception as e:
+        log.info(f'exception {e}')
+
+    # 만약 start_path, dest_path 가 없으면 응급조치를 실행합니다
+
+    # 파일이름과 폴더를 합칩니다
+    # start_path = os.path.join(start_path, js['filename'])
+    # dest_path = os.path.join(dest_path, js['filename'])
+
+    log.info(f'deletefile::fetched::start:{start_path}')
+    log.info(f'deletefile::fetched::dest:{dest_path}')
+
+    try:
+        # db에 패스가 없기에 모든 폴더를 적용해지워봅니다
+        if (start_path == None):
+            for p in PATHS:
+                log.info(f'p: {p}')
+                temp_path = os.path.join(p, js['filename'])
+                if (os.path.exists(temp_path)):
+                    start_path = p
+                    break
+
+            # 모든 폴더에 해당파일이 없다면 지워졌다고 보면됩니다
+            # 아무거나 넣어주면 이후에 당연히 지워졌다고 판단되고 진행될 것입니다
+            if (start_path == None):
+                start_path = PATHS[0]
+                # start_exists = 0
+        log.info(f'start_path: {start_path}')
+
+        # if(start_removed == 0
+        # if(start_exists == 1
+        # and os.path.exists(os.path.join(start_path, js['filename']))):
+        if (os.path.exists(os.path.join(start_path, js['filename']))):
+            os.remove(os.path.join(start_path, js['filename']))
+        # else:
+        #     if(os.path.exists(os.path.join(start_path, js['filename']))):
+        #         os.remove(os.path.join(start_path, js['filename']))
+
+        log.info(f'deleted start paths {js["filename"]}')
+    except Exception as e:
+        log.info(f'exception while deleting start {js["filename"]}, {e}')
+
+    try:
+        if (dest_path == None):
+            dest_path = request.app['target']
+        if (os.path.exists(os.path.join(dest_path, js['filename']))):
+            os.remove(os.path.join(dest_path, js['filename']))
+
+        log.info(f'deleted dest paths {js["filename"]}')
+    except Exception as e:
+        log.info(f'exception while deleting dest {js["filename"]}, {e}')
+
+    # 삭제됐으면 db의 local과 remote도 업데이트해줍니다
+    # if (start_exists == 0
+    #         or os.path.exists(os.path.join(start_path, js['filename'])) == False):
+    if (os.path.exists(os.path.join(start_path, js['filename'])) == False):
+        # start_removed = 1
+        start_exists = 0
+        log.info('start no exists')
+        try:
+            async with engine.acquire() as conn:
+                await conn.execute(db.tbl_youtube_files.update()
+                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+                                                     db.tbl_youtube_files.c.timestamp == js['timestamp']))
+                                   .values(local=0))
+        except Exception as e:
+            log.info(f'{e}')
+
+    if (os.path.exists(os.path.join(dest_path, js['filename'])) == False):
+        # dest_removed = 1
+        dest_exists = 0
+        log.info('dest no exists')
+        try:
+            async with engine.acquire() as conn:
+                await conn.execute(db.tbl_youtube_files.update()
+                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+                                                     db.tbl_youtube_files.c.timestamp == js['timestamp']))
+                                   .values(remote=0))
+        except Exception as e:
+            log.info(f'{e}')
+
+    # 둘다 없을 경우에만 db의 해당파일 튜플을 삭제합니다
+    # if(start_removed == 1 and dest_removed == 1):
+    if (start_exists == 0 and dest_exists == 0):
+        try:
+            async with engine.acquire() as conn:
+                await conn.execute(db.tbl_youtube_files.delete()
+                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+                                                     db.tbl_youtube_files.c.timestamp == js['timestamp'])))
+
+            # 클라이언트에 needRefresh 를 보냅니다
+            async with aiohttp.ClientSession() as sess:
+                async with sess.get(URL_UPLOADER_WS_REFRESH):
+                    log.info('call needRefresh')
+
+        except Exception as e:
+            log.info(f'{e}')
+
+    return web.Response(text='ok')
+
 
 async def low(request):
     # print('low')
+    log.info('httpget: upload low speed')
     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
     # request.app['cur_length'] = 6 * 1024 * 128
-    request.app['cur_length'] = 5 * 1024 * 128
+    # request.app['cur_length'] = 5 * 1024 * 128
+    request.app['cur_length'] = SPEED_LOW
     return web.Response(text='low')
 
 
 async def high(request):
     # print('high')
+    log.info('httpget: upload high speed')
     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
     # request.app['cur_length'] = 48 * 1024 * 128
-    request.app['cur_length'] = 24 * 1024 * 128
+    # request.app['cur_length'] = 24 * 1024 * 128
+    request.app['cur_length'] = SPEED_HIGH
     return web.Response(text='high')
 
 
@@ -101,8 +310,8 @@ async def create_bg_tasks(app):
 
     # 앞에 await 를 안붙였어도 되긴 했던 것 같습니다
     asyncio.create_task(truncate(app))          # 생성된지 일주일된 자료는 db상 삭제합니다
-    asyncio.create_task(transfering(app))
     asyncio.create_task(watching(app))
+    asyncio.create_task(transfering(app))
 
 
 async def transfering(app):
@@ -140,14 +349,14 @@ async def transfering(app):
                             db.tbl_youtube_files.c.filename == file).values(copying=1, making=2))
                     # 또한 needRefresh를 호출해줍니다
                     async with aiohttp.ClientSession() as sess:
-                        async with sess.get('http://192.168.1.204:9993/ws_refresh'):
+                        async with sess.get(URL_UPLOADER_WS_REFRESH):
                             log.info('call needRefresh')
 
                 except:
                     pass
 
                 print(f'start: {start}\ndesti: {desti}')
-                log.info(f'copying startging...')
+                log.info(f'copying starting...')
                 log.info(f'start: {start}\ndesti: {desti}')
 
                 # 현재 복사 진행중인 파일명을 갖고 있기로 합니다
@@ -195,7 +404,9 @@ async def transfering(app):
                         log.info(f'status=3')
                         await conn.execute(db.tbl_youtube_files.update().where(
                             db.tbl_youtube_files.c.filename == file)
-                            .values(copying=2, uploading=1, queueing=0))
+                            .values(copying=2, uploading=1, queueing=0, remote=1))
+                        # remote = 1을 추가합니다. 삭제프로세스 보다보니 없어서
+                        # .values(copying=2, uploading=1, queueing=0))
 
                 except Exception as e:
                     log.info(f'exception {e}')
@@ -209,7 +420,7 @@ async def transfering(app):
                             .values(local=0))
                     # 또한 needRefresh를 호출해줍니다
                     async with aiohttp.ClientSession() as sess:
-                        async with sess.get('http://192.168.1.204:9993/ws_refresh'):
+                        async with sess.get(URL_UPLOADER_WS_REFRESH):
                             log.info('call needRefresh after removing')
                 except Exception as e:
                     log.info(f'exception in file deleting... {e}')
@@ -235,10 +446,6 @@ async def transfering(app):
 
 
 async def watching(app):
-
-    #path = 'f:\\down\\'
-    #path = 'D:/D_Down/'
-    # path = 'E:/Down/'
     # path = 'C:/Users/utylee/Videos/World Of Warcraft'
 
     # 게임 중이냐 아느냐로 속도 조절을 할 수 있게끔 기준 변수를 넣어봅니다
@@ -254,7 +461,8 @@ async def watching(app):
 
     # 게임 중이 아니라면 높은속도로 복사합니다
     if speed_control == 0:
-        cur_length = 24 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+        # cur_length = 24 * 1024 * 128      # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+        cur_length = SPEED_HIGH             # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
 
     # 여러 경로를 감시하게끔 변경합니다
     #path = '/mnt/c/Users/utylee/Videos/World Of Warcraft/'
@@ -267,20 +475,7 @@ async def watching(app):
 
     # path = '/mnt/c/Users/utylee/Videos/Desktop/'
 
-    #path = 'E:\\Down\\'
-    #target = 'w:\\99-data\\91-transmission-watch\\'
-    #target = 'v:/99-data/91-transmission-watch'
-    #target_media = 'v:/00-MediaWorld'
-    #target = 'u:/3002/99-data/91-transmission-watch'
-
-    #target = 'u:/4001/99-data/91-transmission-watch'
-    #target = r'\\192.168.0.201\clark\4001\99-data\91-transmission-watch'
-    # target = r'\\192.168.1.205\clark\4001\99-data\91-transmission-watch'
-    # target = r'\\192.168.1.202\clark\4002\00-MediaWorld-4002'
-    # target = '/mnt/clark/4002/00-MediaWorld-4002'
     # target = r'\\192.168.1.202\clark\4002\00-MediaWorld-4002\97-Capture'
-    # target = r'\\192.168.1.202\clark\4001\99-data\91-transmission-watch'
-
     # target = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
     target = app['target']
 
@@ -305,14 +500,9 @@ async def watching(app):
     afters = []
     addeds = []
     removeds = []
-    # befores = dict()
-    # afters = dict()
-    # addeds = dict()
-    # removeds = dict() 
-    # log.info('come')
     for n in range(len(paths)):
         befores_dict = dict()
-        
+
         # 해당 디렉토리가 있을 경우만 실행합니다
         if os.path.exists(paths[n]) == True:
             befores_dict.update(dict([(f, datetime.datetime.fromtimestamp(
@@ -346,7 +536,6 @@ async def watching(app):
                     print('exception on inserting db!')
                     log.info('exception on inserting db!')
 
-
         # befores[n] = paths[n]
         # befores.append(dict([(f, None) for f in os.listdir(paths[n])]))
         afters.append(paths[n])
@@ -355,7 +544,6 @@ async def watching(app):
         # print(app['files'])
 
     # before = dict([(f, None) for f in os.listdir(path)])
-
     # print(before)
 
     while 1:
@@ -404,6 +592,7 @@ async def watching(app):
                             await conn.execute(db.tbl_youtube_files.insert()
                                                .values(filename=i, timestamp=addeds[n][i],
                                                        local=1, uploading=0,
+                                                       upscaled=0,
                                                        queueing=1,
                                                        youtube_queueing=0,
                                                        making=1, remote=0, copying=0,
@@ -412,22 +601,16 @@ async def watching(app):
                             # 또한 needRefresh를 호출해줍니다
                             async with aiohttp.ClientSession() as sess:
                                 async with sess.get(
-                                        'http://192.168.1.204:9993/ws_refresh') as resp:
+                                        URL_UPLOADER_WS_REFRESH) as resp:
                                     result = await resp.text()
                                     log.info(f'call needRefresh: {result}')
                         except Exception as e:
                             print(f'exception {e} on inserting db!')
                             log.info(f'exception {e} on inserting db!')
 
-                    # 5초마다 녹화가 끝났는지 용량을 확인합니다
-                    # 5초 후 전송을 시작합니다
-                    # time.sleep(3)
-                    # time.sleep(5)
                     # 파일이 여러개가 동시에 추가될 경우 파일 한개 밖에 처리하지 못하던 문제 수정
-                    # if added[0][-7:] == 'torrent' :
-                    # if i[-7:] == 'torrent':
-                    # if i[-3:] == 'mp4':
-                    if i[-3:] == 'mp4' or i[-4:] == 'webm':
+                    # if i[-3:] == 'mp4' or i[-3:] == 'mkv' or i[-4:] == 'webm':
+                    if i[-5:].split('.')[1].lower() in VIDEO_EXT_LIST:
                         exct = 0
                         a = f'{paths[n]}{i}'
                         # /mnt 이 아닌 \\192..xxx 방식의 위치를 사용해봅니다
@@ -457,37 +640,25 @@ async def watching(app):
 
                                 before_size = cur_size
 
-                                # log.info('sending to monitor')
+                            # <--- 녹화완료
 
-                                # payload = {'file': i, 'status': 1}
-                                # ret = await send_current_status(payload)
+                            # upscaling 루틴
+                            if app['bool_upscale'] > 0:
+                                await UpscalingProc(a, app)
+                                # split_ext = os.path.splitext(i)
+                                # new_filepath = UPSCALED_GATHER_PATH + \
+                                #     split_ext[0] + '_up' + split_ext[1]
+                                new_filepath = UPSCALED_GATHER_PATH + i
+                                log.info(f'new_filepath is {new_filepath}')
+                                # 생성된파일을 _Upscaled 폴더로 옮기고 변환전 파일도 삭제합니다
+                                try:
+                                    os.rename(UPSCALED_FILE_NAME, new_filepath)
+                                    os.remove(a)
+                                except Exception as ose:
+                                    log.info(f'exception {ose}')
 
-                                # try:
-                                #     async with engine.acquire() as conn:
-                                #         # making 즉 1일 경우
-                                #         # if status == 1:
-                                #         log.info(f'status=1')
-                                #         await conn.execute(db.tbl_youtube_files
-                                #                            .update()
-                                #                            .where(
-                                #                             db.tbl_youtube_files.c.filename
-                                #                             == i)
-                                #                            .values(copying=0, making=1,
-                                #                                 uploading=0, remote=0))
-
-                                # except:
-                                #     pass
-
-                            # print('copy process start')
-                            log.info('inserting que')
-
-                            #a = path + "".join(added)
-                            # a = path + "".join(i)
-
-                            # # 2초 후 전송을 시작합니다
-                            # # time.sleep(2)
-                            # await asyncio.sleep(2)
-
+                            # db를 업데이트합니다. 녹화완료
+                            log.info('db updating... record ended')
                             try:
                                 async with engine.acquire() as conn:
                                     # making 즉 1일 경우
@@ -499,19 +670,29 @@ async def watching(app):
                                                            db.tbl_youtube_files.c.filename
                                                            == i)
                                                        .values(copying=0, making=2,
-                                                               uploading=0, remote=0))
+                                                               uploading=0, remote=0,
+                                                               upscaled=app['bool_upscale']))
                                     # 또한 needRefresh를 호출해줍니다
                                     async with aiohttp.ClientSession() as sess:
                                         async with sess.get(
-                                                'http://192.168.1.204:9993/ws_refresh'):
+                                                URL_UPLOADER_WS_REFRESH):
                                             log.info('call needRefresh')
 
                             except Exception as e:
                                 log.info(f'exception {e}')
 
-                            #  파일,경로 등을 app['transfering'] 큐에 넣고,
+                            #  파일,경로 등을 app['transfering'] 큐에 넣습니다
+                            # transfering()에서 전송을 담당합니다
+                            log.info('inserting que')
+
+                            # upscaled 이면 _Upscaled 폴더로 변경지정합니다
+                            folder = UPSCALED_GATHER_PATH if app['bool_upscale'] \
+                                else paths[n]
+
                             app['transfer_que']['que'].append(
-                                (i, paths[n], target))
+                                (i, folder, target))
+                            # app['transfer_que']['que'].append(
+                            #     (i, paths[n], target))
                             q = app['transfer_que']['que']
                             log.info(f'que after inserting: {q}')
 
@@ -521,105 +702,6 @@ async def watching(app):
                             exct = 1
                             continue
 
-                        '''
-                        # ------------------------------------------------
-                        # copying process
-                        #
-                        try:
-                            # db 에 copying 플래그를 넣어줍니다
-                            payload = {'file': i, 'status': 2}
-                            ret = await send_current_status(payload)
-
-                            print(f'a: {a}\nb: {b}')
-                            log.info(f'a: {a}\nb: {b}')
-                            async with aiofiles.open(a, mode='rb') as src:
-                                async with aiofiles.open(b, mode='wb') as dst:
-                                    print('async copying')
-                                    while 1:
-                                        cur_length = app['cur_length']
-                                        buf = await src.read(cur_length)
-                                        if not buf:
-                                            break
-                                        await dst.write(buf)
-                                        print(f'{time.time()} wrote:{len(buf)}')
-                                        log.info(
-                                            f'{time.time()} wrote:{len(buf)}')
-                                        await asyncio.sleep(0.5)
-                        # try:
-                        #     print(f'a: {a}\nb: {b}')
-                        #     log.info(f'a: {a}\nb: {b}')
-                        #     with open(a, mode='rb') as src:
-                        #         with open(b, mode='wb') as dst:
-                        #             # print('async copying')
-                        #             while 1:
-                        #                 buf = src.read(cur_length)
-                        #                 if not buf:
-                        #                     break
-                        #                 dst.write(buf)
-                        #                 # print(f'{time.time()} wrote:{len(buf)}')
-                        #                 log.info(f'{time.time()} wrote:{len(buf)}')
-                        #                 time.sleep(0.5)
-
-                        except:
-                            print('exception in copying')
-                            log.info('exception in copying')
-                            exct = 1
-                            continue
-
-                        # def _copyfileobj_patched(fsrc, fdst, length=cur_length):
-                        #     """Patches shutil copyfileobj method to hugely improve copy speed"""
-                        #     print('copyfileobj')
-                        #     while 1:
-                        #         buf = fsrc.read(length)
-                        #         if not buf:
-                        #             break
-                        #         fdst.write(buf)
-                        #         time.sleep(0.5)
-
-                        # # shutil.copyfileobj = _copyfileobj_patched
-
-                        # # src = open(a, 'r+b')
-                        # # dst = open(f'{target}/{i}', 'w+b')
-                        # with open(a, 'rb') as src:
-                        #     # with open(f'{target}/{i}.part', 'w+b') as dst:
-                        #     with open(b, 'wb') as dst:
-                        #         try:
-                        #             # print(a)
-                        #             # shutil.copy(a, target)
-                        #             # shutil.copyfile(a, target)
-                        #             _copyfileobj_patched(src, dst)
-                        #         except:
-                        #             print('exception')
-                        #             exct = 1
-                        #             continue
-                        # 복사완료후 원래 파일을 삭제합니다
-                        print('copy complete')
-                        log.info('copy complete')
-                        if exct == 0:
-                            # exception이 안났을 경우에만 파일이름을 다시 복구합니다. 10초 후
-                            # exception이 안났을 경우에만 삭제합니다. 5초 후
-                            # time.sleep(5)
-                            await asyncio.sleep(5)
-                            os.remove(a)
-
-                            # db 에 completed 플래그를 넣어줍니다
-                            payload = {'file': i, 'status': 3}
-                            ret = await send_current_status(payload)
-
-                            # client-server 로서 part확장자 등을 이용해 변경해줄 필요가 없어졌
-                            # 습니다. 파일 완료후 mp4 moov 정보가 수정된 이후에 전송하기에
-                            # ret = await send_complete(i)
-                            # if (ret == 'ok'):
-                            #     os.remove(a)
-
-                            # renamed = a + '.copied'
-                            # os.rename(a, renamed)
-                            # os.rename(b, b_org)
-
-                        # 백업 폴더에 torrent 파일을 옮깁니다
-                        # shutil.copy(renamed,  backup_target)
-                        # os.remove(renamed)
-                        '''
             # before = after
             befores[n] = afters[n]
 
@@ -685,18 +767,23 @@ if __name__ == '__main__':
 
     app = web.Application()
     # app['log_path'] = f'/home/utylee/capture.log'
-    app['cur_length'] = 8 * 1024 * 128     # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+    # app['cur_length'] = 8 * 1024 * 128    # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+    # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
+    app['cur_length'] = SPEED_HIGH
     # app['paths'] = [
     #     '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
     #     '/mnt/c/Users/utylee/Videos/Heroes of the Storm/',
     #     '/mnt/c/Users/utylee/Videos/Desktop/'
     # ]
     app['paths'] = PATHS
-    app['target'] = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
+    app['target'] = REMOTE_PATH
     app['transfer_que'] = dict(que=[],
                                status=0)  # status:: 0: 대기중, 1: 복사중, 2: 복사완료
 
     app['current_copying'] = ''
+
+    app['bool_upscale'] = BOOL_UPSCALE
+    app['davinci_proc'] = 0
 
     # watcher 프로시져 함수를 돌립니다
     app.on_startup.append(create_bg_tasks)
@@ -704,7 +791,10 @@ if __name__ == '__main__':
     # 웹서버를 엽니다. 히오스가 활성상태인지 확인하는 정보를 받습니다
     app.add_routes([
         web.get('/low', low),
-        web.get('/high', high)
+        web.get('/high', high),
+        web.post('/deletefile', deletefile),
+        web.post('/report_upscale', report_upscale)
+        # web.get('/deletefile', deletefile)
     ])
 
     web.run_app(app, port=8007)
