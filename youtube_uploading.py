@@ -548,6 +548,18 @@ async def monitor(app):
                     video_id = ret["videoId"]
                     log.info(f'-- videoid: {video_id}')
 
+                    # db 상 video_id 를 업데이트해 줍니다
+                    try:
+                        async with engine.acquire() as conn:
+                            async with conn.execute(db.tbl_youtube_files.update()
+                                        .where(db.tbl_youtube_files.c.filename == cur_file)
+                                        .values(video_id=video_id)):
+                                log.info(f'video_id db updated')
+
+                    except Exception as E:
+                        log.info(f'exception {E} while video_id updating')
+
+
                     # 업로드후 playlist에 따라 옮겨줍니다
                     await edit_playlist(app, yt, video_id, playlist)
 
