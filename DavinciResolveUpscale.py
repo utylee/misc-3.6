@@ -99,12 +99,22 @@ async def upscale(path, res):
                 await sess.post(REPORT_URL, json=json.dumps(status))
         even += 1
 
-    #타임라인과 클립을 모두 삭제합니다
+    #타임라인과 모든클립을 삭제합니다
     b = mediapool.DeleteTimelines(prj.GetTimelineByIndex(1))
     print(f'delete timeline result : {b}')
-    # mediapool.DeleteClips([item])
-    mediapool.DeleteClips(item)
-    print(f'delete clips result : {b}')
+
+
+    mediapool_currentfolder = mediapool.GetCurrentFolder()
+    print(f'media pool current folder: {mediapool_currentfolder}')
+    mediapool_folder_clip_list = mediapool_currentfolder.GetClipList()
+    print(f'mediapool_folder_clip_list: {mediapool_folder_clip_list}')
+    
+    ret = mediapool.DeleteClips(mediapool_folder_clip_list)
+    print(f'delete ret: {ret}')
+
+    # # mediapool.DeleteClips([item])
+    # mediapool.DeleteClips(item)
+    # print(f'delete clips result : {b}')
 
     # 프로젝트를 닫습니다
     # prjManager.CloseProject(prj)
