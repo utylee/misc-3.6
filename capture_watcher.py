@@ -28,7 +28,8 @@ PATHS = [
     '/mnt/c/Users/utylee/Videos/Overwatch 2/',
     '/mnt/c/Users/utylee/Videos/The Finals/',
     '/mnt/c/Users/utylee/Videos/Counter-strike 2/',
-    '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/'
+    '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/',
+    '/mnt/c/Users/utylee/Videos/Enshrouded/'
 ]
 
 BOOL_UPSCALE = 1            # 0:None,  1:1440p,  2:2160p
@@ -44,8 +45,8 @@ DAVINCI_PATH = '/mnt/c/Program Files/Blackmagic Design/DaVinci Resolve/Resolve.e
 PYTHONW_PATH = '/mnt/c/Program Files/Python38/python.exe'   # DaVinci 공식지원이 3.6이랍니다
 # DAVINCI_UPSCALE_PY_PATH = '/home/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
 DAVINCI_UPSCALE_PY_PATH = 'c:/Users/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
-UPSCALING_RES = "2160"
-# UPSCALING_RES = "1440"
+# UPSCALING_RES = "2160"
+UPSCALING_RES = "1440"
 # KILL_DAVINCI_PY_PATH = '/home/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
 KILL_DAVINCI_PY_PATH = 'c:/Users/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
 UPSCALED_FILE_NAME = '/mnt/c/Users/utylee/Videos/MainTimeline.mp4'
@@ -55,7 +56,7 @@ UPSCALED_GATHER_PATH = '/mnt/c/Users/utylee/Videos/_Upscaled/'
 async def report_upscale(request):
     js = await request.json()
 
-    js =json.loads(js)
+    js = json.loads(js)
     # log.info(f'report_upscale::{js}')
 
     pct = js['CompletionPercentage']
@@ -67,7 +68,28 @@ async def report_upscale(request):
         eta = round(js['TimeTakenToRenderInMs'] / 1000)
         log.info(f'Upscaling: Complete!,\tTOT: {eta} sec taken')
     # eta = round(js['TimeTakenToRenderInMs'] / 1000)
-    #{'JobStatus': Complete'', 'CompletionPercentage': 100, 'TimeTakenToRenderInMs': 17243}
+    # {'JobStatus': Complete'', 'CompletionPercentage': 100, 'TimeTakenToRenderInMs': 17243}
+
+    # 현 진행율을 db에 갱신합니다
+    try:
+        engine = request.app['db']
+        async with engine.acquire() as conn:
+            await conn.execute(db.tbl_youtube_files.update()
+                .where(db.tbl_youtube_files.c.filename==request.app['current_making_file'])
+                .values(upscale_pct=pct)) 
+
+    except Exception as e:
+        log.info(f'exception {e} while pct updating')
+
+    # 또한 needRefresh를 호출해줍니다
+    try:
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(
+                    URL_UPLOADER_WS_REFRESH) as resp:
+                result = await resp.text()
+                log.info(f'call needRefresh: {result}')
+    except Exception as e:
+        log.info(f'exception {e} while pct needRefreshing')
 
     return web.json_response([])
 
@@ -105,6 +127,9 @@ async def UpscalingProc(file, app):
 
     await proc_killresolve.wait()
     # await asyncio.sleep(5)
+
+    # ret이 0아 아닐 경우는 업스케일 실패입니다
+    return ret
 
 
 async def deletefile(request):
@@ -360,7 +385,7 @@ async def transfering(app):
                 log.info(f'start: {start}\ndesti: {desti}')
 
                 # 현재 복사 진행중인 파일명을 갖고 있기로 합니다
-                app['current_copying'] = file
+                app['current_copying_file'] = file
 
                 sum = 0
                 async with aiofiles.open(start, mode='rb') as src:
@@ -592,7 +617,9 @@ async def watching(app):
                             await conn.execute(db.tbl_youtube_files.insert()
                                                .values(filename=i, timestamp=addeds[n][i],
                                                        local=1, uploading=0,
+                                                       playlist='etc',
                                                        upscaled=0,
+                                                       upscale_pct=-1,
                                                        queueing=1,
                                                        youtube_queueing=0,
                                                        making=1, remote=0, copying=0,
@@ -641,10 +668,14 @@ async def watching(app):
                                 before_size = cur_size
 
                             # <--- 녹화완료
+                            app['current_making_file'] = i #현재만들어진 파일명을 갖고있습니다
 
                             # upscaling 루틴
                             if app['bool_upscale'] > 0:
-                                await UpscalingProc(a, app)
+                                ret_upscale = await UpscalingProc(a, app)
+                                # 0이 아닐 경우 업스케일 실패입니다 중단합니다
+                                if ret_upscale is not 0:
+                                    raise
                                 # split_ext = os.path.splitext(i)
                                 # new_filepath = UPSCALED_GATHER_PATH + \
                                 #     split_ext[0] + '_up' + split_ext[1]
@@ -780,7 +811,8 @@ if __name__ == '__main__':
     app['transfer_que'] = dict(que=[],
                                status=0)  # status:: 0: 대기중, 1: 복사중, 2: 복사완료
 
-    app['current_copying'] = ''
+    app['current_copying_file'] = ''
+    app['current_making_file'] = ''
 
     app['bool_upscale'] = BOOL_UPSCALE
     app['davinci_proc'] = 0

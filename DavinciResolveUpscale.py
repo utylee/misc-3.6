@@ -6,7 +6,7 @@ import aiohttp
 import json
 import DaVinciResolveScript as dvr_script
 
-REPORT_URL = 'http://localhost:8007/report_upscale'
+REPORT_URL = 'http://localhost:8007/report_upscale'     # capture_watcher에게 보내는 겁니다
 
 async def upscale(path, res):
     resolve = dvr_script.scriptapp("Resolve")
@@ -76,6 +76,10 @@ async def upscale(path, res):
     print('render_id' + render_id)
     prj.StartRendering(render_id)
 
+    # 시작되었음을 보고합니다
+    status = {'JobStatus': 'Started', 'CompletionPercentage': 0}
+    async with aiohttp.ClientSession() as sess:
+        await sess.post(REPORT_URL, json=json.dumps(status))
 
     even = 0
     #{'JobStatus': Complete'', 'CompletionPercentage': 100, 'TimeTakenToRenderInMs': 17243}
@@ -95,12 +99,22 @@ async def upscale(path, res):
                 await sess.post(REPORT_URL, json=json.dumps(status))
         even += 1
 
-    #타임라인과 클립을 모두 삭제합니다
+    #타임라인과 모든클립을 삭제합니다
     b = mediapool.DeleteTimelines(prj.GetTimelineByIndex(1))
     print(f'delete timeline result : {b}')
-    # mediapool.DeleteClips([item])
-    mediapool.DeleteClips(item)
-    print(f'delete clips result : {b}')
+
+
+    mediapool_currentfolder = mediapool.GetCurrentFolder()
+    print(f'media pool current folder: {mediapool_currentfolder}')
+    mediapool_folder_clip_list = mediapool_currentfolder.GetClipList()
+    print(f'mediapool_folder_clip_list: {mediapool_folder_clip_list}')
+    
+    ret = mediapool.DeleteClips(mediapool_folder_clip_list)
+    print(f'delete ret: {ret}')
+
+    # # mediapool.DeleteClips([item])
+    # mediapool.DeleteClips(item)
+    # print(f'delete clips result : {b}')
 
     # 프로젝트를 닫습니다
     # prjManager.CloseProject(prj)
@@ -122,6 +136,8 @@ async def main():
 
             time.sleep(2)
 
+        # fuscript.exe 가 확인됐어도 cpu load가 높을 경우 바로 준비가 안되기도 합니다
+        time.sleep(4)
         await upscale(sys.argv[1], sys.argv[2])
 
 asyncio.run(main())
