@@ -150,9 +150,11 @@ class Studio:
             "Referer": self.YT_STUDIO_URL,
         }, data=self.fileSender(file_path), timeout=None)
         print(f'uploadFileToYoutube::uploaded is::')
-        print(f'uploaded')
+        print(f'{uploaded}')
         _ = await uploaded.text("utf-8")
+        print(f'uploaded.text:{_}')
         _ = json.loads(_)
+        print(f'json:{_}')
         return _['scottyResourceId']
 
     async def uploadVideo(self, file_name, title=f"New Video {round(time.time())}", description='This video uploaded by github.com/yusufusta/ytstudio', privacy='PRIVATE', draft=False, progress=None, extra_fields={}):
@@ -180,6 +182,7 @@ class Studio:
         print(f'file_name is: {file_name}')
         scottyResourceId = await self.uploadFileToYoutube(uploadUrl, file_name)
 
+        print('a')
         _data = self.templates.UPLOAD_VIDEO
         _data["resourceId"]["scottyResourceId"]["id"] = scottyResourceId
         _data["frontendUploadId"] = frontEndUID
@@ -204,6 +207,8 @@ class Studio:
             f"https://studio.youtube.com/youtubei/v1/upload/createvideo?alt=json&key={self.config['INNERTUBE_API_KEY']}",
             json=_data
         )
+        print(f'uploadVideo::upload::{upload}')
+        # print(f'uploadVideo::upload.json::{await upload.json()}')
 
         return await upload.json()
 

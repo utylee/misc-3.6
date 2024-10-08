@@ -82,8 +82,8 @@ async def report_upscale(request):
         engine = request.app['db']
         async with engine.acquire() as conn:
             await conn.execute(db.tbl_youtube_files.update()
-                .where(db.tbl_youtube_files.c.filename==request.app['current_making_file'])
-                .values(upscale_pct=pct)) 
+                               .where(db.tbl_youtube_files.c.filename == request.app['current_making_file'])
+                               .values(upscale_pct=pct))
 
     except Exception as e:
         log.info(f'exception {e} while pct updating')
@@ -676,7 +676,7 @@ async def watching(app):
                                 before_size = cur_size
 
                             # <--- 녹화완료
-                            app['current_making_file'] = i #현재만들어진 파일명을 갖고있습니다
+                            app['current_making_file'] = i  # 현재만들어진 파일명을 갖고있습니다
 
                             # upscaling 루틴
                             if app['bool_upscale'] > 0:
@@ -704,13 +704,13 @@ async def watching(app):
                                     # if status == 1:
                                     log.info(f'status=1')
                                     await conn.execute(db.tbl_youtube_files
-                                                       .update()
-                                                       .where(
-                                                           db.tbl_youtube_files.c.filename
+                                                    .update()
+                                                    .where(db.tbl_youtube_files.c.filename
                                                            == i)
-                                                       .values(copying=0, making=2,
-                                                               uploading=0, remote=0,
-                                                               upscaled=app['bool_upscale']))
+                                                    .values(copying=0, making=2,
+                                                            uploading=0, remote=0,
+                                                            start_path=UPSCALED_GATHER_PATH,
+                                                            upscaled=app['bool_upscale']))
                                     # 또한 needRefresh를 호출해줍니다
                                     async with aiohttp.ClientSession() as sess:
                                         async with sess.get(

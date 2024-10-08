@@ -32,9 +32,12 @@ from collections import OrderedDict as od, defaultdict
 import copy
 
 
-FIXED_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture/'
+# FIXED_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture/'
+FIXED_PATH = '/mnt/8001/97-Capture/'
 JSON_PATH = '/home/utylee/login.json'
 COOKIE_PATH = f'/mnt/c/Users/utylee/Downloads/cookies.txt'
+# PRIVACY = 'PUBLIC'
+PRIVACY = 'PRIVATE'
 
 
 def progress(yuklenen, toplam):
@@ -542,11 +545,11 @@ async def monitor(app):
                         path,
                         progress=progress,
                         description='',
-                        privacy='PUBLIC',
+                        privacy=PRIVACY,
                         title=title)
                     # ret = json.loads(ret)
-                    # log.info(f'upload completed. ret was {ret}')
-                    log.info(f'upload completed. ')
+                    log.info(f'monitor::yt.uploadVideo::upload completed.\n ret was {ret}')
+                    # log.info(f'upload completed. ')
 
                     video_id = ret["videoId"]
                     log.info(f'-- videoid: {video_id}')
