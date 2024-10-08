@@ -32,13 +32,20 @@ PATHS = [
     '/mnt/c/Users/utylee/Videos/Enshrouded/'
 ]
 
-BOOL_UPSCALE = 1            # 0:None,  1:1440p,  2:2160p
+INTV = 5                    # watching 확인 주기입니다
+# INTV = 1                    # watching 확인 주기입니다
+INTV_TRNS = 10              # transfering 확인 주기입니다
+# INTV_TRNS = 1              # transfering 확인 주기입니다
+
+# BOOL_UPSCALE = 1            # 0:None,  1:1440p,  2:2160p
+BOOL_UPSCALE = 0            # 0:None,  1:1440p,  2:2160p
 VIDEO_EXT_LIST = ['mp4', 'mkv', 'webm', 'avi', 'mov', 'mpg', 'mpeg', 'wmv']
 
 SPEED_LOW = 5 * 1024 * 128     # 5K * 128 = 0.6M /sec => 초당 0.6M 입니다
 SPEED_HIGH = 24 * 1024 * 128     # 24K * 128 = 3.2M /sec => 초당 3.2M 입니다
 
-REMOTE_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
+# REMOTE_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
+REMOTE_PATH = '/mnt/8001/97-Capture'
 
 # SUDO = 'sudo'
 DAVINCI_PATH = '/mnt/c/Program Files/Blackmagic Design/DaVinci Resolve/Resolve.exe'
@@ -467,7 +474,7 @@ async def transfering(app):
                     pass
                 '''
 
-        await asyncio.sleep(10)
+        await asyncio.sleep(INTV_TRNS)
 
 
 async def watching(app):
@@ -510,7 +517,8 @@ async def watching(app):
     #target_media = 'u:/4002/00-MediaWorld-4002'
     #target_media = r'\\192.168.0.201\clark\4002\00-MediaWorld-4002'
     # target_media = r'\\192.168.1.205\clark\4002\00-MediaWorld-4002'
-    target_media = r'\\192.168.1.202\clark\4002\00-MediaWorld-4002'
+    # target_media = r'\\192.168.1.202\clark\4002\00-MediaWorld-4002'
+    # target_media = r'\\192.168.1.202\8001\00-MediaWorld-4002'
 
     size_table = dict()
     # before = dict([(f, None) for f in os.listdir(path)])
@@ -576,7 +584,7 @@ async def watching(app):
         for n in range(len(paths)):
             # 5초 주기입니다
             # time.sleep(5)
-            await asyncio.sleep(5)
+            await asyncio.sleep(INTV)
 
             afters_dict = dict()
 
