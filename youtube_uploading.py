@@ -27,6 +27,7 @@ from aiohttp import web
 import db_youtube as db
 import json
 import logging
+import logging.handlers
 from collections import OrderedDict as od, defaultdict
 import copy
 
@@ -287,6 +288,7 @@ async def ws(request):
 
 async def asyncupload(app, path, title):
     yt = app['Studio']
+    log.info(f'asyncupload::path is:{path}')
     ret = await yt.uploadVideo(
         path,
         title=title,
@@ -362,12 +364,11 @@ async def monitor(app):
     app['Studio'] = Studio(app['login_file'])
     log.info('came into monitor function')
     yt = app['Studio']
-    log.info(yt)
     # result = await yt.login()
     try:
         result = await yt.login()
-        log.info(result)
-        print(result)
+        log.info(f'login result:{result}')
+        print(f'login result:{result}')
     except Exception as e:
         log.info('yt.login() excepted')
         print('yt.login() excepted')
@@ -535,6 +536,8 @@ async def monitor(app):
 
                     await yt.login()
                     log.info(f'yt.login() succeed')
+                    log.info(f'yt.uploadVideo starting...')
+                    log.info(f'path:{path}, title:{title}')
                     ret = await yt.uploadVideo(
                         path,
                         progress=progress,
@@ -925,9 +928,14 @@ if __name__ == '__main__':
     #     print(("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content)))
 
     # 로그설정입니다
-    log = logging.getLogger('logger')
-    handler = logging.FileHandler('/home/utylee/youtube_uploading.log')
+    log_path = f'/home/utylee/youtube_uploading.log'
+    handler = logging.handlers.RotatingFileHandler(filename=log_path,
+                                                   maxBytes=10*1024*1024,
+                                                   backupCount=10)
+
+    # handler = logging.FileHandler('/home/utylee/youtube_uploading.log')
     handler.setFormatter(logging.Formatter('[%(asctime)s-%(message)s]'))
+    log = logging.getLogger('logger')
     log.addHandler(handler)
     log.setLevel(logging.DEBUG)
 

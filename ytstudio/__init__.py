@@ -61,7 +61,13 @@ class Studio:
         Login to your youtube account
         """
         page = await self.getMainPage()
-        print(f'page:{page}')
+
+        # print(f'\nYT_STUDIO_URL:{self.YT_STUDIO_URL}')
+        # print(f'page:{page}')
+        f = open('/mnt/8001/loginedpage.html', 'w')
+        f.write(page)
+        f.close()
+
         _ = pq(page)
         script = _("script")
         if len(script) < 1:
@@ -127,7 +133,14 @@ class Studio:
                     break
 
     async def uploadFileToYoutube(self, upload_url, file_path):
+        print(f'\ncame into uploadFileToYoutube(...)')
         self.TRANSFERRED_BYTES = 0
+
+        print(f'\nuploadFileToYoutube::params...')
+        print(f'upload_url:{upload_url}')
+        print(f'self.YT_STUDIO_URL:{self.YT_STUDIO_URL}')
+        print(f'upload-file-name:file-{round(time.time())}')
+        print(f'file_path:{file_path}')
 
         uploaded = await self.session.post(upload_url,  headers={
             "Content-Type": "application/x-www-form-urlencoded;charset=utf-8'",
@@ -136,6 +149,8 @@ class Studio:
             "x-goog-upload-offset": "0",
             "Referer": self.YT_STUDIO_URL,
         }, data=self.fileSender(file_path), timeout=None)
+        print(f'uploadFileToYoutube::uploaded is::')
+        print(f'uploaded')
         _ = await uploaded.text("utf-8")
         _ = json.loads(_)
         return _['scottyResourceId']
@@ -157,7 +172,12 @@ class Studio:
                                                 },
                                                 json={'frontendUploadId': frontEndUID})
 
+        print(f'uploadRequest from session.get:')
+        print(f'{uploadRequest}')
         uploadUrl = uploadRequest.headers.get("x-goog-upload-url")
+        print(f'uploadUrl from request.headers.get:')
+        print(f'{uploadUrl}')
+        print(f'file_name is: {file_name}')
         scottyResourceId = await self.uploadFileToYoutube(uploadUrl, file_name)
 
         _data = self.templates.UPLOAD_VIDEO
