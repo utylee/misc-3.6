@@ -94,6 +94,7 @@ async def edit_playlist(app, yt, vid, playlist):
 async def cook(request):
     full = []
     full_dict = dict()
+    # phase = request.match_info['phase']
 
     # 먼저 login.json 에서 SESSION_TOKEN 값은 저장해놓습니다
     # --> pyperclip으로 클립보드 값을 넣어주는 것으로 변경합니다
@@ -236,6 +237,47 @@ async def ws_refresh(request):
     except Exception as e:
         log.info(f'exception in websocket send:needRefresh: {e}')
         '''
+
+    return web.Response(text='ok')
+
+
+async def loginjson_finished():
+    # log.info(f'process 종료')
+
+    # 파일 변경일도 수집합니다
+    float_time = os.stat(JSON_PATH).st_mtime
+    readable_time = datetime.datetime.fromtimestamp(float_time)
+    readable_time = readable_time.strftime('%y%m%d-%H:%M:%S')
+    log.info(f'login.json date: {readable_time}')
+    app['login_file_date'] = readable_time
+
+    # api에 해당시간을 전달해줍니다
+    async with aiohttp.ClientSession() as sess:
+        async with sess.post(
+                'http://localhost/youtube/api/report_loginjson_date', data=readable_time):
+            log.info(f'report loginjson date:{readable_time}')
+
+    app['process'] = 0
+
+
+async def ws_phase(request):
+    phase = request.match_info['phase']
+
+    # subprocess로 매초 확인하는 작업으로 종료여부를 확인했는데
+    # AutoHotkey에서 http client가 가능하다는 것을 안 이후로는 뒤늦게
+    # 직접 신호전달로 변경해봅니다
+    if (phase == "finished"):
+        # if app['process'].returncode == 0:
+        # await app['process'].wait()
+        log.info(f'login.json 파일 갱신작업 완료.')
+        await loginjson_finished()
+
+        await send_ws(app['websockets'], 'needRefresh')
+        await send_ws(app['websockets'], 'finished')
+
+    else:
+        # await send_ws(request.app['websockets'],  proc_phase)
+        await send_ws(request.app['websockets'],  'processing_' + phase)
 
     return web.Response(text='ok')
 
@@ -548,7 +590,8 @@ async def monitor(app):
                         privacy=PRIVACY,
                         title=title)
                     # ret = json.loads(ret)
-                    log.info(f'monitor::yt.uploadVideo::upload completed.\n ret was {ret}')
+                    log.info(
+                        f'monitor::yt.uploadVideo::upload completed.\n ret was {ret}')
                     # log.info(f'upload completed. ')
 
                     video_id = ret["videoId"]
@@ -558,13 +601,12 @@ async def monitor(app):
                     try:
                         async with engine.acquire() as conn:
                             async with conn.execute(db.tbl_youtube_files.update()
-                                        .where(db.tbl_youtube_files.c.filename == cur_file)
-                                        .values(video_id=video_id)):
+                                                    .where(db.tbl_youtube_files.c.filename == cur_file)
+                                                    .values(video_id=video_id)):
                                 log.info(f'video_id db updated')
 
                     except Exception as E:
                         log.info(f'exception {E} while video_id updating')
-
 
                     # 업로드후 playlist에 따라 옮겨줍니다
                     await edit_playlist(app, yt, video_id, playlist)
@@ -662,7 +704,7 @@ def upload(app, res):
 
 async def create_bg_tasks(app):
     asyncio.create_task(monitor(app))
-    asyncio.create_task(monitor_subprocess(app))
+    # asyncio.create_task(monitor_subprocess(app))
 
 
 # ahk를 실행시키는 명령하는 함수입니다
@@ -817,7 +859,7 @@ VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
 #                  http=credentials.authorize(httplib2.Http()))
 
 
-#def initialize_upload(youtube, options):
+# def initialize_upload(youtube, options):
 #    tags = None
 #    if options.keywords:
 #        tags = options.keywords.split(",")
@@ -855,11 +897,11 @@ VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
 #    # resumable_upload(insert_request)
 #    return resumable_upload(insert_request)
 
-## This method implements an exponential backoff strategy to resume a
-## failed upload.
+# This method implements an exponential backoff strategy to resume a
+# failed upload.
 
 
-#def resumable_upload(insert_request):
+# def resumable_upload(insert_request):
 #    # result라는 값을 리턴하도록 합니다. exception 이 발생하면 1을 반납합니다
 #    result = 0
 #    response = None
@@ -942,7 +984,6 @@ if __name__ == '__main__':
     log.addHandler(handler)
     log.setLevel(logging.DEBUG)
 
-
     app = web.Application()
 
     # app['args'] = args
@@ -969,7 +1010,9 @@ if __name__ == '__main__':
         web.post('/addque', addque),
         web.get('/loginjson', loginjson),
         web.get('/cook', cook),
+        # web.get('/cook/{phase:.*}', cook),
         web.get('/ws', ws),
+        web.get('/ws/{phase:.*}', ws_phase),
         web.get('/ws_refresh', ws_refresh),
         web.get('/', handle)
     ])
