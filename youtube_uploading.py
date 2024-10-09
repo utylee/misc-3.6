@@ -272,8 +272,8 @@ async def ws_phase(request):
         log.info(f'login.json 파일 갱신작업 완료.')
         await loginjson_finished()
 
-        await send_ws(app['websockets'], 'needRefresh')
         await send_ws(app['websockets'], 'finished')
+        await send_ws(app['websockets'], 'needRefresh')
 
     else:
         # await send_ws(request.app['websockets'],  proc_phase)
@@ -579,10 +579,13 @@ async def monitor(app):
                     log.info(f'app["login_file"]')
                     yt = Studio(app['login_file'])
 
+                    # 업로드 직전 다시 로그인하고
                     await yt.login()
                     log.info(f'yt.login() succeed')
                     log.info(f'yt.uploadVideo starting...')
                     log.info(f'path:{path}, title:{title}')
+
+                    # 업로드를 시작합니다
                     ret = await yt.uploadVideo(
                         path,
                         progress=progress,
@@ -715,16 +718,17 @@ async def loginjson(request):
 
     # 작업중이 아닐 때만 실행 명령을 내립니다
     if request.app['process'] == 0:
+        log.info(f'login.json 파일 갱신작업 중입니다.')
+
+        # websocket들에 작업중 메세지를 보냅니다
+        await send_ws(request.app['websockets'], 'processing')
+
         process = await asyncio.create_subprocess_exec(
             '/mnt/c/Program Files/AutoHotkey/v1.1.37.01/AutoHotkeyU64.exe',
             'c:\\Users\\utylee\\bin\\cookie_refresher_force.ahk')
         # await process.wait()
-
-        log.info(f'login.json 파일 갱신작업 중입니다. {process}')
+        log.info(f'{process}')
         request.app['process'] = process
-
-        # websocket들에 작업중 메세지를 보냅니다
-        await send_ws(request.app['websockets'], 'processing')
 
         '''
         ws_dict = request.app['websockets']
