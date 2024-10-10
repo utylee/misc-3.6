@@ -36,9 +36,10 @@ INTV = 5                    # watching 확인 주기입니다
 # INTV = 1                    # watching 확인 주기입니다
 INTV_TRNS = 10              # transfering 확인 주기입니다
 # INTV_TRNS = 1              # transfering 확인 주기입니다
+INTV_UPSCL = 3              # upscaling 확인 주기입니다
 
-# BOOL_UPSCALE = 1            # 0:None,  1:1440p,  2:2160p
-BOOL_UPSCALE = 0            # 0:None,  1:1440p,  2:2160p
+BOOL_UPSCALE = 1            # 0:None,  1:1440p,  2:2160p
+# BOOL_UPSCALE = 0            # 0:None,  1:1440p,  2:2160p
 VIDEO_EXT_LIST = ['mp4', 'mkv', 'webm', 'avi', 'mov', 'mpg', 'mpeg', 'wmv']
 
 SPEED_LOW = 5 * 1024 * 128     # 5K * 128 = 0.6M /sec => 초당 0.6M 입니다
@@ -288,6 +289,7 @@ async def high(request):
 
 
 # 날짜로 파일 정보를 정리도 하지만 초기에 중단된 전송이 있으면 추가도 합니다
+# 또한 upscaling이 중단된 경우라면 upscaling도 다시 진행해줍니다
 async def truncate(app):
     engine = app['db']
     candidate = []          # 삭제 후보리스트
@@ -344,6 +346,170 @@ async def create_bg_tasks(app):
     asyncio.create_task(truncate(app))          # 생성된지 일주일된 자료는 db상 삭제합니다
     asyncio.create_task(watching(app))
     asyncio.create_task(transfering(app))
+    asyncio.create_task(upscaling(app))
+
+
+async def upscaling(app):
+    # que, status = app['transfer_que']['que'], app['transfer_que']['status']
+    engine = app['db']
+
+    # 3초에 한번씩 큐 리스트를 탐색합니다
+    while True:
+        # status가 0(대기중)이며 que 리스트에 항목이 있을 때 작동합니다
+        # if status == 0 and len(que):
+
+        que = app['upscale_que']['que']
+        if len(que) > 0:
+            # 첫번째 항목을 큐에서 꺼냅니다
+
+            # 현재 업스케일 큐를 표시합니다
+            log.info(f'upscaling::que: {que}')
+
+            file, path = que.pop(0)
+            log.info(f'file, path:{file},{path}')
+            pathfile = f'{path}{file}'
+
+            # BOOL_UPSCALE 이 1일 경우는 DaVinciResolve 프로세스를 실행합니다
+            if (BOOL_UPSCALE):
+                log.info(f'UpscalingProc::executing davinci resolve -nogui...')
+                app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, '-nogui', stdout=None)
+                # app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, stdout=None)
+                log.info(f'davinci_proc: {app["davinci_proc"]}')
+                await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+                # await app['davinci_proc'].wait()
+
+                # 업스케일을 실행합니다
+                pathfile_win = 'c:' + pathfile[6:]  # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
+                log.info(f'pathfile_win:{pathfile_win}')
+                log.info(f'davinci upscale executing with pythonw...')
+                proc_upscale = await asyncio.create_subprocess_exec(PYTHONW_PATH, DAVINCI_UPSCALE_PY_PATH, pathfile_win, UPSCALING_RES, stdout=None)
+
+                ret = await proc_upscale.wait()
+                log.info(f'davinci upscale return code: {ret}')
+                if ret == 0:
+                    log.info(f'Upscale Successed!')
+                # await asyncio.sleep(20)
+
+                log.info(f'UpscalingProc::killing davinci resolve by win python.exe ...')
+                # await asyncio.create_subprocess_exec('sudo', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
+                # proc = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=asyncio.subprocess.PIPE)
+                # proc = await asyncio.create_subprocess_exec('sudo', '-S', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
+                proc_killresolve = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
+
+                # import psutil
+                # for proc in psutil.process_iter():
+                #     log.info(f'proc: {proc.name()}')
+
+                await proc_killresolve.wait()
+                # await asyncio.sleep(5)
+
+                # 0이 아닐 경우 업스케일 실패입니다
+                if ret is not 0:
+                    log.info(f'upscale failed!!')
+
+            # DavinciResolveUpscale 혹은 비처리 패스등을 끝낸 이후
+            try:
+                # db 에 upscaled 플래그를 넣어줍니다
+                # payload = {'file': file, 'status': 2}
+                # ret = await send_current_status(payload)
+                try:
+                    async with engine.acquire() as conn:
+                        await conn.execute(db.tbl_youtube_files.update()
+                            .where(db.tbl_youtube_files.c.filename == file)
+                            .values(upscaled=BOOL_UPSCALE,making=2))
+                    # 또한 needRefresh를 호출해줍니다
+                    async with aiohttp.ClientSession() as sess:
+                        async with sess.get(URL_UPLOADER_WS_REFRESH):
+                            log.info('call needRefresh')
+                except:
+                    pass
+
+                # 현재 복사 진행중인 파일명을 갖고 있기로 합니다
+                app['current_copying_file'] = file
+
+                sum = 0
+                async with aiofiles.open(start, mode='rb') as src:
+                    async with aiofiles.open(desti, mode='wb') as dst:
+                        while 1:
+                            cur_length = app['cur_length']
+                            buf = await src.read(cur_length)
+                            if not buf:
+                                break
+                            await dst.write(buf)
+                            sum = sum + cur_length
+                            sumk = round(sum / 1000000)
+                            wrote = round(len(buf)/1000)
+                            # print(f'wrote:{len(buf)}')
+                            # log.info(f'wrote:{len(buf)}')
+                            # print(f'{file}: {len(buf)} kb')
+                            # log.info(f'{file}: {len(buf)} b ')
+                            pct = round(sumk / size * 100)
+                            log.info(
+                                f'{file}: {wrote*2}KB/s / {sumk}M / {size}M ({pct}%)')
+                            await asyncio.sleep(0.5)
+
+            except:
+                print('exception in copying')
+                log.info('exception in copying')
+                exct = 1
+
+            # 복사완료후 원래 파일을 삭제합니다
+            print('copy complete')
+            log.info('copy complete')
+            if exct == 0:
+                # exception이 안났을 경우에만 파일이름을 다시 복구합니다. 10초 후
+                # exception이 안났을 경우에만 삭제합니다. 5초 후
+                # time.sleep(5)
+                await asyncio.sleep(5)
+
+                # 영상을 감상중이라던가해서 삭제가 안될경우 db업데이트 문제로
+                # youtube 업로드가 시작되지 않습니다. 따라서 삭제전 나머지 플래그는
+                # 설정해주도록 합니다. 로컬 삭제는 안되어도 리모트에서 업로드는 되도록
+                try:
+                    async with engine.acquire() as conn:
+                        # completed 즉 3일 경우
+                        log.info(f'status=3')
+                        await conn.execute(db.tbl_youtube_files.update().where(
+                            db.tbl_youtube_files.c.filename == file)
+                            .values(copying=2, uploading=1, queueing=0, remote=1))
+                        # remote = 1을 추가합니다. 삭제프로세스 보다보니 없어서
+                        # .values(copying=2, uploading=1, queueing=0))
+
+                except Exception as e:
+                    log.info(f'exception {e}')
+
+                try:
+                    os.remove(start)
+                    async with engine.acquire() as conn:
+                        log.info(f'set db local=0')
+                        await conn.execute(db.tbl_youtube_files.update().where(
+                            db.tbl_youtube_files.c.filename == file)
+                            .values(local=0))
+                    # 또한 needRefresh를 호출해줍니다
+                    async with aiohttp.ClientSession() as sess:
+                        async with sess.get(URL_UPLOADER_WS_REFRESH):
+                            log.info('call needRefresh after removing')
+                except Exception as e:
+                    log.info(f'exception in file deleting... {e}')
+
+                # db 에 completed 플래그를 넣어줍니다
+                # payload = {'file': file, 'status': 3}
+                # ret = await send_current_status(payload)
+
+                # os.remove 와 try내에 통합합니다
+                '''
+                try:
+                    async with engine.acquire() as conn:
+                        log.info(f'set db local=0')
+                        await conn.execute(db.tbl_youtube_files.update().where(
+                            db.tbl_youtube_files.c.filename == file)
+                            .values(local=0))
+
+                except:
+                    pass
+                '''
+
+        await asyncio.sleep(INTV_UPSCL)
 
 
 async def transfering(app):
@@ -367,6 +533,7 @@ async def transfering(app):
             start = f'{path}{file}'
             desti = f'{target}/{file}'
             exct = 0
+            size = round(os.path.getsize(start) / 1000000)
 
             try:
                 # db 에 copying 플래그를 넣어줍니다
@@ -410,7 +577,9 @@ async def transfering(app):
                             # log.info(f'wrote:{len(buf)}')
                             # print(f'{file}: {len(buf)} kb')
                             # log.info(f'{file}: {len(buf)} b ')
-                            log.info(f'{file}: {wrote} K / {sumk} M')
+                            pct = round(sumk / size * 100)
+                            log.info(
+                                f'{file}: {wrote*2}KB/s / {sumk}M / {size}M ({pct}%)')
                             await asyncio.sleep(0.5)
 
             except:
@@ -678,6 +847,13 @@ async def watching(app):
                             # <--- 녹화완료
                             app['current_making_file'] = i  # 현재만들어진 파일명을 갖고있습니다
 
+                            _start_path = paths[n]
+
+                            # upscale 큐에 넣어줍니다
+                            # BOOL_UPSCALE 에 상관없이 일단 upscale 큐가 판단한 후
+                            # transfer 큐로 넘겨줍니다 (파일명, 폴더명)
+                            app['upscale_que']['que'].append((i, _start_path))
+
                             # upscaling 루틴
                             if app['bool_upscale'] > 0:
                                 ret_upscale = await UpscalingProc(a, app)
@@ -696,6 +872,10 @@ async def watching(app):
                                 except Exception as ose:
                                     log.info(f'exception {ose}')
 
+                                # 또한 db 업데이트에서의 start_path로 _Upscaled path로
+                                # 변환해줍니다
+                                _start_path = UPSCALED_GATHER_PATH
+
                             # db를 업데이트합니다. 녹화완료
                             log.info('db updating... record ended')
                             try:
@@ -704,13 +884,13 @@ async def watching(app):
                                     # if status == 1:
                                     log.info(f'status=1')
                                     await conn.execute(db.tbl_youtube_files
-                                                    .update()
-                                                    .where(db.tbl_youtube_files.c.filename
-                                                           == i)
-                                                    .values(copying=0, making=2,
-                                                            uploading=0, remote=0,
-                                                            start_path=UPSCALED_GATHER_PATH,
-                                                            upscaled=app['bool_upscale']))
+                                                       .update()
+                                                       .where(db.tbl_youtube_files.c.filename
+                                                              == i)
+                                                       .values(copying=0, making=2,
+                                                               uploading=0, remote=0,
+                                                               start_path=_start_path,
+                                                               upscaled=app['bool_upscale']))
                                     # 또한 needRefresh를 호출해줍니다
                                     async with aiohttp.ClientSession() as sess:
                                         async with sess.get(
@@ -725,11 +905,14 @@ async def watching(app):
                             log.info('inserting que')
 
                             # upscaled 이면 _Upscaled 폴더로 변경지정합니다
-                            folder = UPSCALED_GATHER_PATH if app['bool_upscale'] \
-                                else paths[n]
+                            # folder = UPSCALED_GATHER_PATH if app['bool_upscale'] \
+                            #     else paths[n]
 
+                            # 저위에서 upscale 여부에따라 변환하는 파트를 새로 넣어줬습니다
                             app['transfer_que']['que'].append(
-                                (i, folder, target))
+                                (i, _start_path, target))
+                            # app['transfer_que']['que'].append(
+                            #     (i, folder, target))
                             # app['transfer_que']['que'].append(
                             #     (i, paths[n], target))
                             q = app['transfer_que']['que']
@@ -818,6 +1001,7 @@ if __name__ == '__main__':
     app['target'] = REMOTE_PATH
     app['transfer_que'] = dict(que=[],
                                status=0)  # status:: 0: 대기중, 1: 복사중, 2: 복사완료
+    app['upscale_que'] = dict(que=[], status=0)
 
     app['current_copying_file'] = ''
     app['current_making_file'] = ''
