@@ -80,10 +80,11 @@ async def report_upscale(request):
 
     # 현 진행율을 db에 갱신합니다
     try:
+        app['upscale_pct'] = pct
         engine = request.app['db']
         async with engine.acquire() as conn:
             await conn.execute(db.tbl_youtube_files.update()
-                               .where(db.tbl_youtube_files.c.filename == request.app['current_making_file'])
+                               .where(db.tbl_youtube_files.c.filename == request.app['current_upscaling_file'])
                                .values(upscale_pct=pct))
 
     except Exception as e:
@@ -385,6 +386,7 @@ async def upscaling(app):
                 # await app['davinci_proc'].wait()
 
                 # 업스케일을 실행합니다
+                app['current_upscaling_file'] = file  # 현재만들어진 파일명을 갖고있습니다
                 pathfile_win = 'c:' + pathfile[6:]  # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
                 log.info(f'pathfile_win:{pathfile_win}')
                 log.info(f'davinci upscale executing with pythonw...')
@@ -394,22 +396,26 @@ async def upscaling(app):
                 log.info(f'davinci upscale return code: {ret}')
                 if ret == 0:
                     log.info(f'Upscale Successed!')
-                    
+
                     # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
                     upscaled_pathfile = UPSCALED_GATHER_PATH + file
                     log.info(f'upscaled_pathfile is {upscaled_pathfile}')
                     # db 상 넣어줄 start_path 를 upscale폴더로 변경해줍니다
-                    path=UPSCALED_GATHER_PATH
+                    path = UPSCALED_GATHER_PATH
                     # 생성된파일을 _Upscaled 폴더로 옮기고 원본 파일도 삭제합니다
                     try:
                         os.rename(UPSCALED_FILE_NAME, upscaled_pathfile)
                         os.remove(pathfile)
                     except Exception as ose:
-                        log.info(f'exception while moving and removing upscaled file\n {ose}')
+                        log.info(
+                            f'exception while moving and removing upscaled file\n {ose}')
+                    # 또한 변환이 성공하였으니 upscale_pct도 100으로 지정해줍니다
+                    app['upscale_pct'] = 100
 
                 # await asyncio.sleep(20)
 
-                log.info(f'UpscalingProc::killing davinci resolve by win python.exe ...')
+                log.info(
+                    f'UpscalingProc::killing davinci resolve by win python.exe ...')
                 # await asyncio.create_subprocess_exec('sudo', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
                 # proc = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=asyncio.subprocess.PIPE)
                 # proc = await asyncio.create_subprocess_exec('sudo', '-S', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
@@ -423,7 +429,7 @@ async def upscaling(app):
                 # await asyncio.sleep(5)
 
                 # 0이 아닐 경우 업스케일 실패입니다
-                if ret is not 0:
+                if ret != 0:
                     log.info(f'upscale failed!!')
 
             # DavinciResolveUpscale 혹은 비처리 패스등을 끝낸 이후
@@ -434,10 +440,11 @@ async def upscaling(app):
                 try:
                     async with engine.acquire() as conn:
                         await conn.execute(db.tbl_youtube_files.update()
-                            .where(db.tbl_youtube_files.c.filename == file)
-                            .values(upscaled=BOOL_UPSCALE,
-                                    making=2,
-                                    start_path=path))
+                                           .where(db.tbl_youtube_files.c.filename == file)
+                                           .values(upscaled=BOOL_UPSCALE,
+                                                   upscaling_pct=app['upscale_pct'],
+                                                   making=2,
+                                                   start_path=path))
                     # 또한 needRefresh를 호출해줍니다
                     async with aiohttp.ClientSession() as sess:
                         async with sess.get(URL_UPLOADER_WS_REFRESH):
@@ -950,8 +957,10 @@ if __name__ == '__main__':
 
     app['current_copying_file'] = ''
     app['current_making_file'] = ''
+    app['current_upscaling_file'] = ''
 
     app['bool_upscale'] = BOOL_UPSCALE
+    app['upscale_pct'] = 0
     app['davinci_proc'] = 0
 
     # watcher 프로시져 함수를 돌립니다
