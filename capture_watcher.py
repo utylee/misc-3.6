@@ -306,12 +306,12 @@ async def truncate(app):
                 try:
                     # 중단된 전송을 초기 큐에 등록하는 프로세스입니다
                     # queueing 이 1인 것들이 예약된 상태로 전송완료가 되지 않은 것들입니다
-                    log.info(f'중단됐던 전송들 select: {r}')
+                    log.info(f'중단됐던 전송: {r}')
                     if r[10] == 1:
                         #  파일,경로,업스케일완료여부 등을 업스케일큐에 넣습니다,
                         app['upscale_que']['que'].append((r[0], r[8], r[13]))
                         q = app['upscale_que']['que'][-1]
-                        log.info(f'upscale_queueing 1 추가됨: {q}')
+                        log.info(f'upscale_queueing에 추가된 데이터: {q}')
 
                         # #  파일,경로 등을 app['transfering'] 큐에 넣습니다,
                         # app['transfer_que']['que'].append(
@@ -378,8 +378,9 @@ async def upscaling(app):
 
             # BOOL_UPSCALE 이 1이면서 upscale이 안되어있을 경우
             # DaVinciResolve 프로세스를 실행합니다
-            if (upscaled == 0 and BOOL_UPSCALE):
-                log.info(f'UpscalingProc::executing davinci resolve -nogui...')
+            if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
+                log.info(
+                    f'upscaling()::upscaled==0::executing davinciResolve -nogui...')
                 app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, '-nogui', stdout=None)
                 # app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, stdout=None)
                 log.info(f'davinci_proc: {app["davinci_proc"]}')
@@ -442,7 +443,7 @@ async def upscaling(app):
                     async with engine.acquire() as conn:
                         await conn.execute(db.tbl_youtube_files.update()
                                            .where(db.tbl_youtube_files.c.filename == file)
-                                           .values(upscaled=BOOL_UPSCALE,
+                                           .values(upscaled=app['bool_upscale'],
                                                    upscaling_pct=app['upscale_pct'],
                                                    making=2,
                                                    start_path=path))
@@ -455,11 +456,12 @@ async def upscaling(app):
 
                 #  파일,경로 등을 app['transfering'] 큐에 넣습니다
                 # transfering()에서 전송을 담당합니다
-                log.info('inserting to transfering que')
+                log.info(
+                    'upscaling()::inserting to transfering que..{file}, {path}, {app["target"]}')
                 app['transfer_que']['que'].append(
                     (file, path, app['target']))
                 q = app['transfer_que']['que']
-                log.info(f'que after inserting: {q}')
+                log.info(f'transfer_que after inserting: {q}')
             except Exception as e:
                 log.info('exception {e} on upscale(app)')
 
@@ -535,7 +537,7 @@ async def transfering(app):
                             eta = round(
                                 ((size - sumk) / (wrote/INTV_TRNS_TICK / 1000))/60)
                             log.info(
-                                f'{file}: {wrote/INTV_TRNS_TICK}KB/s / {sumk}M / {size}M ({pct}%/{eta}min)')
+                                f'{file}: {round(wrote/INTV_TRNS_TICK)}KB/s / {sumk}M / {size}M ({pct}%/{eta}min)')
                             await asyncio.sleep(INTV_TRNS_TICK)
 
             except:
