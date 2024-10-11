@@ -35,6 +35,7 @@ PATHS = [
 INTV = 5                    # watching 확인 주기입니다
 # INTV = 1                    # watching 확인 주기입니다
 INTV_TRNS = 10              # transfering 확인 주기입니다
+INTV_TRNS_TICK = 0.5       # transfering 파일 조각 전송주기입니다
 # INTV_TRNS = 1              # transfering 확인 주기입니다
 INTV_UPSCL = 3              # upscaling 확인 주기입니다
 
@@ -531,9 +532,11 @@ async def transfering(app):
                             # print(f'{file}: {len(buf)} kb')
                             # log.info(f'{file}: {len(buf)} b ')
                             pct = round(sumk / size * 100)
+                            eta = round(
+                                ((size - sumk) / (wrote/INTV_TRNS_TICK / 1000))/60)
                             log.info(
-                                f'{file}: {wrote*2}KB/s / {sumk}M / {size}M ({pct}%)')
-                            await asyncio.sleep(0.5)
+                                f'{file}: {wrote/INTV_TRNS_TICK}KB/s / {sumk}M / {size}M ({pct}%/{eta}min)')
+                            await asyncio.sleep(INTV_TRNS_TICK)
 
             except:
                 print('exception in copying')
@@ -619,7 +622,7 @@ async def watching(app):
         cur_length = SPEED_HIGH             # 16K * 100 = 1.6M /sec => 초당 3.2M 입니다
 
     # 여러 경로를 감시하게끔 변경합니다
-    #path = '/mnt/c/Users/utylee/Videos/World Of Warcraft/'
+    # path = '/mnt/c/Users/utylee/Videos/World Of Warcraft/'
     paths = app['paths']
     # paths = [
     #             '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
@@ -635,9 +638,9 @@ async def watching(app):
 
     backup_target = r'E:/magnets/'
 
-    #target_media = 'u:/3002/00-MediaWorld'
-    #target_media = 'u:/4002/00-MediaWorld-4002'
-    #target_media = r'\\192.168.0.201\clark\4002\00-MediaWorld-4002'
+    # target_media = 'u:/3002/00-MediaWorld'
+    # target_media = 'u:/4002/00-MediaWorld-4002'
+    # target_media = r'\\192.168.0.201\clark\4002\00-MediaWorld-4002'
     # target_media = r'\\192.168.1.205\clark\4002\00-MediaWorld-4002'
     # target_media = r'\\192.168.1.202\clark\4002\00-MediaWorld-4002'
     # target_media = r'\\192.168.1.202\8001\00-MediaWorld-4002'
@@ -933,7 +936,13 @@ if __name__ == '__main__':
                                                    maxBytes=10*1024*1024,
                                                    backupCount=10)
     # handler.setFormatter(logging.Formatter('%[(asctime)s]-%(name)s-%(message)s'))
-    handler.setFormatter(logging.Formatter('[%(asctime)s]-%(message)s'))
+    # logging.Formatter.default_msec_format = '%s.%03d'
+    formatter = logging.Formatter(
+        '[%(asctime)s.%(msecs)03d]-%(message)s', "%y%m%d %H:%M:%S")
+    # formatter.default_msec_format = '%s.%03d'
+    handler.setFormatter(formatter)
+    # handler.setFormatter(logging.Formatter(
+    # '[%(asctime)s]-%(message)s', "%y-%m-%d %H:%M:%S:%f").default_msec_format('%s.%03d')))
     log = logging.getLogger('log')
     log.addHandler(handler)
     # log.terminator = ''
