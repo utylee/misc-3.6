@@ -444,7 +444,7 @@ async def upscaling(app):
                         await conn.execute(db.tbl_youtube_files.update()
                                            .where(db.tbl_youtube_files.c.filename == file)
                                            .values(upscaled=app['bool_upscale'],
-                                                   upscaling_pct=app['upscale_pct'],
+                                                   upscale_pct=app['upscale_pct'],
                                                    making=2,
                                                    start_path=path))
                     # 또한 needRefresh를 호출해줍니다
@@ -452,7 +452,7 @@ async def upscaling(app):
                         async with sess.get(URL_UPLOADER_WS_REFRESH):
                             log.info('call needRefresh')
                 except:
-                    pass
+                    log.info('upscaling()::db update excepted!!')
 
                 #  파일,경로 등을 app['transfering'] 큐에 넣습니다
                 # transfering()에서 전송을 담당합니다
