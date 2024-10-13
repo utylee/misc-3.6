@@ -402,11 +402,6 @@ async def monitor_subprocess(app):
 
 
 async def monitor(app):
-    app['db'] = await create_engine(host='192.168.1.203',
-                                    user='postgres',
-                                    password='sksmsqnwk11',
-                                    database='youtube_db')
-    app['Studio'] = Studio(app['login_file'])
     log.info('came into monitor function')
     yt = app['Studio']
     # result = await yt.login()
@@ -444,8 +439,8 @@ async def monitor(app):
 
     # 업로드 성공여부 리턴값입니다
     ret = 1
-    #url_gimme = 'http://192.168.1.102/uploader/api/gimme_que'
-    #url_result = 'http://192.168.1.102/uploader/api/upload_complete'
+    # url_gimme = 'http://192.168.1.102/uploader/api/gimme_que'
+    # url_result = 'http://192.168.1.102/uploader/api/upload_complete'
 
     # 업로드 서버에 gimme que 요청에서 자체 que 탐색으로 변경합니다
     while True:
@@ -706,15 +701,39 @@ def upload(app, res):
 
 
 async def create_bg_tasks(app):
+    app['db'] = await create_engine(host='192.168.1.203',
+                                    user='postgres',
+                                    password='sksmsqnwk11',
+                                    database='youtube_db')
+    app['Studio'] = Studio(app['login_file'])
+
     asyncio.create_task(monitor(app))
+    asyncio.create_task(recoverQue(app))
     # asyncio.create_task(monitor_subprocess(app))
 
+
+async def recoverQue(app):
+    # 시작 시 지난 큐 정보를 다시 들고 옵니다
+    log.info(f'recoverQue():db inserting...')
+    engine = app['db']
+    try:
+        async with engine.acquire() as conn:
+            async for r in conn.execute(db.tbl_youtube_files.select()
+                            .where(db.sa.and_(db.tbl_youtube_files.c.youtube_queueing == 1,
+                                db.sa.or_(db.tbl_youtube_files.c.copying == 0,
+                                            db.tbl_youtube_files.c.copying == 1)))):
+                                # db.tbl_youtube_files.c.uploading == 0))):
+                app['upload_que'].update({r[0]: [r[1], r[2]]})
+                log.info(f'-found...({r[0]}: [{r[1]}, {r[2]}])')
+    except Exception as e:
+        log.info(f'recoverQue():db insert failed. {e}')
+    # log.info(f'playlists from db: {}')
 
 # ahk를 실행시키는 명령하는 함수입니다
 # **작업완료는 monitor_subprocess 함수에서 점검해서 처리합니다
 async def loginjson(request):
 
-    result = 'waiting'
+    result='waiting'
 
     # 작업중이 아닐 때만 실행 명령을 내립니다
     if request.app['process'] == 0:
@@ -723,12 +742,12 @@ async def loginjson(request):
         # websocket들에 작업중 메세지를 보냅니다
         await send_ws(request.app['websockets'], 'processing')
 
-        process = await asyncio.create_subprocess_exec(
+        process=await asyncio.create_subprocess_exec(
             '/mnt/c/Program Files/AutoHotkey/v1.1.37.01/AutoHotkeyU64.exe',
             'c:\\Users\\utylee\\bin\\cookie_refresher_force.ahk')
         # await process.wait()
         log.info(f'{process}')
-        request.app['process'] = process
+        request.app['process']=process
 
         '''
         ws_dict = request.app['websockets']
@@ -753,14 +772,14 @@ async def loginjson(request):
 
 
 async def addque(request):
-    res = await request.json()
-    res = json.loads(res)
+    res=await request.json()
+    res=json.loads(res)
     log.info('came into handle addque')
     log.info(res)
     # title1 = res["title"]
-    filename = res["file"]
-    title = res["title"]
-    playlist = res["playlist"]
+    filename=res["file"]
+    title=res["title"]
+    playlist=res["playlist"]
     # filename = f'{FIXED_PATH}{filename}'
 
     # request.app['upload_que'].update({filename: title})
@@ -775,7 +794,7 @@ async def addque(request):
     # print(f'file:{args.file}')
     # print(f'title:{args.title}')
 
-    result = 'ok'
+    result='ok'
     # try:
     #     initialize_upload(youtube, args)
     # except:
@@ -794,20 +813,20 @@ async def handle(request):
 
 # Explicitly tell the underlying HTTP transport library not to retry, since
 # we are handling retry logic ourselves.
-httplib2.RETRIES = 1
+httplib2.RETRIES=1
 
 # Maximum number of times to retry before giving up.
-MAX_RETRIES = 10
+MAX_RETRIES=10
 
 # Always retry when these exceptions are raised.
-RETRIABLE_EXCEPTIONS = (httplib2.HttpLib2Error, IOError, http.client.NotConnected,
+RETRIABLE_EXCEPTIONS=(httplib2.HttpLib2Error, IOError, http.client.NotConnected,
                         http.client.IncompleteRead, http.client.ImproperConnectionState,
                         http.client.CannotSendRequest, http.client.CannotSendHeader,
                         http.client.ResponseNotReady, http.client.BadStatusLine)
 
 # Always retry when an apiclient.errors.HttpError with one of these status
 # codes is raised.
-RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
+RETRIABLE_STATUS_CODES=[500, 502, 503, 504]
 
 # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
 # the OAuth 2.0 information for this application, including its client_id and
@@ -819,17 +838,17 @@ RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
 #   https://developers.google.com/youtube/v3/guides/authentication
 # For more information about the client_secrets.json file format, see:
 #   https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
-CLIENT_SECRETS_FILE = "client_secrets.json"
+CLIENT_SECRETS_FILE="client_secrets.json"
 
 # This OAuth 2.0 access scope allows an application to upload files to the
 # authenticated user's YouTube channel, but doesn't allow other types of access.
-YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
-YOUTUBE_API_SERVICE_NAME = "youtube"
-YOUTUBE_API_VERSION = "v3"
+YOUTUBE_UPLOAD_SCOPE="https://www.googleapis.com/auth/youtube.upload"
+YOUTUBE_API_SERVICE_NAME="youtube"
+YOUTUBE_API_VERSION="v3"
 
 # This variable defines a message to display if the CLIENT_SECRETS_FILE is
 # missing.
-MISSING_CLIENT_SECRETS_MESSAGE = """
+MISSING_CLIENT_SECRETS_MESSAGE="""
 WARNING: Please configure OAuth 2.0
 
 To make this sample run you will need to populate the client_secrets.json file
@@ -845,7 +864,7 @@ https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
 """ % os.path.abspath(os.path.join(os.path.dirname(__file__),
                                    CLIENT_SECRETS_FILE))
 
-VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
+VALID_PRIVACY_STATUSES=("public", "private", "unlisted")
 
 
 # def get_authenticated_service(args):
@@ -977,32 +996,32 @@ if __name__ == '__main__':
     #     print(("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content)))
 
     # 로그설정입니다
-    log_path = f'/home/utylee/youtube_uploading.log'
-    handler = logging.handlers.RotatingFileHandler(filename=log_path,
+    log_path=f'/home/utylee/youtube_uploading.log'
+    handler=logging.handlers.RotatingFileHandler(filename=log_path,
                                                    maxBytes=10*1024*1024,
                                                    backupCount=10)
 
     # handler = logging.FileHandler('/home/utylee/youtube_uploading.log')
     handler.setFormatter(logging.Formatter('[%(asctime)s-%(message)s]'))
-    log = logging.getLogger('logger')
+    log=logging.getLogger('logger')
     log.addHandler(handler)
     log.setLevel(logging.DEBUG)
 
-    app = web.Application()
+    app=web.Application()
 
     # app['args'] = args
-    app['uploading'] = 0
+    app['uploading']=0
     # app['youtube'] = youtube
-    app['login_file'] = ''
-    app['login_file_date'] = ''
-    app['upload_que'] = od()
-    app['process'] = 0
-    app['websockets'] = defaultdict(int)
+    app['login_file']=''
+    app['login_file_date']=''
+    app['upload_que']=od()
+    app['process']=0
+    app['websockets']=defaultdict(int)
 
     # if os.path.exists('./login.json'):
     # SESSION_TOKEN 을 고쳐도 에러가 나서 보니 SIDCC도 변경되었더군요
     if os.path.exists(JSON_PATH):
-        app['login_file'] = json.loads(open(JSON_PATH, 'r').read())
+        app['login_file']=json.loads(open(JSON_PATH, 'r').read())
         print(app['login_file'])
         log.info('login file loaded')
         log.info(app['login_file'])
