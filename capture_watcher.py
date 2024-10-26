@@ -1,19 +1,18 @@
 import os
-import time
-import shutil
+#import time
+#import shutil
 import asyncio
 import aiohttp
 from aiohttp import web
 import aiofiles
 import json
-import subprocess
+#import subprocess
 import logging
 import logging.handlers
 import datetime
-import time
 
 from aiopg.sa import create_engine
-from sqlalchemy import false
+#from sqlalchemy import false
 # http post 로 신호 전달을 위해 json 객체가 필요합니다
 # import json
 import db_youtube as db
@@ -141,13 +140,7 @@ async def UpscalingProc(file, app):
     # ret이 0아 아닐 경우는 업스케일 실패입니다
     return ret
 
-
-async def deletefile(request):
-    js = await request.json()
-    js = json.loads(js)
-    log.info(f'came into deletefile. js is {js}')
-    # log.info(f'js.filename is {js["filename"]}')
-
+async def _deletefile(file_name, timestamp):
     start_path = ''
     dest_path = ''
 
@@ -158,19 +151,27 @@ async def deletefile(request):
     dest_exists = 1
 
     # db에서 해당파일의 로컬 및 리모트의 폴더를 가져옵니다
-    engine = request.app['db']
+    engine = app['db']
     try:
         async with engine.acquire() as conn:
             async for r in conn.execute(db.tbl_youtube_files.select()
-                                        .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
-                                                          db.tbl_youtube_files.c.timestamp == js['timestamp']))):
+                        .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
+                                        db.tbl_youtube_files.c.timestamp == timestamp))):
                 # db.tbl_youtube_files.c.timestamp == '3'))):
                 start_path = r[8]
                 dest_path = r[9]
-                log.info(f'deletefile::DB selected::{start_path}, {dest_path}')
+                log.info(f'_deletefile::DB selected::{start_path}, {dest_path}')
+
+        # 또한 transfer_que와 upscale_que 에서의 아이템도 삭제해줍니다
+        que = app['transfer_que']['que']
+        for q in que:
+            que.remove(q) if q[0] == file_name else 0
+        que1 = app['upscale_que']['que']
+        for q in que1:
+            que.remove(q) if q[0] == file_name else 0
 
     except Exception as e:
-        log.info(f'exception {e}')
+        log.info(f'_deletefile()::exception {e}')
 
     # 만약 start_path, dest_path 가 없으면 응급조치를 실행합니다
 
@@ -178,15 +179,15 @@ async def deletefile(request):
     # start_path = os.path.join(start_path, js['filename'])
     # dest_path = os.path.join(dest_path, js['filename'])
 
-    log.info(f'deletefile::fetched::start:{start_path}')
-    log.info(f'deletefile::fetched::dest:{dest_path}')
+    log.info(f'_deletefile::fetched::start:{start_path}')
+    log.info(f'_deletefile::fetched::dest:{dest_path}')
 
     try:
         # db에 패스가 없기에 모든 폴더를 적용해지워봅니다
         if (start_path == None):
             for p in PATHS:
                 log.info(f'p: {p}')
-                temp_path = os.path.join(p, js['filename'])
+                temp_path = os.path.join(p, file_name)
                 if (os.path.exists(temp_path)):
                     start_path = p
                     break
@@ -201,54 +202,54 @@ async def deletefile(request):
         # if(start_removed == 0
         # if(start_exists == 1
         # and os.path.exists(os.path.join(start_path, js['filename']))):
-        if (os.path.exists(os.path.join(start_path, js['filename']))):
-            os.remove(os.path.join(start_path, js['filename']))
+        if (os.path.exists(os.path.join(start_path, file_name))):
+            os.remove(os.path.join(start_path, file_name))
         # else:
         #     if(os.path.exists(os.path.join(start_path, js['filename']))):
         #         os.remove(os.path.join(start_path, js['filename']))
 
-        log.info(f'deleted start paths {js["filename"]}')
+        log.info(f'deleted start paths {file_name}')
     except Exception as e:
-        log.info(f'exception while deleting start {js["filename"]}, {e}')
+        log.info(f'exception while deleting start {file_name}, {e}')
 
     try:
         if (dest_path == None):
-            dest_path = request.app['target']
-        if (os.path.exists(os.path.join(dest_path, js['filename']))):
-            os.remove(os.path.join(dest_path, js['filename']))
+            dest_path = app['target']
+        if (os.path.exists(os.path.join(dest_path, file_name))):
+            os.remove(os.path.join(dest_path, file_name))
 
-        log.info(f'deleted dest paths {js["filename"]}')
+        log.info(f'deleted dest paths {file_name}')
     except Exception as e:
-        log.info(f'exception while deleting dest {js["filename"]}, {e}')
+        log.info(f'exception while deleting dest {file_name}, {e}')
 
     # 삭제됐으면 db의 local과 remote도 업데이트해줍니다
     # if (start_exists == 0
     #         or os.path.exists(os.path.join(start_path, js['filename'])) == False):
-    if (os.path.exists(os.path.join(start_path, js['filename'])) == False):
+    if (os.path.exists(os.path.join(start_path, file_name)) == False):
         # start_removed = 1
         start_exists = 0
         log.info('start no exists')
         try:
             async with engine.acquire() as conn:
                 await conn.execute(db.tbl_youtube_files.update()
-                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
-                                                     db.tbl_youtube_files.c.timestamp == js['timestamp']))
+                        .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
+                                        db.tbl_youtube_files.c.timestamp == timestamp))
                                    .values(local=0))
         except Exception as e:
-            log.info(f'{e}')
+            log.info(f'_deletefile()::{e}')
 
-    if (os.path.exists(os.path.join(dest_path, js['filename'])) == False):
+    if (os.path.exists(os.path.join(dest_path, file_name)) == False):
         # dest_removed = 1
         dest_exists = 0
         log.info('dest no exists')
         try:
             async with engine.acquire() as conn:
                 await conn.execute(db.tbl_youtube_files.update()
-                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
-                                                     db.tbl_youtube_files.c.timestamp == js['timestamp']))
+                    .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
+                                db.tbl_youtube_files.c.timestamp == timestamp))
                                    .values(remote=0))
         except Exception as e:
-            log.info(f'{e}')
+            log.info(f'_deletefile()::{e}')
 
     # 둘다 없을 경우에만 db의 해당파일 튜플을 삭제합니다
     # if(start_removed == 1 and dest_removed == 1):
@@ -256,8 +257,8 @@ async def deletefile(request):
         try:
             async with engine.acquire() as conn:
                 await conn.execute(db.tbl_youtube_files.delete()
-                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
-                                                     db.tbl_youtube_files.c.timestamp == js['timestamp'])))
+                        .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
+                                        db.tbl_youtube_files.c.timestamp == timestamp)))
 
             # 클라이언트에 needRefresh 를 보냅니다
             async with aiohttp.ClientSession() as sess:
@@ -265,7 +266,143 @@ async def deletefile(request):
                     log.info('call needRefresh')
 
         except Exception as e:
-            log.info(f'{e}')
+            log.info(f'_deletefile()::{e}')
+
+
+async def deletefile(request):
+    js = await request.json()
+    js = json.loads(js)
+    log.info(f'came into deletefile. js is {js}')
+    # log.info(f'js.filename is {js["filename"]}')
+
+    await _deletefile(js['filename'], js['timestamp'])
+
+    # start_path = ''
+    # dest_path = ''
+
+    # # start_removed = 0
+    # # dest_removed = 0
+
+    # start_exists = 1
+    # dest_exists = 1
+
+    # # db에서 해당파일의 로컬 및 리모트의 폴더를 가져옵니다
+    # engine = request.app['db']
+    # try:
+    #     async with engine.acquire() as conn:
+    #         async for r in conn.execute(db.tbl_youtube_files.select()
+    #                                     .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+    #                                                       db.tbl_youtube_files.c.timestamp == js['timestamp']))):
+    #             # db.tbl_youtube_files.c.timestamp == '3'))):
+    #             start_path = r[8]
+    #             dest_path = r[9]
+    #             log.info(f'deletefile::DB selected::{start_path}, {dest_path}')
+
+    #     # 또한 transfer_que와 upscale_que 에서의 아이템도 삭제해줍니다
+    #     que = request.app['transfer_que']['que']
+    #     for q in que:
+    #         que.remove(q) if q[0] == js['filename'] else 0
+    #     que1 = request.app['upscale_que']['que']
+    #     for q in que1:
+    #         que.remove(q) if q[0] == js['filename'] else 0
+
+    # except Exception as e:
+    #     log.info(f'deletefile()::exception {e}')
+
+    # # 만약 start_path, dest_path 가 없으면 응급조치를 실행합니다
+
+    # # 파일이름과 폴더를 합칩니다
+    # # start_path = os.path.join(start_path, js['filename'])
+    # # dest_path = os.path.join(dest_path, js['filename'])
+
+    # log.info(f'deletefile::fetched::start:{start_path}')
+    # log.info(f'deletefile::fetched::dest:{dest_path}')
+
+    # try:
+    #     # db에 패스가 없기에 모든 폴더를 적용해지워봅니다
+    #     if (start_path == None):
+    #         for p in PATHS:
+    #             log.info(f'p: {p}')
+    #             temp_path = os.path.join(p, js['filename'])
+    #             if (os.path.exists(temp_path)):
+    #                 start_path = p
+    #                 break
+
+    #         # 모든 폴더에 해당파일이 없다면 지워졌다고 보면됩니다
+    #         # 아무거나 넣어주면 이후에 당연히 지워졌다고 판단되고 진행될 것입니다
+    #         if (start_path == None):
+    #             start_path = PATHS[0]
+    #             # start_exists = 0
+    #     log.info(f'start_path: {start_path}')
+
+    #     # if(start_removed == 0
+    #     # if(start_exists == 1
+    #     # and os.path.exists(os.path.join(start_path, js['filename']))):
+    #     if (os.path.exists(os.path.join(start_path, js['filename']))):
+    #         os.remove(os.path.join(start_path, js['filename']))
+    #     # else:
+    #     #     if(os.path.exists(os.path.join(start_path, js['filename']))):
+    #     #         os.remove(os.path.join(start_path, js['filename']))
+
+    #     log.info(f'deleted start paths {js["filename"]}')
+    # except Exception as e:
+    #     log.info(f'exception while deleting start {js["filename"]}, {e}')
+
+    # try:
+    #     if (dest_path == None):
+    #         dest_path = request.app['target']
+    #     if (os.path.exists(os.path.join(dest_path, js['filename']))):
+    #         os.remove(os.path.join(dest_path, js['filename']))
+
+    #     log.info(f'deleted dest paths {js["filename"]}')
+    # except Exception as e:
+    #     log.info(f'exception while deleting dest {js["filename"]}, {e}')
+
+    # # 삭제됐으면 db의 local과 remote도 업데이트해줍니다
+    # # if (start_exists == 0
+    # #         or os.path.exists(os.path.join(start_path, js['filename'])) == False):
+    # if (os.path.exists(os.path.join(start_path, js['filename'])) == False):
+    #     # start_removed = 1
+    #     start_exists = 0
+    #     log.info('start no exists')
+    #     try:
+    #         async with engine.acquire() as conn:
+    #             await conn.execute(db.tbl_youtube_files.update()
+    #                                .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+    #                                                  db.tbl_youtube_files.c.timestamp == js['timestamp']))
+    #                                .values(local=0))
+    #     except Exception as e:
+    #         log.info(f'{e}')
+
+    # if (os.path.exists(os.path.join(dest_path, js['filename'])) == False):
+    #     # dest_removed = 1
+    #     dest_exists = 0
+    #     log.info('dest no exists')
+    #     try:
+    #         async with engine.acquire() as conn:
+    #             await conn.execute(db.tbl_youtube_files.update()
+    #                                .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+    #                                                  db.tbl_youtube_files.c.timestamp == js['timestamp']))
+    #                                .values(remote=0))
+    #     except Exception as e:
+    #         log.info(f'{e}')
+
+    # # 둘다 없을 경우에만 db의 해당파일 튜플을 삭제합니다
+    # # if(start_removed == 1 and dest_removed == 1):
+    # if (start_exists == 0 and dest_exists == 0):
+    #     try:
+    #         async with engine.acquire() as conn:
+    #             await conn.execute(db.tbl_youtube_files.delete()
+    #                                .where(db.sa.and_(db.tbl_youtube_files.c.filename == js['filename'],
+    #                                                  db.tbl_youtube_files.c.timestamp == js['timestamp'])))
+
+    #         # 클라이언트에 needRefresh 를 보냅니다
+    #         async with aiohttp.ClientSession() as sess:
+    #             async with sess.get(URL_UPLOADER_WS_REFRESH):
+    #                 log.info('call needRefresh')
+
+    #     except Exception as e:
+    #         log.info(f'{e}')
 
     return web.Response(text='ok')
 
@@ -294,11 +431,11 @@ async def high(request):
 # 또한 upscaling이 중단된 경우라면 upscaling도 다시 진행해줍니다
 async def truncate(app):
     engine = app['db']
-    candidate = []          # 삭제 후보리스트
+    # candidate = []          # 삭제 후보리스트
 
     # os.path.getmtime(paths[n] + f)).strftime("%y%m%d%H%M%S")) for f in os.listdir(paths[n])]))
     now = datetime.datetime.now()
-    log.info(f'{datetime.datetime.now()}')
+    log.info(f'truncate()::now is {datetime.datetime.now()}')
     # 24시간 주기로 실행합니다
     while True:
         async with engine.acquire() as conn:
@@ -306,41 +443,58 @@ async def truncate(app):
                 try:
                     # 중단된 전송을 초기 큐에 등록하는 프로세스입니다
                     # queueing 이 1인 것들이 예약된 상태로 전송완료가 되지 않은 것들입니다
-                    log.info(f'중단됐던 전송: {r}')
-                    if r[10] == 1:
+                    if r[10] == 1:              # queueing
+                        log.info(f'truncate()::중단됐던 전송: {r}')
+
                         #  파일,경로,업스케일완료여부 등을 업스케일큐에 넣습니다,
-                        app['upscale_que']['que'].append((r[0], r[8], r[13]))
-                        q = app['upscale_que']['que'][-1]
-                        log.info(f'upscale_queueing에 추가된 데이터: {q}')
+                        # 물론 파일이 있을 경우에만 넣습니다
+                        pathfile = r[8] + r[0]     # start_path + filename 
+                        log.info(f'truncate()::path/file is : {pathfile}')
 
-                        # #  파일,경로 등을 app['transfering'] 큐에 넣습니다,
-                        # app['transfer_que']['que'].append(
-                        #     (r[0], r[8], r[9]))
-                        # q = app['transfer_que']['que'][-1]
-                        # log.info(f'queueing 1 추가됨: {q}')
+                        if (os.path.isfile(pathfile)):
+                            app['upscale_que']['que'].append((r[0], r[8], r[13]))
+                            q = app['upscale_que']['que'][-1]
+                            log.info(f'truncate()::upscale_queueing에 추가된 데이터: {q}')
 
-                    # 경과일 계산부
-                    t = datetime.datetime.strptime(r[12], "%y%m%d%H%M%S")
-                    diff = now - t
-                    log.info(f'경과일:{diff.days}, {r[0]}')
-                    log.info(f'경과일:{diff.days}')
+                            # #  파일,경로 등을 app['transfering'] 큐에 넣습니다,
+                            # app['transfer_que']['que'].append(
+                            #     (r[0], r[8], r[9]))
+                            # q = app['transfer_que']['que'][-1]
+                            # log.info(f'queueing 1 추가됨: {q}')
 
-                    # 일주일 기간 이상은 삭제합니다
-                    # 3일 기간 이상은 삭제합니다
-                    # if diff.days > 7:
-                    if diff.days > TRUNCATE_DAYS:
-                        await conn.execute(db.tbl_youtube_files.delete()
-                                           .where(db.tbl_youtube_files.c.filename == r[0]))
-                        # candidate.append(r[0])
-                    # log.info(f'{r[8]}')
+                            # 경과일 계산부
+                            t = datetime.datetime.strptime(r[12], "%y%m%d%H%M%S")
+                            diff = now - t
+                            log.info(f'truncate()::경과일:{diff.days}, {r[0]}')
+                            log.info(f'truncate()::경과일:{diff.days}')
 
+                            # 일주일 기간 이상은 삭제합니다
+                            # 3일 기간 이상은 삭제합니다
+                            # if diff.days > 7:
+                            if diff.days > TRUNCATE_DAYS:
+                                await conn.execute(db.tbl_youtube_files.delete()
+                                                   .where(db.tbl_youtube_files.c.filename == r[0]))
+                                # candidate.append(r[0])
+                            # log.info(f'{r[8]}')
+                        # 파일이 없을 경우는 db및 파일 삭제명령을 내립니다
+                        else:
+                            await _deletefile(r[0], r[12])
+
+                        # 추가 후의 upscaling que 상태
+                        log.info(f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
                 except:
-                    log.info(f'truncation::exception')
+                    log.info(f'truncate()::exception')
 
-        await asyncio.sleep(3600*24)
+        await asyncio.sleep(3600*24)  # 24시간 즉 하루에 한번 큐를 검색해줍니다
 
 
 async def create_bg_tasks(app):
+    log.info(f'\n')
+    log.info(f'\n')
+    log.info(f'=======================================================')
+    log.info(f'capture watcher started::create_bg_tasks()')
+    log.info(f'=======================================================')
+    log.info(f'\n')
     # aiohttp에서 app.loop 이 사라졌다고 하네요 그냥 아래와같이 하라고 합니다
     # app.loop.create_task(watching(app))
     app['db'] = await create_engine(host='192.168.1.203',
@@ -366,42 +520,51 @@ async def upscaling(app):
         # if status == 0 and len(que):
 
         que = app['upscale_que']['que']
+        ret = 1
         if len(que) > 0:
             # 첫번째 항목을 큐에서 꺼냅니다
 
             # 현재 업스케일 큐를 표시합니다
-            log.info(f'upscaling::que: {que}')
+            log.info(f'upscaling()::que: {que}')
 
             file, path, upscaled = que.pop(0)
-            log.info(f'file, path, upscaled:{file}, {path}, {upscaled}')
+            log.info(f'upscaling()::pop(0)::(file, path, upscaled)')
+            log.info(f'({file}, {path}, {upscaled})')
             pathfile = f'{path}{file}'
 
+            exst = os.path.isfile(pathfile)
+            if (exst == 0):
+                log.info(f'upscaling()::({pathfile}) is not exists')
+
             # BOOL_UPSCALE 이 1이면서 upscale이 안되어있을 경우
+            # 또한 해당파일이 존재할 경우에만
             # DaVinciResolve 프로세스를 실행합니다
             if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
                 log.info(
                     f'upscaling()::upscaled==0::executing davinciResolve -nogui...')
                 app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, '-nogui', stdout=None)
                 # app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, stdout=None)
-                log.info(f'davinci_proc: {app["davinci_proc"]}')
+                log.info(f'upscaling()::davinci_proc: {app["davinci_proc"]}')
+                log.info(f'upscaling()::wait for davinci resolve executing...')
                 await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
                 # await app['davinci_proc'].wait()
 
                 # 업스케일을 실행합니다
                 app['current_upscaling_file'] = file  # 현재만들어진 파일명을 갖고있습니다
                 pathfile_win = 'c:' + pathfile[6:]  # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
-                log.info(f'pathfile_win:{pathfile_win}')
-                log.info(f'davinci upscale executing with pythonw...')
+                log.info(f'upscaling()::pathfile_win:{pathfile_win}')
+                log.info(f'upscaling()::davinci upscale processing with pythonw...')
                 proc_upscale = await asyncio.create_subprocess_exec(PYTHONW_PATH, DAVINCI_UPSCALE_PY_PATH, pathfile_win, UPSCALING_RES, stdout=None)
 
                 ret = await proc_upscale.wait()
-                log.info(f'davinci upscale return code: {ret}')
+                log.info(f'upscaling()::davinci upscale return code: {ret}')
                 if ret == 0:
-                    log.info(f'Upscale Successed!')
+                    log.info(f'upscaling()::Upscale Successed!')
+
 
                     # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
                     upscaled_pathfile = UPSCALED_GATHER_PATH + file
-                    log.info(f'upscaled_pathfile is {upscaled_pathfile}')
+                    log.info(f'upscaling()::upscaled_pathfile is {upscaled_pathfile}')
                     # db 상 넣어줄 start_path 를 upscale폴더로 변경해줍니다
                     path = UPSCALED_GATHER_PATH
                     # 생성된파일을 _Upscaled 폴더로 옮기고 원본 파일도 삭제합니다
@@ -410,14 +573,15 @@ async def upscaling(app):
                         os.remove(pathfile)
                     except Exception as ose:
                         log.info(
-                            f'exception while moving and removing upscaled file\n {ose}')
+                                f'upscaling()::exception while moving and removing upscaled file\n {ose}')
                     # 또한 변환이 성공하였으니 upscale_pct도 100으로 지정해줍니다
                     app['upscale_pct'] = 100
+                    upscaled = 1
 
                 # await asyncio.sleep(20)
 
                 log.info(
-                    f'UpscalingProc::killing davinci resolve by win python.exe ...')
+                        f'upscaling()::killing davinci resolve by win python.exe ...')
                 # await asyncio.create_subprocess_exec('sudo', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
                 # proc = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=asyncio.subprocess.PIPE)
                 # proc = await asyncio.create_subprocess_exec('sudo', '-S', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
@@ -432,38 +596,54 @@ async def upscaling(app):
 
                 # 0이 아닐 경우 업스케일 실패입니다
                 if ret != 0:
-                    log.info(f'upscale failed!!')
+                    log.info(f'upscaling()::upscale failed!!')
 
+            #################################################
+            #
             # DavinciResolveUpscale 혹은 비처리 패스등을 끝낸 이후
+            #
             try:
                 # db 에 upscaled 플래그를 넣어줍니다
                 # payload = {'file': file, 'status': 2}
                 # ret = await send_current_status(payload)
+                # _upscaled = int(not ret)
+
+                #혹시 수동 db삭제등으로 플래그에 문제가 생겼을 경우를 대비해
+                # path긑이 _Upscaled/ 라면 upscaled 값을 1로 설정해줍니다
+                if(path[-10:-1] == '_Upscaled'):
+                    upscaled = 1
                 try:
+                    # ret 값에 따라 upscaled 값을 넣어줍니다
+                    # .values(upscaled=app['bool_upscale'],
                     async with engine.acquire() as conn:
                         await conn.execute(db.tbl_youtube_files.update()
                                            .where(db.tbl_youtube_files.c.filename == file)
-                                           .values(upscaled=app['bool_upscale'],
+                                           .values(upscaled=upscaled,
                                                    upscale_pct=app['upscale_pct'],
                                                    making=2,
                                                    start_path=path))
+                        log.info(
+                            f'upscaling()::upscaled value from ret is {upscaled}')
                     # 또한 needRefresh를 호출해줍니다
                     async with aiohttp.ClientSession() as sess:
                         async with sess.get(URL_UPLOADER_WS_REFRESH):
-                            log.info('call needRefresh')
+                            log.info('upscaling()::call needRefresh')
                 except:
                     log.info('upscaling()::db update excepted!!')
 
                 #  파일,경로 등을 app['transfering'] 큐에 넣습니다
                 # transfering()에서 전송을 담당합니다
-                log.info(
-                    'upscaling()::inserting to transfering que..{file}, {path}, {app["target"]}')
-                app['transfer_que']['que'].append(
-                    (file, path, app['target']))
-                q = app['transfer_que']['que']
-                log.info(f'transfer_que after inserting: {q}')
+                # upscale 플래그와 결과가 같을 경우만 다음 프로세스인 전송 큐에 삽입해줍니다
+                if (BOOL_UPSCALE == upscaled):
+                    log.info(
+                        f'upscaling()::inserting to transfering que..\n{file}, {path}, {app["target"]}')
+                    app['transfer_que']['que'].append(
+                        (file, path, app['target']))
+                    q = app['transfer_que']['que']
+                    log.info(f'upscaling()::after inserting: {q}')
+
             except Exception as e:
-                log.info('exception {e} on upscale(app)')
+                log.info(f'upscaling()::exception {e} on upscale(app)')
 
         await asyncio.sleep(INTV_UPSCL)
 
@@ -508,10 +688,10 @@ async def transfering(app):
                             log.info('call needRefresh')
 
                 except:
-                    pass
+                    log.info(f'transfering()::exception while db updating')
 
                 print(f'start: {start}\ndesti: {desti}')
-                log.info(f'copying starting...')
+                log.info(f'transfering()::copying starting...')
                 log.info(f'start: {start}\ndesti: {desti}')
 
                 # 현재 복사 진행중인 파일명을 갖고 있기로 합니다
@@ -540,14 +720,14 @@ async def transfering(app):
                                 f'{file}: {round(wrote/INTV_TRNS_TICK)}KB/s / {sumk}M / {size}M ({pct}%/{eta}min)')
                             await asyncio.sleep(INTV_TRNS_TICK)
 
-            except:
+            except Exception as e:
                 print('exception in copying')
-                log.info('exception in copying')
+                log.info(f'transfering()::exception in copying...{e}')
                 exct = 1
 
             # 복사완료후 원래 파일을 삭제합니다
             print('copy complete')
-            log.info('copy complete')
+            log.info('transfering()::copy complete')
             if exct == 0:
                 # exception이 안났을 경우에만 파일이름을 다시 복구합니다. 10초 후
                 # exception이 안났을 경우에만 삭제합니다. 5초 후
@@ -568,7 +748,7 @@ async def transfering(app):
                         # .values(copying=2, uploading=1, queueing=0))
 
                 except Exception as e:
-                    log.info(f'exception {e}')
+                    log.info(f'transfering()::exception {e}')
 
                 try:
                     os.remove(start)
@@ -582,7 +762,7 @@ async def transfering(app):
                         async with sess.get(URL_UPLOADER_WS_REFRESH):
                             log.info('call needRefresh after removing')
                 except Exception as e:
-                    log.info(f'exception in file deleting... {e}')
+                    log.info(f'transfering()::exception in file deleting... {e}')
 
                 # db 에 completed 플래그를 넣어줍니다
                 # payload = {'file': file, 'status': 3}
@@ -637,8 +817,6 @@ async def watching(app):
     # target = r'\\192.168.1.202\clark\4002\00-MediaWorld-4002\97-Capture'
     # target = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
     target = app['target']
-
-    backup_target = r'E:/magnets/'
 
     # target_media = 'u:/3002/00-MediaWorld'
     # target_media = 'u:/4002/00-MediaWorld-4002'
