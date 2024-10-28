@@ -42,8 +42,10 @@ BOOL_UPSCALE = 1            # 0:None,  1:1440p,  2:2160p
 # BOOL_UPSCALE = 0            # 0:None,  1:1440p,  2:2160p
 VIDEO_EXT_LIST = ['mp4', 'mkv', 'webm', 'avi', 'mov', 'mpg', 'mpeg', 'wmv']
 
-SPEED_LOW = 5 * 1024 * 128     # 5K * 128 = 0.6M /sec => 초당 0.6M 입니다
-SPEED_HIGH = 24 * 1024 * 128     # 24K * 128 = 3.2M /sec => 초당 3.2M 입니다
+SPEED_LOW = 5 * 1024 * 128     # 5K * 128 = 0.6M /sec => 0.5초당 0.6M 입니다
+# SPEED_LOW = 24 * 1024 * 128     # 5K * 128 = 0.6M /sec => 0.5초당 0.6M 입니다
+SPEED_HIGH = 24 * 1024 * 128     # 24K * 128 = 3.2M /sec => 0.5초당 3.2M 입니다
+# SPEED_HIGH = 30 * 1024 * 128     # 24K * 128 = 3.2M /sec => 0.5초당 3.2M 입니다
 
 # REMOTE_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
 REMOTE_PATH = '/mnt/8001/97-Capture'
@@ -547,6 +549,7 @@ async def upscaling(app):
                 log.info(f'upscaling()::davinci_proc: {app["davinci_proc"]}')
                 log.info(f'upscaling()::wait for davinci resolve executing...')
                 await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+                # await asyncio.sleep(10)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
                 # await app['davinci_proc'].wait()
 
                 # 업스케일을 실행합니다
