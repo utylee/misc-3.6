@@ -42,6 +42,7 @@ async def upscale(path, res):
     log.info(f'mediapool: {mediapool}')
     # items = mediapool.ImportMedia(
     #     "d:\\Videos\\The Finals 2024.02.02 - 21.18.56.19.mp4")
+    log.info(f'path: {path}')
     item = mediapool.ImportMedia(
         path)
     # "d:\\Videos\\Test.mp4")
@@ -73,12 +74,14 @@ async def upscale(path, res):
     log.info(f'clips: {clips}')
     # ApplyGradeFromDRX(path, gradeMode, item1, item2, ...)--> Bool          # Loads a still from given file path (string) and applies grade to Timeline Items with gradeMode (int): 0 - "No keyframes", 1 - "Source Timecode aligned", 2 - "Start Frames aligned".
     ret = timeline.ApplyGradeFromDRX(
-        "c:\\Users\\utylee\\Davinci Resolve Projects\\Blur_48_1.1.1.dpx", 0, clips)
+        "c:\\Users\\utylee\\Davinci Resolve Projects\\Blur_48_1.1.2.dpx", 0, clips)
+        # "c:\\Users\\utylee\\Davinci Resolve Projects\\Blur_48_1.1.1.dpx", 0, clips)
     # "c:\\Users\\utylee\\Davinci Resolve Projects\\Blur_47_1.1.1.dpx", 0, clips)
     log.info(f'ApplyGradeFromDRX:{ret}:')
     render_id = prj.AddRenderJob()
     log.info(f'render_id: {render_id}')
-    prj.StartRendering(render_id)
+    ret_start = prj.StartRendering(render_id)
+    log.info(f'ret_renderstart: {ret_start}')
 
     # 시작되었음을 보고합니다
     status = {'JobStatus': 'Started', 'CompletionPercentage': 0}
@@ -124,6 +127,7 @@ async def upscale(path, res):
     # prjManager.CloseProject(prj)
 
 async def main():
+    log.info(f'this is DavinciResolveUpscale.py')
 
     if len(sys.argv) > 1:
         log.info(f'args: {sys.argv[1]}, {sys.argv[2]}')
@@ -147,6 +151,7 @@ async def main():
 
 if __name__ == '__main__':
     log_path = f'/home/utylee/davinci.log'
+    # log_path = f'c:/Users/utylee/davinci.log'
     handler = logging.handlers.RotatingFileHandler(filename=log_path,
                                                    maxBytes=10*1024*1024,
                                                    backupCount=10)

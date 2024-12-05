@@ -19,6 +19,7 @@ import db_youtube as db
 
 URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
 TRUNCATE_DAYS = 3
+'''
 PATHS = [
     '/mnt/c/Users/utylee/Videos/World Of Warcraft/',
     '/mnt/c/Users/utylee/Videos/Apex Legends/',
@@ -29,6 +30,18 @@ PATHS = [
     '/mnt/c/Users/utylee/Videos/Counter-strike 2/',
     '/mnt/c/Users/utylee/Videos/Fpsaimtrainer/',
     '/mnt/c/Users/utylee/Videos/Enshrouded/'
+]
+'''
+PATHS = [
+    '/mnt/f/Videos/World Of Warcraft/',
+    '/mnt/f/Videos/Apex Legends/',
+    '/mnt/f/Videos/Heroes of the Storm/',
+    '/mnt/f/Videos/Desktop/',
+    '/mnt/f/Videos/Overwatch 2/',
+    '/mnt/f/Videos/The Finals/',
+    '/mnt/f/Videos/Counter-strike 2/',
+    '/mnt/f/Videos/Fpsaimtrainer/',
+    '/mnt/f/Videos/Enshrouded/'
 ]
 
 INTV = 5                    # watching 확인 주기입니다
@@ -52,15 +65,20 @@ REMOTE_PATH = '/mnt/8001/97-Capture'
 
 # SUDO = 'sudo'
 DAVINCI_PATH = '/mnt/c/Program Files/Blackmagic Design/DaVinci Resolve/Resolve.exe'
-PYTHONW_PATH = '/mnt/c/Program Files/Python38/python.exe'   # DaVinci 공식지원이 3.6이랍니다
+# PYTHONW_PATH = '/mnt/c/Program Files/Python38/python.exe'   # DaVinci 공식지원이 3.6이랍니다
+# PYTHONW_PATH = '/mnt/c/Users/utylee/AppData/Local/Programs/Python/Python310/python.exe'
+PYTHONW_PATH = '/mnt/c/Python38/python.exe'
+
 # DAVINCI_UPSCALE_PY_PATH = '/home/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
 DAVINCI_UPSCALE_PY_PATH = 'c:/Users/utylee/.virtualenvs/misc/src/DavinciResolveUpscale.py'
 # UPSCALING_RES = "2160"
 UPSCALING_RES = "1440"
 # KILL_DAVINCI_PY_PATH = '/home/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
 KILL_DAVINCI_PY_PATH = 'c:/Users/utylee/.virtualenvs/misc/src/kill_win32_davinci.py'
-UPSCALED_FILE_NAME = '/mnt/c/Users/utylee/Videos/MainTimeline.mp4'
-UPSCALED_GATHER_PATH = '/mnt/c/Users/utylee/Videos/_Upscaled/'
+# UPSCALED_FILE_NAME = '/mnt/c/Users/utylee/Videos/MainTimeline.mp4'
+# UPSCALED_GATHER_PATH = '/mnt/c/Users/utylee/Videos/_Upscaled/'
+UPSCALED_FILE_NAME = '/mnt/f/Videos/MainTimeline.mp4'
+UPSCALED_GATHER_PATH = '/mnt/f/Videos/_Upscaled/'
 
 
 async def report_upscale(request):
@@ -142,6 +160,7 @@ async def UpscalingProc(file, app):
     # ret이 0아 아닐 경우는 업스케일 실패입니다
     return ret
 
+
 async def _deletefile(file_name, timestamp):
     start_path = ''
     dest_path = ''
@@ -157,8 +176,8 @@ async def _deletefile(file_name, timestamp):
     try:
         async with engine.acquire() as conn:
             async for r in conn.execute(db.tbl_youtube_files.select()
-                        .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
-                                        db.tbl_youtube_files.c.timestamp == timestamp))):
+                                        .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
+                                                          db.tbl_youtube_files.c.timestamp == timestamp))):
                 # db.tbl_youtube_files.c.timestamp == '3'))):
                 start_path = r[8]
                 dest_path = r[9]
@@ -234,8 +253,8 @@ async def _deletefile(file_name, timestamp):
         try:
             async with engine.acquire() as conn:
                 await conn.execute(db.tbl_youtube_files.update()
-                        .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
-                                        db.tbl_youtube_files.c.timestamp == timestamp))
+                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
+                                          db.tbl_youtube_files.c.timestamp == timestamp))
                                    .values(local=0))
         except Exception as e:
             log.info(f'_deletefile()::{e}')
@@ -247,8 +266,8 @@ async def _deletefile(file_name, timestamp):
         try:
             async with engine.acquire() as conn:
                 await conn.execute(db.tbl_youtube_files.update()
-                    .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
-                                db.tbl_youtube_files.c.timestamp == timestamp))
+                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
+                                                     db.tbl_youtube_files.c.timestamp == timestamp))
                                    .values(remote=0))
         except Exception as e:
             log.info(f'_deletefile()::{e}')
@@ -259,8 +278,8 @@ async def _deletefile(file_name, timestamp):
         try:
             async with engine.acquire() as conn:
                 await conn.execute(db.tbl_youtube_files.delete()
-                        .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
-                                        db.tbl_youtube_files.c.timestamp == timestamp)))
+                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
+                                          db.tbl_youtube_files.c.timestamp == timestamp)))
 
             # 클라이언트에 needRefresh 를 보냅니다
             async with aiohttp.ClientSession() as sess:
@@ -450,13 +469,14 @@ async def truncate(app):
 
                         #  파일,경로,업스케일완료여부 등을 업스케일큐에 넣습니다,
                         # 물론 파일이 있을 경우에만 넣습니다
-                        pathfile = r[8] + r[0]     # start_path + filename 
+                        pathfile = r[8] + r[0]     # start_path + filename
                         log.info(f'truncate()::path/file is : {pathfile}')
 
                         if (os.path.isfile(pathfile)):
                             app['upscale_que']['que'].append((r[0], r[8], r[13]))
                             q = app['upscale_que']['que'][-1]
-                            log.info(f'truncate()::upscale_queueing에 추가된 데이터: {q}')
+                            log.info(
+                                f'truncate()::upscale_queueing에 추가된 데이터: {q}')
 
                             # #  파일,경로 등을 app['transfering'] 큐에 넣습니다,
                             # app['transfer_que']['que'].append(
@@ -483,7 +503,8 @@ async def truncate(app):
                             await _deletefile(r[0], r[12])
 
                         # 추가 후의 upscaling que 상태
-                        log.info(f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
+                        log.info(
+                            f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
                 except:
                     log.info(f'truncate()::exception')
 
@@ -542,21 +563,30 @@ async def upscaling(app):
             # 또한 해당파일이 존재할 경우에만
             # DaVinciResolve 프로세스를 실행합니다
             if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
+
+                ver = await asyncio.create_subprocess_exec(PYTHONW_PATH, '--version', stdout=None)
+                log.info(f'python ver is {ver}')
+
                 log.info(
                     f'upscaling()::upscaled==0::executing davinciResolve -nogui...')
                 app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, '-nogui', stdout=None)
                 # app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, stdout=None)
                 log.info(f'upscaling()::davinci_proc: {app["davinci_proc"]}')
                 log.info(f'upscaling()::wait for davinci resolve executing...')
-                await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
-                # await asyncio.sleep(10)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+                # await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+                await asyncio.sleep(10)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
                 # await app['davinci_proc'].wait()
 
                 # 업스케일을 실행합니다
                 app['current_upscaling_file'] = file  # 현재만들어진 파일명을 갖고있습니다
-                pathfile_win = 'c:' + pathfile[6:]  # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
+                # pathfile_win = 'c:' + pathfile[6:]  # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
+                # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
+                # pathfile_win = '"' + 'f:' + pathfile[6:] + '"'
+                pathfile_win = 'f:' + pathfile[6:]
                 log.info(f'upscaling()::pathfile_win:{pathfile_win}')
                 log.info(f'upscaling()::davinci upscale processing with pythonw...')
+                log.info(
+                    f'upscaling()::PYTHONW_PATH:{PYTHONW_PATH}, DAVINCI_UPSCALE_PY_PATH:{DAVINCI_UPSCALE_PY_PATH}, pathfile_win:{pathfile_win}, UPSCALING_RES: {UPSCALING_RES}')
                 proc_upscale = await asyncio.create_subprocess_exec(PYTHONW_PATH, DAVINCI_UPSCALE_PY_PATH, pathfile_win, UPSCALING_RES, stdout=None)
 
                 ret = await proc_upscale.wait()
@@ -564,10 +594,10 @@ async def upscaling(app):
                 if ret == 0:
                     log.info(f'upscaling()::Upscale Successed!')
 
-
                     # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
                     upscaled_pathfile = UPSCALED_GATHER_PATH + file
-                    log.info(f'upscaling()::upscaled_pathfile is {upscaled_pathfile}')
+                    log.info(
+                        f'upscaling()::upscaled_pathfile is {upscaled_pathfile}')
                     # db 상 넣어줄 start_path 를 upscale폴더로 변경해줍니다
                     path = UPSCALED_GATHER_PATH
                     # 생성된파일을 _Upscaled 폴더로 옮기고 원본 파일도 삭제합니다
@@ -576,7 +606,7 @@ async def upscaling(app):
                         os.remove(pathfile)
                     except Exception as ose:
                         log.info(
-                                f'upscaling()::exception while moving and removing upscaled file\n {ose}')
+                            f'upscaling()::exception while moving and removing upscaled file\n {ose}')
                     # 또한 변환이 성공하였으니 upscale_pct도 100으로 지정해줍니다
                     app['upscale_pct'] = 100
                     upscaled = 1
@@ -584,7 +614,7 @@ async def upscaling(app):
                 # await asyncio.sleep(20)
 
                 log.info(
-                        f'upscaling()::killing davinci resolve by win python.exe ...')
+                    f'upscaling()::killing davinci resolve by win python.exe ...')
                 # await asyncio.create_subprocess_exec('sudo', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
                 # proc = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=asyncio.subprocess.PIPE)
                 # proc = await asyncio.create_subprocess_exec('sudo', '-S', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
@@ -611,9 +641,9 @@ async def upscaling(app):
                 # ret = await send_current_status(payload)
                 # _upscaled = int(not ret)
 
-                #혹시 수동 db삭제등으로 플래그에 문제가 생겼을 경우를 대비해
+                # 혹시 수동 db삭제등으로 플래그에 문제가 생겼을 경우를 대비해
                 # path긑이 _Upscaled/ 라면 upscaled 값을 1로 설정해줍니다
-                if(path[-10:-1] == '_Upscaled'):
+                if (path[-10:-1] == '_Upscaled'):
                     upscaled = 1
                 try:
                     # ret 값에 따라 upscaled 값을 넣어줍니다
@@ -858,6 +888,8 @@ async def watching(app):
         async with engine.acquire() as conn:
             files = files_dict
             # for f in app['files']:
+        # 모든 파일들을 전부 db에 삽입해봅니다
+            log.info(f'모든 파일들을 전부 db에 삽입해봅니다')
             for f in files:
                 # print(f'file: {f}, time: {int(files[f])}')
                 log.info(f'insertingDB::file: {f}, time: {int(files[f])}')
