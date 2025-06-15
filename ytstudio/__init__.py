@@ -8,6 +8,7 @@ import js2py
 import js2py.pyjs
 import random
 import os
+import sys
 import json
 from .templates import Templates
 import typing
@@ -64,7 +65,15 @@ class Studio:
 
         # print(f'\nYT_STUDIO_URL:{self.YT_STUDIO_URL}')
         # print(f'page:{page}')
-        f = open('/mnt/8001/loginedpage.html', 'w')
+
+        location = ''
+        if sys.platform.startswith("darwin"):
+           location = '/Volumes/8001/loginedpage.html'
+        elif sys.platform.startswith("win") or sys.platform.startswith("cygwin"):
+           location = '/mnt/8001/loginedpage.html'
+
+        f = open(location, 'w')
+        # f = open('/Volumes/8001/loginedpage.html', 'w')
         f.write(page)
         f.close()
 

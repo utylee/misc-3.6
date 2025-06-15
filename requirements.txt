@@ -65,7 +65,7 @@ propcache==0.2.0
 protobuf==4.21.12
 psutil==5.9.2
 psycopg2==2.9.3
-psycopg2-binary==2.9.3
+psycopg2-binary==2.9.10
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pycares==4.2.2
@@ -77,9 +77,9 @@ pynvim==0.4.3
 pyOpenSSL==21.0.0
 pyparsing==3.0.9
 pyperclip==1.8.2
-PyQt5==5.15.7
-PyQt5-Qt5==5.15.2
-PyQt5-sip==12.11.0
+PyQt6==6.7.1
+PyQt6-Qt6==6.7.3
+PyQt6_sip==13.8.0
 pyquery==2.0.0
 pyscreenshot==3.0
 PySocks==1.7.1
