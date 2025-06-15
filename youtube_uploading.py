@@ -34,7 +34,8 @@ import copy
 
 # FIXED_PATH = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture/'
 FIXED_PATH = '/mnt/8001/97-Capture/'
-JSON_PATH = '/home/utylee/login.json'
+# JSON_PATH = '/home/utylee/login.json'
+JSON_PATH = '/mnt/d/login.json'
 COOKIE_PATH = f'/mnt/c/Users/utylee/Downloads/cookies.txt'
 # PRIVACY = 'PUBLIC'
 PRIVACY = 'PRIVATE'
@@ -119,6 +120,7 @@ async def cook(request):
     try:
         pyperclip.ENCODING = 'cp949'
         sessionToken = pyperclip.paste()
+        log.info(f'sessionToken is {sessionToken}')
 
     except Exception as e:
         log.info(f'pyperclip exception: {e}')
@@ -737,16 +739,17 @@ async def loginjson(request):
 
     # 작업중이 아닐 때만 실행 명령을 내립니다
     if request.app['process'] == 0:
-        log.info(f'login.json 파일 갱신작업 중입니다.')
+        log.info(f'loginjson()::login.json 파일 갱신작업 중입니다.')
 
         # websocket들에 작업중 메세지를 보냅니다
         await send_ws(request.app['websockets'], 'processing')
 
+        log.info(f'loginjson()::create_subprocess_exec()...')
         process=await asyncio.create_subprocess_exec(
             '/mnt/c/Program Files/AutoHotkey/v1.1.37.01/AutoHotkeyU64.exe',
             'c:\\Users\\utylee\\bin\\cookie_refresher_force.ahk')
         # await process.wait()
-        log.info(f'{process}')
+        log.info(f'loginjson()::process is {process}')
         request.app['process']=process
 
         '''
