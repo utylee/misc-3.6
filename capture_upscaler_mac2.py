@@ -12,6 +12,7 @@ import logging.handlers
 import datetime
 import copy
 from ytstudio import Studio
+import sys
 
 from aiopg.sa import create_engine
 #from sqlalchemy import false
@@ -944,6 +945,8 @@ async def upscaling(app):
             # BOOL_UPSCALE 이 1이면서 upscale이 안되어있을 경우
             # 또한 해당파일이 존재할 경우에만
             # DaVinciResolve 프로세스를 실행합니다
+            print(f'sys.path:{sys.path}')
+            log.info(f'sys.path:{sys.path}')
             if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
                 # log.info(f'came in')
 

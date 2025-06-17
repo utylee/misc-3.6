@@ -3,7 +3,7 @@ import time
 
 for proc in psutil.process_iter():
     try:
-        print(proc.name())
+        # print(proc.name())
         if proc.name().lower() == 'resolve':
             ret = proc.kill()
             print(f'resolve killed ret: {ret}')
