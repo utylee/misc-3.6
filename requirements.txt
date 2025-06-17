@@ -2,7 +2,7 @@ aiodns==3.0.0
 aiofiles==22.1.0
 aiohappyeyeballs==2.4.3
 aiohttp==3.10.9
-aiopg==1.3.5
+aiopg==1.4.0
 aiosignal==1.2.0
 apsw==3.39.3.0
 async-generator==1.10
@@ -64,7 +64,7 @@ platformdirs==2.5.4
 propcache==0.2.0
 protobuf==4.21.12
 psutil==5.9.2
-psycopg2==2.9.3
+psycopg2==2.9.10
 psycopg2-binary==2.9.10
 pyasn1==0.4.8
 pyasn1-modules==0.2.8

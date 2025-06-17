@@ -957,6 +957,7 @@ async def upscaling(app):
                 log.info(f'upscaling()::davinci_proc: {app["davinci_proc"]}')
                 log.info(f'upscaling()::wait for davinci resolve executing...')
                 # await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+                # await asyncio.sleep(10)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
                 await asyncio.sleep(10)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
                 # await app['davinci_proc'].wait()
 
