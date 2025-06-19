@@ -11,6 +11,7 @@ import logging
 import logging.handlers
 import datetime
 import copy
+import sys
 from ytstudio import Studio
 
 from aiopg.sa import create_engine
@@ -24,7 +25,6 @@ URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
 
 TRUNCATE_DAYS = 3
 # PATHS = [
-#     '/Users/utylee/Downloads/_share_mac2/_Capture//mnt/f/Videos/World Of Warcraft/',
 #     '/mnt/f/Videos/Apex Legends/',
 #     '/mnt/f/Videos/Heroes of the Storm/',
 #     '/mnt/f/Videos/Desktop/',
@@ -35,7 +35,7 @@ TRUNCATE_DAYS = 3
 #     '/mnt/f/Videos/Enshrouded/'
 # ]
 
-TRANSFERED_PATHS = ['/Users/utylee/Downloads/_share_mac2/_Capture/']
+TRANSFERED_PATHS = ['/Users/utylee/Downloads/_share_mac/_Capture/']
 
 PRIVACY = 'PRIVATE'
 INTV = 5                    # watching 확인 주기입니다
@@ -81,9 +81,9 @@ KILL_DAVINCI_PY_PATH = '/Users/utylee/.virtualenvs/misc/src/kill_macos_davinci.p
 # UPSCALED_GATHER_PATH = '/mnt/c/Users/utylee/Videos/_Upscaled/'
 # UPSCALED_FILE_NAME = '/mnt/f/Videos/MainTimeline.mp4'
 # UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Movies/MainTimeline.mp4'
-UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4'
+UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/MainTimeline.mp4'
 # UPSCALED_GATHER_PATH = '/mnt/f/Videos/_Upscaled/'
-UPSCALED_GATHER_PATH = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/'
+UPSCALED_GATHER_PATH = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/'
 
 def progress(yuklenen, toplam):
     # print(f"{round(round(yuklenen / toplam, 2) * 100)}% upload", end="\r")
@@ -931,7 +931,7 @@ async def upscaling(app):
 
             file, path, upscaled = que.pop(0)
             # file = '1.mp4'
-            # path = '/Users/utylee/Downloads/_share_mac2/_Capture/'
+            # path = '/Users/utylee/Downloads/_share_mac/_Capture/'
             # upscaled = 0
             log.info(f'upscaling()::pop(0)::(file, path, upscaled)')
             log.info(f'({file}, {path}, {upscaled})')
@@ -947,6 +947,7 @@ async def upscaling(app):
             if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
                 # log.info(f'came in')
 
+                log.info(f'sys.path:{sys.path}')
                 ver = await asyncio.create_subprocess_exec(PYTHONW_PATH, '--version', stdout=None)
                 log.info(f'python ver is {ver}')
 
@@ -966,6 +967,8 @@ async def upscaling(app):
                 # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
                 # pathfile_win = '"' + 'f:' + pathfile[6:] + '"'
                 # pathfile_win = 'f:' + pathfile[6:]
+
+
                 pathfile_mac = pathfile
                 log.info(f'upscaling()::pathfile_mac:{pathfile_mac}')
                 log.info(f'upscaling()::davinci upscale processing with pythonw...')
@@ -1226,7 +1229,7 @@ async def watching(app):
     # paths = app['paths']
     paths = TRANSFERED_PATHS
     log.info(f'paths:{paths}')
-    #TRANSFERED_PATH = '/Users/utylee/Downloads/_share_mac2/_Capture'
+    #TRANSFERED_PATH = '/Users/utylee/Downloads/_share_mac/_Capture'
 
     # # target = r'\\192.168.1.202\clark\4002\00-MediaWorld-4002\97-Capture'
     # # target = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
