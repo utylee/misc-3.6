@@ -68,7 +68,8 @@ class Studio:
 
         location = ''
         if sys.platform.startswith("darwin"):
-           location = '/Volumes/8001/loginedpage.html'
+           # location = '/Volumes/8001/loginedpage.html'
+           location = '/Users/utylee/Volumes/8001/loginedpage.html'
         elif sys.platform.startswith("win") or sys.platform.startswith("cygwin"):
            location = '/mnt/8001/loginedpage.html'
 
