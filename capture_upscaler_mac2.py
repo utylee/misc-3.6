@@ -22,6 +22,7 @@ import db_youtube as db
 from collections import OrderedDict as od, defaultdict
 
 URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
+MY_IP = '192.168.100.108'
 
 TRUNCATE_DAYS = 3
 # PATHS = [
@@ -45,6 +46,7 @@ INTV_TRNS = 10              # transfering 확인 주기입니다
 INTV_TRNS_TICK = 0.5       # transfering 파일 조각 전송주기입니다
 # INTV_TRNS = 1              # transfering 확인 주기입니다
 INTV_UPSCL = 3              # upscaling 확인 주기입니다
+INTV_POLL = 3               # api 서버에 que를 polling하는 주기입니다
 
 BOOL_UPSCALE = 1            # 0:None,  1:1440p,  2:2160p
 # BOOL_UPSCALE = 0            # 0:None,  1:1440p,  2:2160p
@@ -600,7 +602,8 @@ async def create_bg_tasks(app):
     asyncio.create_task(upscaling(app))
 
     asyncio.create_task(monitor_upload(app))
-    asyncio.create_task(recoverQue(app))
+    # asyncio.create_task(recoverQue(app))
+    asyncio.create_task(polling_api_que(app))
 
 async def recoverQue(app):
     # 시작 시 지난 큐 정보를 다시 들고 옵니다
@@ -618,6 +621,49 @@ async def recoverQue(app):
     except Exception as e:
         log.info(f'recoverQue():db insert failed. {e}')
     # log.info(f'playlists from db: {}')
+
+async def polling_api_que(app):
+
+    while True:
+        # log.info(f'polling api que...')
+        try:
+            await asyncio.sleep(INTV_POLL)
+            async with aiohttp.ClientSession() as sess:
+                async with sess.get('http://192.168.1.203:8082/gimme_que_all',
+                        params={'my_ip': MY_IP}) as resp:
+                    jes = await resp.json()
+                    res=json.loads(jes)
+                    # log.info(f'jes is {jes}')
+                    # log.info(f'res is {res}')
+
+                    # if len(jes) is not None:
+                    # if len(jes) > 0:
+                    # if len(res) > 0:
+                    if len(res.keys()) > 0:
+                        # res=json.loads(jes)
+                        # res=jes
+                        for k in res.keys():
+                            kes=res[k]
+                            log.info(f
+                                    'polling_api_que:if len(res) > 0: {len(res.keys())}')
+                            # log.info(k)
+                            # log.info(kes)
+                            # log.info(jes)
+                            # title1 = res["title"]
+                            filename=kes["file"]
+                            title=kes["title"]
+                            playlist=kes["playlist"]
+                            # filename = f'{FIXED_PATH}{filename}'
+
+                            # request.app['upload_que'].update({filename: title})
+                            app['upload_que'].update({filename: [title, playlist]})
+
+                            await send_ws(app['websockets'], 'needRefresh')
+
+
+        except Exception as e:
+            log.info(f'polling_api_que::Exception:{e}')
+
 
 
 async def monitor_upload(app):
@@ -962,7 +1008,7 @@ async def upscaling(app):
                 log.info(f'upscaling()::wait for davinci resolve executing...')
                 # await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
                 # await asyncio.sleep(10)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
-                await asyncio.sleep(15)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+                await asyncio.sleep(25)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
                 # await app['davinci_proc'].wait()
 
                 # 업스케일을 실행합니다
@@ -1343,7 +1389,8 @@ async def watching(app):
                     # 해당파일명 copying이 2면 업스케일큐에 넣고 
                     #copying을 3으로 바꿔줍니다
 
-                    # 추가된 파일을 db에 삽입을 시도합니다
+                    # 아직 copying이 1인 경우에는 afters에서 현 added를 빼어서
+                    #다음 턴에도 여전히 감시하게끔 유도합니다
                     async with engine.acquire() as conn:
                         # log.info(
                         #     f'insertingDB::file: {i}, time: {int(addeds[n][i])}')
@@ -1357,18 +1404,36 @@ async def watching(app):
                                    # .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
                         try:
                             # db에 copying 2(전송완료)인것을 찾아 3으로 바꿔줍니다
-                            log.info(f'came here')
-                            await conn.execute(db.tbl_youtube_files.update()
-                                    .where(db.sa.and_((db.tbl_youtube_files.c.filename==i), (db.tbl_youtube_files.c.copying==2)))
-                                    .values(copying=3))
-                            app['current_making_file'] = i  # 현재만들어진 파일명을 갖고있습니다
-                            _start_path = paths[n]
+                            # log.info(f'came here')
 
-                            # upscale 큐에 넣어줍니다
-                            # BOOL_UPSCALE 에 상관없이 일단 upscale 큐가 판단한 후
-                            # transfer 큐로 넘겨줍니다 (파일명, 폴더명)
-                            app['upscale_que']['que'].append((i, _start_path, 0))
+                            f_copying = 0
+                            async for r in conn.execute(db.tbl_youtube_files
+                                    .select()
+                                    .where(
+                            db.tbl_youtube_files.c.filename == i)):
+                                f_copying = r[4]            #copying
+                            log.info(f'filename:{i}, copying:{f_copying}')
 
+
+
+                            # await conn.execute(db.tbl_youtube_files.update()
+                            #         .where(db.sa.and_((db.tbl_youtube_files.c.filename==i), (db.tbl_youtube_files.c.copying==2)))
+                            #         .values(copying=3))
+
+                            # app['current_making_file'] = i  # 현재만들어진 파일명을 갖고있습니다
+                            # log.info(f'came here2')
+
+                            # 복사중이면 현 added를 after 리스트에서 제거해줍니다
+                            if (f_copying <= 1):
+                                log.info(f'copying is 1, so remove {i}')
+                                del(afters[n][i])
+
+                            elif (f_copying == 2):
+                                log.info(f'copying is 2, so add to que {i}')
+                                _start_path = paths[n]
+
+                                # upscale 큐에 넣어줍니다
+                                app['upscale_que']['que'].append((i, _start_path, 0))
 
                             # await conn.execute(db.tbl_youtube_files.insert()
                             #                    .values(filename=i, timestamp=addeds[n][i],
