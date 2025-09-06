@@ -22,8 +22,8 @@ import db_youtube as db
 from collections import OrderedDict as od, defaultdict
 
 URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
-MY_IP = '192.168.100.107'
-# MY_IP = '192.168.100.108'
+# MY_IP = '192.168.100.107'
+MY_IP = '192.168.100.108'
 
 TRUNCATE_DAYS = 3
 # PATHS = [
@@ -38,7 +38,7 @@ TRUNCATE_DAYS = 3
 #     '/mnt/f/Videos/Enshrouded/'
 # ]
 
-TRANSFERED_PATHS = ['/Users/utylee/Downloads/_share_mac/_Capture/']
+TRANSFERED_PATHS = ['/Users/utylee/Downloads/_share_mac/_Capture/'] if MY_IP == '192.168.100.107' else ['/Users/utylee/Downloads/_share_mac2/_Capture/']
 # TRANSFERED_PATHS = ['/Users/utylee/Downloads/_share_mac2/_Capture/']
 
 PRIVACY = 'PRIVATE'
@@ -87,10 +87,10 @@ KILL_DAVINCI_PY_PATH = '/Users/utylee/.virtualenvs/misc/src/kill_macos_davinci.p
 # UPSCALED_GATHER_PATH = '/mnt/c/Users/utylee/Videos/_Upscaled/'
 # UPSCALED_FILE_NAME = '/mnt/f/Videos/MainTimeline.mp4'
 # UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Movies/MainTimeline.mp4'
-UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/MainTimeline.mp4' if MY_IP == '192.168.1.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4' 
+UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/MainTimeline.mp4' if MY_IP == '192.168.100.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4' 
 # UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4'
 # UPSCALED_GATHER_PATH = '/mnt/f/Videos/_Upscaled/'
-UPSCALED_GATHER_PATH = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/' if MY_IP == '192.168.1.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/'
+UPSCALED_GATHER_PATH = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/' if MY_IP == '192.168.100.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/'
 # UPSCALED_GATHER_PATH = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/'
 
 def progress(yuklenen, toplam):
