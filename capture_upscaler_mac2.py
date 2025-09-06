@@ -22,7 +22,8 @@ import db_youtube as db
 from collections import OrderedDict as od, defaultdict
 
 URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
-MY_IP = '192.168.100.108'
+MY_IP = '192.168.100.107'
+# MY_IP = '192.168.100.108'
 
 TRUNCATE_DAYS = 3
 # PATHS = [
@@ -37,7 +38,8 @@ TRUNCATE_DAYS = 3
 #     '/mnt/f/Videos/Enshrouded/'
 # ]
 
-TRANSFERED_PATHS = ['/Users/utylee/Downloads/_share_mac2/_Capture/']
+TRANSFERED_PATHS = ['/Users/utylee/Downloads/_share_mac/_Capture/']
+# TRANSFERED_PATHS = ['/Users/utylee/Downloads/_share_mac2/_Capture/']
 
 PRIVACY = 'PRIVATE'
 INTV = 5                    # watching 확인 주기입니다
@@ -85,9 +87,11 @@ KILL_DAVINCI_PY_PATH = '/Users/utylee/.virtualenvs/misc/src/kill_macos_davinci.p
 # UPSCALED_GATHER_PATH = '/mnt/c/Users/utylee/Videos/_Upscaled/'
 # UPSCALED_FILE_NAME = '/mnt/f/Videos/MainTimeline.mp4'
 # UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Movies/MainTimeline.mp4'
-UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4'
+UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/MainTimeline.mp4' if MY_IP == '192.168.1.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4' 
+# UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4'
 # UPSCALED_GATHER_PATH = '/mnt/f/Videos/_Upscaled/'
-UPSCALED_GATHER_PATH = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/'
+UPSCALED_GATHER_PATH = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/' if MY_IP = '192.168.1.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/'
+# UPSCALED_GATHER_PATH = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/'
 
 def progress(yuklenen, toplam):
     # print(f"{round(round(yuklenen / toplam, 2) * 100)}% upload", end="\r")
@@ -644,8 +648,8 @@ async def polling_api_que(app):
                         # res=jes
                         for k in res.keys():
                             kes=res[k]
-                            log.info(f
-                                    'polling_api_que:if len(res) > 0: {len(res.keys())}')
+                            log.info(
+                                    f'polling_api_que:if len(res) > 0: {len(res.keys())}')
                             # log.info(k)
                             # log.info(kes)
                             # log.info(jes)
@@ -971,7 +975,8 @@ async def upscaling(app):
         que = app['upscale_que']['que']
         ret = 1
         # if len(que) >= 0:
-        if len(que) > 0:
+        # if len(que) > 0:
+        if len(que) > 0 and app['upscaling_busy'] == 0:
             # 첫번째 항목을 큐에서 꺼냅니다
 
             # 현재 업스케일 큐를 표시합니다
@@ -997,6 +1002,7 @@ async def upscaling(app):
             if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
                 # log.info(f'came in')
 
+                app['upscaling_busy'] = 1
                 ver = await asyncio.create_subprocess_exec(PYTHONW_PATH, '--version', stdout=None)
                 log.info(f'python ver is {ver}')
 
@@ -1062,6 +1068,7 @@ async def upscaling(app):
                 await proc_killresolve.wait()
                 # await asyncio.sleep(5)
 
+                app['upscaling_busy'] = 0
                 # 0이 아닐 경우 업스케일 실패입니다
                 if ret != 0:
                     log.info(f'upscaling()::upscale failed!!')
@@ -1758,6 +1765,7 @@ if __name__ == '__main__':
     app['bool_upscale'] = BOOL_UPSCALE
     app['upscale_pct'] = 0
     app['davinci_proc'] = 0
+    app['upscaling_busy'] = 0
 
 
     # 204의 youtube_uploading 통합하면서 가져온 변수들
