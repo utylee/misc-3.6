@@ -11,8 +11,8 @@ import logging
 import logging.handlers
 import datetime
 import copy
-import sys
 from ytstudio import Studio
+import sys
 
 from aiopg.sa import create_engine
 #from sqlalchemy import false
@@ -22,9 +22,11 @@ import db_youtube as db
 from collections import OrderedDict as od, defaultdict
 
 URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
+MY_IP = '192.168.100.107'
 
 TRUNCATE_DAYS = 3
 # PATHS = [
+#     '/Users/utylee/Downloads/_share_mac2/_Capture//mnt/f/Videos/World Of Warcraft/',
 #     '/mnt/f/Videos/Apex Legends/',
 #     '/mnt/f/Videos/Heroes of the Storm/',
 #     '/mnt/f/Videos/Desktop/',
@@ -44,6 +46,7 @@ INTV_TRNS = 10              # transfering 확인 주기입니다
 INTV_TRNS_TICK = 0.5       # transfering 파일 조각 전송주기입니다
 # INTV_TRNS = 1              # transfering 확인 주기입니다
 INTV_UPSCL = 3              # upscaling 확인 주기입니다
+INTV_POLL = 3               # api 서버에 que를 polling하는 주기입니다
 
 BOOL_UPSCALE = 1            # 0:None,  1:1440p,  2:2160p
 # BOOL_UPSCALE = 0            # 0:None,  1:1440p,  2:2160p
@@ -599,7 +602,8 @@ async def create_bg_tasks(app):
     asyncio.create_task(upscaling(app))
 
     asyncio.create_task(monitor_upload(app))
-    asyncio.create_task(recoverQue(app))
+    # asyncio.create_task(recoverQue(app))
+    asyncio.create_task(polling_api_que(app))
 
 async def recoverQue(app):
     # 시작 시 지난 큐 정보를 다시 들고 옵니다
@@ -617,6 +621,49 @@ async def recoverQue(app):
     except Exception as e:
         log.info(f'recoverQue():db insert failed. {e}')
     # log.info(f'playlists from db: {}')
+
+async def polling_api_que(app):
+
+    while True:
+        # log.info(f'polling api que...')
+        try:
+            await asyncio.sleep(INTV_POLL)
+            async with aiohttp.ClientSession() as sess:
+                async with sess.get('http://192.168.1.203:8082/gimme_que_all',
+                        params={'my_ip': MY_IP}) as resp:
+                    jes = await resp.json()
+                    res=json.loads(jes)
+                    # log.info(f'jes is {jes}')
+                    # log.info(f'res is {res}')
+
+                    # if len(jes) is not None:
+                    # if len(jes) > 0:
+                    # if len(res) > 0:
+                    if len(res.keys()) > 0:
+                        # res=json.loads(jes)
+                        # res=jes
+                        for k in res.keys():
+                            kes=res[k]
+                            log.info(
+                                    f'polling_api_que:if len(res) > 0: {len(res.keys())}')
+                            # log.info(k)
+                            # log.info(kes)
+                            # log.info(jes)
+                            # title1 = res["title"]
+                            filename=kes["file"]
+                            title=kes["title"]
+                            playlist=kes["playlist"]
+                            # filename = f'{FIXED_PATH}{filename}'
+
+                            # request.app['upload_que'].update({filename: title})
+                            app['upload_que'].update({filename: [title, playlist]})
+
+                            await send_ws(app['websockets'], 'needRefresh')
+
+
+        except Exception as e:
+            log.info(f'polling_api_que::Exception:{e}')
+
 
 
 async def monitor_upload(app):
@@ -924,7 +971,8 @@ async def upscaling(app):
         que = app['upscale_que']['que']
         ret = 1
         # if len(que) >= 0:
-        if len(que) > 0:
+        # if len(que) > 0:
+        if len(que) > 0 and app['upscaling_busy'] == 0:
             # 첫번째 항목을 큐에서 꺼냅니다
 
             # 현재 업스케일 큐를 표시합니다
@@ -932,7 +980,7 @@ async def upscaling(app):
 
             file, path, upscaled = que.pop(0)
             # file = '1.mp4'
-            # path = '/Users/utylee/Downloads/_share_mac/_Capture/'
+            # path = '/Users/utylee/Downloads/_share_mac2/_Capture/'
             # upscaled = 0
             log.info(f'upscaling()::pop(0)::(file, path, upscaled)')
             log.info(f'({file}, {path}, {upscaled})')
@@ -945,10 +993,12 @@ async def upscaling(app):
             # BOOL_UPSCALE 이 1이면서 upscale이 안되어있을 경우
             # 또한 해당파일이 존재할 경우에만
             # DaVinciResolve 프로세스를 실행합니다
+            print(f'sys.path:{sys.path}')
+            log.info(f'sys.path:{sys.path}')
             if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
                 # log.info(f'came in')
 
-                log.info(f'sys.path:{sys.path}')
+                app['upscaling_busy'] = 1
                 ver = await asyncio.create_subprocess_exec(PYTHONW_PATH, '--version', stdout=None)
                 log.info(f'python ver is {ver}')
 
@@ -959,6 +1009,7 @@ async def upscaling(app):
                 log.info(f'upscaling()::davinci_proc: {app["davinci_proc"]}')
                 log.info(f'upscaling()::wait for davinci resolve executing...')
                 # await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+                # await asyncio.sleep(10)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
                 await asyncio.sleep(25)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
                 # await app['davinci_proc'].wait()
 
@@ -968,8 +1019,6 @@ async def upscaling(app):
                 # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
                 # pathfile_win = '"' + 'f:' + pathfile[6:] + '"'
                 # pathfile_win = 'f:' + pathfile[6:]
-
-
                 pathfile_mac = pathfile
                 log.info(f'upscaling()::pathfile_mac:{pathfile_mac}')
                 log.info(f'upscaling()::davinci upscale processing with pythonw...')
@@ -1015,6 +1064,7 @@ async def upscaling(app):
                 await proc_killresolve.wait()
                 # await asyncio.sleep(5)
 
+                app['upscaling_busy'] = 0
                 # 0이 아닐 경우 업스케일 실패입니다
                 if ret != 0:
                     log.info(f'upscaling()::upscale failed!!')
@@ -1230,7 +1280,7 @@ async def watching(app):
     # paths = app['paths']
     paths = TRANSFERED_PATHS
     log.info(f'paths:{paths}')
-    #TRANSFERED_PATH = '/Users/utylee/Downloads/_share_mac/_Capture'
+    #TRANSFERED_PATH = '/Users/utylee/Downloads/_share_mac2/_Capture'
 
     # # target = r'\\192.168.1.202\clark\4002\00-MediaWorld-4002\97-Capture'
     # # target = '/mnt/clark/4002/00-MediaWorld-4002/97-Capture'
@@ -1342,7 +1392,8 @@ async def watching(app):
                     # 해당파일명 copying이 2면 업스케일큐에 넣고 
                     #copying을 3으로 바꿔줍니다
 
-                    # 추가된 파일을 db에 삽입을 시도합니다
+                    # 아직 copying이 1인 경우에는 afters에서 현 added를 빼어서
+                    #다음 턴에도 여전히 감시하게끔 유도합니다
                     async with engine.acquire() as conn:
                         # log.info(
                         #     f'insertingDB::file: {i}, time: {int(addeds[n][i])}')
@@ -1356,18 +1407,36 @@ async def watching(app):
                                    # .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
                         try:
                             # db에 copying 2(전송완료)인것을 찾아 3으로 바꿔줍니다
-                            log.info(f'came here')
-                            await conn.execute(db.tbl_youtube_files.update()
-                                    .where(db.sa.and_((db.tbl_youtube_files.c.filename==i), (db.tbl_youtube_files.c.copying==2)))
-                                    .values(copying=3))
-                            app['current_making_file'] = i  # 현재만들어진 파일명을 갖고있습니다
-                            _start_path = paths[n]
+                            # log.info(f'came here')
 
-                            # upscale 큐에 넣어줍니다
-                            # BOOL_UPSCALE 에 상관없이 일단 upscale 큐가 판단한 후
-                            # transfer 큐로 넘겨줍니다 (파일명, 폴더명)
-                            app['upscale_que']['que'].append((i, _start_path, 0))
+                            f_copying = 0
+                            async for r in conn.execute(db.tbl_youtube_files
+                                    .select()
+                                    .where(
+                            db.tbl_youtube_files.c.filename == i)):
+                                f_copying = r[4]            #copying
+                            log.info(f'filename:{i}, copying:{f_copying}')
 
+
+
+                            # await conn.execute(db.tbl_youtube_files.update()
+                            #         .where(db.sa.and_((db.tbl_youtube_files.c.filename==i), (db.tbl_youtube_files.c.copying==2)))
+                            #         .values(copying=3))
+
+                            # app['current_making_file'] = i  # 현재만들어진 파일명을 갖고있습니다
+                            # log.info(f'came here2')
+
+                            # 복사중이면 현 added를 after 리스트에서 제거해줍니다
+                            if (f_copying <= 1):
+                                log.info(f'copying is 1, so remove {i}')
+                                del(afters[n][i])
+
+                            elif (f_copying == 2):
+                                log.info(f'copying is 2, so add to que {i}')
+                                _start_path = paths[n]
+
+                                # upscale 큐에 넣어줍니다
+                                app['upscale_que']['que'].append((i, _start_path, 0))
 
                             # await conn.execute(db.tbl_youtube_files.insert()
                             #                    .values(filename=i, timestamp=addeds[n][i],
@@ -1692,6 +1761,7 @@ if __name__ == '__main__':
     app['bool_upscale'] = BOOL_UPSCALE
     app['upscale_pct'] = 0
     app['davinci_proc'] = 0
+    app['upscaling_busy'] = 0
 
 
     # 204의 youtube_uploading 통합하면서 가져온 변수들
