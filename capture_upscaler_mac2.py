@@ -1066,9 +1066,10 @@ async def upscaling(app):
                 #     log.info(f'proc: {proc.name()}')
 
                 await proc_killresolve.wait()
-                # await asyncio.sleep(5)
+                await asyncio.sleep(5)
 
                 app['upscaling_busy'] = 0
+
                 # 0이 아닐 경우 업스케일 실패입니다
                 if ret != 0:
                     log.info(f'upscaling()::upscale failed!!')
