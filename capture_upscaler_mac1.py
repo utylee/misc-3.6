@@ -769,7 +769,7 @@ async def monitor_upload(app):
                             f'{temp_file} is not upscaled. continue.. ')
                         continue_ = 1
                     # upscale failed
-                    else if r[13] == 2:
+                    elif r[13] == 2:
                         log.info(
                             # f'{temp_file} is currently copying. continue next')
                             f'{temp_file} upscaling failed. delete from que.. ')
