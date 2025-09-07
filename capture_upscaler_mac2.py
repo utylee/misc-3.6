@@ -762,10 +762,20 @@ async def monitor_upload(app):
                     # if int(r[4]) != 2:
                     # if r[4] != 2:
                     # if r[4] != 3:
-                    if r[13] != 1:
+                    # if r[13] != 1:
+                    if r[13] == 0:
                         log.info(
                             # f'{temp_file} is currently copying. continue next')
                             f'{temp_file} is not upscaled. continue.. ')
+                        continue_ = 1
+                    # upscale failed
+                    else if r[13] == 2:
+                        log.info(
+                            # f'{temp_file} is currently copying. continue next')
+                            f'{temp_file} upscaling failed. delete from que.. ')
+                        # 실패이므로 업로드 큐에서 제거를 해버립니다
+                        del app['upload_que'][temp_file]
+
                         continue_ = 1
             if (continue_ == 1):
                 continue
@@ -1003,6 +1013,7 @@ async def upscaling(app):
                 # log.info(f'came in')
 
                 app['upscaling_busy'] = 1
+                log.info(f'upscaling_busy is 1')
                 ver = await asyncio.create_subprocess_exec(PYTHONW_PATH, '--version', stdout=None)
                 log.info(f'python ver is {ver}')
 
@@ -1066,13 +1077,15 @@ async def upscaling(app):
                 #     log.info(f'proc: {proc.name()}')
 
                 await proc_killresolve.wait()
-                await asyncio.sleep(5)
+                await asyncio.sleep(10)
 
                 app['upscaling_busy'] = 0
+                log.info(f'upscaling_busy is 0')
 
                 # 0이 아닐 경우 업스케일 실패입니다
                 if ret != 0:
                     log.info(f'upscaling()::upscale failed!!')
+                    upscaled = 2
 
             #################################################
             #
