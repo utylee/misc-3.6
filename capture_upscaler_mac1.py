@@ -671,7 +671,7 @@ async def polling_api_que(app):
 
 
 async def monitor_upload(app):
-    log.info('came into monitor_upload function')
+    # log.info('came into monitor_upload function')
     yt = app['Studio']
     # result = await yt.login()
     try:
@@ -768,13 +768,16 @@ async def monitor_upload(app):
                             # f'{temp_file} is currently copying. continue next')
                             f'{temp_file} is not upscaled. continue.. ')
                         continue_ = 1
-                    # upscale failed
+
+                    # upscale failed 업스케일링 실패로 업스케일 큐에 다시 넣습니다
                     elif r[13] == 2:
                         log.info(
                             # f'{temp_file} is currently copying. continue next')
-                            f'{temp_file} upscaling failed. delete from que.. ')
+                            # f'{temp_file} upscaling failed. delete from que.. ')
+                            f'{temp_file} upscaling failed. reinsert to upscaling que. ')
                         # 실패이므로 업로드 큐에서 제거를 해버립니다
                         del app['upload_que'][temp_file]
+                        app['upscale_que']['que'].append((r[0], r[8], r[13]))
 
                         continue_ = 1
             if (continue_ == 1):
@@ -1398,10 +1401,9 @@ async def watching(app):
             if addeds[n]:
                 # if added:
                 for i in addeds[n]:
-                    print(f'added {i}')
-                    log.info(f'watching()::while::if::added {i}')
-                    log.info(f'afters[n]:{afters[n]}')
-                    log.info(f'addeds[n]:{addeds[n]}')
+                    # log.info(f'watching()::while::if::added {i}')
+                    # log.info(f'afters[n]:{afters[n]}')
+                    # log.info(f'addeds[n]:{addeds[n]}')
 
                     t = int(addeds[n][i])
 
@@ -1449,8 +1451,9 @@ async def watching(app):
                                 log.info(f'copying is 1, so remove {i}')
                                 del(afters[n][i])
 
+                            # 복사완료이므로 upscale que 에 넣어줍니다
                             elif (f_copying == 2):
-                                log.info(f'copying is 2, so add to que {i}')
+                                log.info(f'copying is 2(completed), so add to que {i}')
                                 _start_path = paths[n]
 
                                 # upscale 큐에 넣어줍니다
