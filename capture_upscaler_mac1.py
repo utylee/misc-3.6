@@ -1012,7 +1012,8 @@ async def upscaling(app):
             # DaVinciResolve 프로세스를 실행합니다
             print(f'sys.path:{sys.path}')
             log.info(f'sys.path:{sys.path}')
-            if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
+            # if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
+            if ((upscaled == 0 or upscaled ==2 ) and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
                 # log.info(f'came in')
 
                 app['upscaling_busy'] = 1
