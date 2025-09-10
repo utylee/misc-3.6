@@ -88,6 +88,11 @@ KILL_DAVINCI_PY_PATH = '/Users/utylee/.virtualenvs/misc/src/kill_macos_davinci.p
 # UPSCALED_FILE_NAME = '/mnt/f/Videos/MainTimeline.mp4'
 # UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Movies/MainTimeline.mp4'
 UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/MainTimeline.mp4' if MY_IP == '192.168.100.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4' 
+
+UPSCALED_TEMP_INTERM_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/MainTimeline.mov' if MY_IP == '192.168.100.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mov' 
+
+UPSCALED_PATH2_FFMPEG_COMMAND = f'ffmpeg -i {UPSCALED_TEMP_INTERM_FILE_NAME} -c:v hevc_videotoolbox -b:v 60M -pix_fmt yuv420p -c:a aac -b:a 192k {UPSCALED_TEMP_FILE_NAME}'
+
 # UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4'
 # UPSCALED_GATHER_PATH = '/mnt/f/Videos/_Upscaled/'
 UPSCALED_GATHER_PATH = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/' if MY_IP == '192.168.100.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/'
@@ -1048,7 +1053,15 @@ async def upscaling(app):
                 ret = await proc_upscale.wait()
                 log.info(f'upscaling()::davinci upscale return code: {ret}')
                 if ret == 0:
-                    log.info(f'upscaling()::Upscale Successed!')
+                    log.info(f'upscaling()::Upscale Succeeded!')
+
+                    # PATH 1 / 2 로 나누기로 합니다 Apple ProRes 로 만들고
+                    #이후 H.265 는 ffmpeg가 담당하기로 합니다
+                    # PATH2 H.265
+                    proc_ffmpeg = await asyncio.create_subprocess_exec(UPSCALED_PATH2_FFMPEG_COMMAND, '-nogui', stdout=None)
+                    log.info(f'upscaling()::ffmpeg_proc: {app["ffmpeg_proc"]}')
+                    log.info(f'upscaling()::wait for ffmpeg h.265 encoding...')
+                    ret = await proc_ffmpeg.wait()
 
                     # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
                     upscaled_pathfile = UPSCALED_GATHER_PATH + file
@@ -1783,6 +1796,7 @@ if __name__ == '__main__':
     app['bool_upscale'] = BOOL_UPSCALE
     app['upscale_pct'] = 0
     app['davinci_proc'] = 0
+    app['ffmpeg_proc'] = 0
     app['upscaling_busy'] = 0
 
 
