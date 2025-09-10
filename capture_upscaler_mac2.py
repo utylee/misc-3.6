@@ -1058,9 +1058,10 @@ async def upscaling(app):
                     # PATH 1 / 2 로 나누기로 합니다 Apple ProRes 로 만들고
                     #이후 H.265 는 ffmpeg가 담당하기로 합니다
                     # PATH2 H.265
-                    proc_ffmpeg = await asyncio.create_subprocess_exec(UPSCALED_PATH2_FFMPEG_COMMAND, '-nogui', stdout=None)
                     log.info(f'upscaling()::ffmpeg_proc: {app["ffmpeg_proc"]}')
                     log.info(f'upscaling()::wait for ffmpeg h.265 encoding...')
+                    log.info(f'upscaling()::{UPSCALED_PATH2_FFMPEG_COMMAND}')
+                    proc_ffmpeg = await asyncio.create_subprocess_exec(UPSCALED_PATH2_FFMPEG_COMMAND, '-nogui', stdout=None)
                     ret = await proc_ffmpeg.wait()
 
                     # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
