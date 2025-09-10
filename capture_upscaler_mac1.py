@@ -91,7 +91,7 @@ UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled
 
 UPSCALED_TEMP_INTERM_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/MainTimeline.mov' if MY_IP == '192.168.100.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mov' 
 
-UPSCALED_PATH2_FFMPEG_COMMAND = f'ffmpeg -i {UPSCALED_TEMP_INTERM_FILE_NAME} -c:v hevc_videotoolbox -b:v 60M -pix_fmt yuv420p -c:a aac -b:a 192k {UPSCALED_TEMP_FILE_NAME}'
+UPSCALED_PATH2_FFMPEG_COMMAND = f'ffmpeg -y -i {UPSCALED_TEMP_INTERM_FILE_NAME} -c:v hevc_videotoolbox -b:v 60M -pix_fmt yuv420p -c:a aac -b:a 192k {UPSCALED_TEMP_FILE_NAME}'
 
 # UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4'
 # UPSCALED_GATHER_PATH = '/mnt/f/Videos/_Upscaled/'
@@ -1062,7 +1062,8 @@ async def upscaling(app):
                     log.info(f'upscaling()::wait for ffmpeg h.265 encoding...')
                     log.info(f'upscaling()::{UPSCALED_PATH2_FFMPEG_COMMAND}')
                     # proc_ffmpeg = await asyncio.create_subprocess_exec(UPSCALED_PATH2_FFMPEG_COMMAND, '-nogui', stdout=None)
-                    proc_ffmpeg = await asyncio.create_subprocess_exec('ffmpeg', '-nogui', stdout=None)
+                    # proc_ffmpeg = await asyncio.create_subprocess_exec('ffmpeg', '-nogui', stdout=None)
+                    proc_ffmpeg = await asyncio.create_subprocess_shell(UPSCALED_PATH2_FFMPEG_COMMAND, stdout=None)
                     ret = await proc_ffmpeg.wait()
                     log.info(f'upscaling()::ffmpeg ret is {ret}')
 
