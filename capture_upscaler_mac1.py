@@ -1055,31 +1055,19 @@ async def upscaling(app):
                 if ret == 0:
                     log.info(f'upscaling()::Upscale Succeeded!')
 
-                    # PATH 1 / 2 로 나누기로 합니다 Apple ProRes 로 만들고
-                    #이후 H.265 는 ffmpeg가 담당하기로 합니다
-                    # PATH2 H.265
-                    log.info(f'upscaling()::ffmpeg_proc: {app["ffmpeg_proc"]}')
-                    log.info(f'upscaling()::wait for ffmpeg h.265 encoding...')
-                    log.info(f'upscaling()::{UPSCALED_PATH2_FFMPEG_COMMAND}')
-                    # proc_ffmpeg = await asyncio.create_subprocess_exec(UPSCALED_PATH2_FFMPEG_COMMAND, '-nogui', stdout=None)
-                    # proc_ffmpeg = await asyncio.create_subprocess_exec('ffmpeg', '-nogui', stdout=None)
-                    proc_ffmpeg = await asyncio.create_subprocess_shell(UPSCALED_PATH2_FFMPEG_COMMAND, stdout=None)
-                    ret = await proc_ffmpeg.wait()
-                    log.info(f'upscaling()::ffmpeg ret is {ret}')
-
-                    # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
-                    upscaled_pathfile = UPSCALED_GATHER_PATH + file
-                    log.info(
-                        f'upscaling()::upscaled_pathfile is {upscaled_pathfile}')
-                    # db 상 넣어줄 start_path 를 upscale폴더로 변경해줍니다
-                    path = UPSCALED_GATHER_PATH
-                    # 생성된파일을 _Upscaled 폴더로 옮기고 원본 파일도 삭제합니다
-                    try:
-                        os.rename(UPSCALED_TEMP_FILE_NAME, upscaled_pathfile)
-                        os.remove(pathfile)
-                    except Exception as ose:
-                        log.info(
-                            f'upscaling()::exception while moving and removing upscaled file\n {ose}')
+                    # # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
+                    # upscaled_pathfile = UPSCALED_GATHER_PATH + file
+                    # log.info(
+                    #     f'upscaling()::upscaled_pathfile is {upscaled_pathfile}')
+                    # # db 상 넣어줄 start_path 를 upscale폴더로 변경해줍니다
+                    # path = UPSCALED_GATHER_PATH
+                    # # 생성된파일을 _Upscaled 폴더로 옮기고 원본 파일도 삭제합니다
+                    # try:
+                    #     os.rename(UPSCALED_TEMP_FILE_NAME, upscaled_pathfile)
+                    #     os.remove(pathfile)
+                    # except Exception as ose:
+                    #     log.info(
+                    #         f'upscaling()::exception while moving and removing upscaled file\n {ose}')
                     # 또한 변환이 성공하였으니 upscale_pct도 100으로 지정해줍니다
                     app['upscale_pct'] = 100
                     upscaled = 1
@@ -1099,6 +1087,34 @@ async def upscaling(app):
 
                 await proc_killresolve.wait()
                 await asyncio.sleep(10)
+
+
+                # PATH 1 / 2 로 나누기로 합니다 Apple ProRes 로 만들고
+                #이후 H.265 는 ffmpeg가 담당하기로 합니다
+                # PATH2 H.265
+                log.info(f'upscaling()::ffmpeg_proc: {app["ffmpeg_proc"]}')
+                log.info(f'upscaling()::wait for ffmpeg h.265 encoding...')
+                log.info(f'upscaling()::{UPSCALED_PATH2_FFMPEG_COMMAND}')
+                # proc_ffmpeg = await asyncio.create_subprocess_exec(UPSCALED_PATH2_FFMPEG_COMMAND, '-nogui', stdout=None)
+                # proc_ffmpeg = await asyncio.create_subprocess_exec('ffmpeg', '-nogui', stdout=None)
+                proc_ffmpeg = await asyncio.create_subprocess_shell(UPSCALED_PATH2_FFMPEG_COMMAND, stdout=None)
+                ret2 = await proc_ffmpeg.wait()
+                log.info(f'upscaling()::ffmpeg ret is {ret2}')
+
+                # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
+                upscaled_pathfile = UPSCALED_GATHER_PATH + file
+                log.info(
+                    f'upscaling()::upscaled_pathfile is {upscaled_pathfile}')
+                # db 상 넣어줄 start_path 를 upscale폴더로 변경해줍니다
+                path = UPSCALED_GATHER_PATH
+                # 생성된파일을 _Upscaled 폴더로 옮기고 원본 파일도 삭제합니다
+                try:
+                    os.rename(UPSCALED_TEMP_FILE_NAME, upscaled_pathfile)
+                    os.remove(pathfile)
+                except Exception as ose:
+                    log.info(
+                        f'upscaling()::exception while moving and removing upscaled file\n {ose}')
+
 
                 app['upscaling_busy'] = 0
                 log.info(f'upscaling_busy is 0')
