@@ -155,7 +155,7 @@ async def edit_playlist(app, yt, vid, playlist):
 
 async def ffprobe_duration_seconds(path: str) -> float:
     # 전체 길이(초) 가져오기
-    cmd = f'ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "{path}"'
+    cmd = f'/opt/homebrew/bin/ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "{path}"'
     proc = await asyncio.create_subprocess_shell(
         cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL
     )
