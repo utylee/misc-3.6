@@ -170,7 +170,7 @@ async def report_ffmpeg(app, pct):
         # engine = request.app['db']
         async with engine.acquire() as conn:
             await conn.execute(db.tbl_youtube_files.update()
-                               .where(db.tbl_youtube_files.c.filename == request.app['current_upscaling_file'])
+                               .where(db.tbl_youtube_files.c.filename == app['current_upscaling_file'])
                                .values(ffmpeg_pct=pct))
 
     except Exception as e:
