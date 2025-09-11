@@ -1136,7 +1136,7 @@ async def upscaling(app):
                         ms = int(s.split("=", 1)[1])
                         out_time_sec = ms / 1_000_000.0
 
-                        if now - last_emit > 3:
+                        if now - last_emit > 10:
                             percent = min(100.0, (out_time_sec / full_duration) * 100.0)
                             # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
                             log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {full_duration:.1f}s)")
