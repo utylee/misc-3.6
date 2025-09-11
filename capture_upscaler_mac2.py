@@ -1149,8 +1149,8 @@ async def upscaling(app):
 
                     # await asyncio.sleep(3)
 
-                _, err = await proc.communicate()
-                rc = proc.returncode
+                _, err = await proc_ffmpeg.communicate()
+                rc = proc_ffmpeg.returncode
                 if rc != 0:
                     log.info(f'upscaling()::ffmpeg failed:', rc, (err or b"").decode(errors="ignore"))
 
