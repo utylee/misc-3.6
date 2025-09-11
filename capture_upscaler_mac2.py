@@ -1192,6 +1192,7 @@ async def upscaling(app):
                         pct = 100.0 if full_duration > 0 else 0.0
                         # print(f"{pct:5.1f}% | {total:.1f}s / {total:.1f}s | done")
                         log.info(f"{pct:5.1f}% | {full_duration:.1f}s / {full_duration:.1f}s | done")
+                        await report_ffmpeg(app, 100)
                         break
 
                     now = time.monotonic()
