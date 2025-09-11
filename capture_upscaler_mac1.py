@@ -162,7 +162,7 @@ async def ffprobe_duration_seconds(path: str) -> float:
     out, _ = await proc.communicate()
     return float(out.decode().strip())
 
-async def report_ffmpeg(pct):
+async def report_ffmpeg(app, pct):
     # 현 진행율을 db에 갱신합니다
     try:
         app['ffmpeg_pct'] = pct
@@ -1201,7 +1201,7 @@ async def upscaling(app):
                         percent = min(100.0, (out_time_sec / full_duration) * 100.0)
                         # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
                         log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {full_duration:.1f}s)")
-                        await report_ffmpeg(int(percent))
+                        await report_ffmpeg(app, int(percent))
                         last_emit = time.monotonic()
 
                     # elif s == "progress=end":
