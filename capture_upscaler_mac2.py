@@ -991,6 +991,14 @@ async def monitor_upload(app):
         # await asyncio.sleep(20)
 
 
+def parse_tc_to_seconds(tc: str):
+    # "HH:MM:SS.micro" → seconds(float)
+    try:
+        h, m, s = tc.split(":")
+        return int(h) * 3600 + int(m) * 60 + float(s)
+    except Exception:
+        return None
+
 async def upscaling(app):
     # que, status = app['transfer_que']['que'], app['transfer_que']['status']
     engine = app['db']
@@ -1130,29 +1138,54 @@ async def upscaling(app):
                     if not line:
                         break
                     s = line.decode(errors="ignore").strip()
+                    if not s or "=" not in s:
+                        continue
+
+                    key, val = s.split("=", 1)
+
+                    if key == "out_time_ms":
+                        # out_time_ms=N/A 케이스 대비
+                        try:
+                            ms = int(val)
+                            out_time_sec = ms / 1_000_000.0
+                        except ValueError:
+                            pass  # N/A면 스킵
+
+                    elif key == "out_time":
+                        # 대체 파싱: 00:01:23.45 형태
+                        t = parse_tc_to_seconds(val)
+                        if t is not None:
+                            out_time_sec = t
+
+                    elif key == "progress" and val == "end":
+                        # 마지막 한번 더 찍고 종료
+                        pct = 100.0 if total > 0 else 0.0
+                        # print(f"{pct:5.1f}% | {total:.1f}s / {total:.1f}s | done")
+                        log.info(f"{pct:5.1f}% | {full_duration:.1f}s / {full_duration:.1f}s | done")
+                        break
 
                     now = time.monotonic()
-                    if s.startswith("out_time_ms="):
-                        ms = int(s.split("=", 1)[1])
-                        out_time_sec = ms / 1_000_000.0
+                    # if s.startswith("out_time_ms="):
+                        # ms = int(s.split("=", 1)[1])
+                        # out_time_sec = ms / 1_000_000.0
 
-                        if now - last_emit > 10:
-                            percent = min(100.0, (out_time_sec / full_duration) * 100.0)
-                            # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
-                            log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {full_duration:.1f}s)")
-                            last_emit = time.monotonic()
+                    if now - last_emit > 10:
+                        percent = min(100.0, (out_time_sec / full_duration) * 100.0)
+                        # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
+                        log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {full_duration:.1f}s)")
+                        last_emit = time.monotonic()
 
-                    elif s == "progress=end":
-                        # print("100.0%  done")
-                        log.info(f"upscaling()::ffmpeg::100.0%  done")
-                        break
+                    # elif s == "progress=end":
+                    #     # print("100.0%  done")
+                    #     log.info(f"upscaling()::ffmpeg::100.0%  done")
+                    #     break
 
                     # await asyncio.sleep(3)
 
-                _, err = await proc_ffmpeg.communicate()
-                rc = proc_ffmpeg.returncode
-                if rc != 0:
-                    log.info(f'upscaling()::ffmpeg failed:', rc, (err or b"").decode(errors="ignore"))
+                # _, err = await proc_ffmpeg.communicate()
+                # rc = proc_ffmpeg.returncode
+                # if rc != 0:
+                #     log.info(f'upscaling()::ffmpeg failed:', rc, (err or b"").decode(errors="ignore"))
 
 
                 # ret2 = await proc_ffmpeg.wait()
