@@ -1126,7 +1126,7 @@ async def upscaling(app):
                 last_emit = time.monotonic()
                 while True:
                     line = await proc_ffmpeg.stdout.readline()
-                    log.info(f'upscaling()::{line}')
+                    # log.info(f'upscaling()::{line}')
                     if not line:
                         break
                     s = line.decode(errors="ignore").strip()
