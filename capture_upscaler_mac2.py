@@ -165,9 +165,10 @@ async def ffprobe_duration_seconds(path: str) -> float:
 async def report_ffmpeg(app, pct):
     # 현 진행율을 db에 갱신합니다
     try:
-        log.info(f'report_ffmpeg came in')
+        log.info(f'report_ffmpeg:: came in')
         app['ffmpeg_pct'] = pct
         engine = app['db']
+        log.info(f'report_ffmpeg::pct:{pct},engine:{engine}')
         # engine = request.app['db']
         async with engine.acquire() as conn:
             await conn.execute(db.tbl_youtube_files.update()
