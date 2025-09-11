@@ -165,6 +165,7 @@ async def ffprobe_duration_seconds(path: str) -> float:
 async def report_ffmpeg(app, pct):
     # 현 진행율을 db에 갱신합니다
     try:
+        log.info(f'report_ffmpeg came in')
         app['ffmpeg_pct'] = pct
         engine = app['db']
         # engine = request.app['db']
@@ -1936,6 +1937,7 @@ if __name__ == '__main__':
     app['upscale_pct'] = 0
     app['davinci_proc'] = 0
     app['ffmpeg_proc'] = 0
+    app['ffmpeg_pct'] = 0
     app['upscaling_busy'] = 0
 
 
