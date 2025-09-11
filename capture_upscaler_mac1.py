@@ -1139,7 +1139,7 @@ async def upscaling(app):
                         if now - last_emit > 3:
                             percent = min(100.0, (out_time_sec / full_duration) * 100.0)
                             # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
-                            log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
+                            log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {full_duration:.1f}s)")
                             last_emit = time.monotonic()
 
                     elif s == "progress=end":
