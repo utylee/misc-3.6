@@ -153,6 +153,16 @@ async def edit_playlist(app, yt, vid, playlist):
     # )
 
 
+async def ffprobe_duration_seconds(path: str) -> float:
+    # 전체 길이(초) 가져오기
+    cmd = f'ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "{path}"'
+    proc = await asyncio.create_subprocess_shell(
+        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL
+    )
+    out, _ = await proc.communicate()
+    return float(out.decode().strip())
+
+
 async def report_upscale(request):
     js = await request.json()
 
@@ -1086,7 +1096,8 @@ async def upscaling(app):
                 #     log.info(f'proc: {proc.name()}')
 
                 await proc_killresolve.wait()
-                await asyncio.sleep(10)
+                await asyncio.sleep(3)
+                # await asyncio.sleep(10)
 
 
                 # PATH 1 / 2 로 나누기로 합니다 Apple ProRes 로 만들고
@@ -1097,9 +1108,42 @@ async def upscaling(app):
                 log.info(f'upscaling()::{UPSCALED_PATH2_FFMPEG_COMMAND}')
                 # proc_ffmpeg = await asyncio.create_subprocess_exec(UPSCALED_PATH2_FFMPEG_COMMAND, '-nogui', stdout=None)
                 # proc_ffmpeg = await asyncio.create_subprocess_exec('ffmpeg', '-nogui', stdout=None)
-                proc_ffmpeg = await asyncio.create_subprocess_shell(UPSCALED_PATH2_FFMPEG_COMMAND, stdout=None)
-                ret2 = await proc_ffmpeg.wait()
-                log.info(f'upscaling()::ffmpeg ret is {ret2}')
+
+
+                # 전체재생시간 받아오기
+                full_duration = await ffprobe_duration_seconds( UPSCALED_TEMP_INTERM_FILE_NAME )
+                log.info(f'upscaling()::full_duration is {full_duration}')
+
+                proc_ffmpeg = await asyncio.create_subprocess_shell(
+                        UPSCALED_PATH2_FFMPEG_COMMAND,
+                        stdout=asyncio.subprocess.PIPE,     # 진행정보를 여기로 받음
+                        stderr=asyncio.subprocess.PIPE      # 에러만 여기로(원하면 DEVNULL)
+                        )
+
+                # ffmpeg는 대략 0.5~1초 간격으로 이런 줄들을 보냅니다:
+                # frame=..., fps=..., out_time_ms=1234567, out_time=00:00:01.23, speed=..., progress=continue
+                while True:
+                    line = await proc_ffmpeg.stdout.readline()
+                    if not line:
+                        break
+                    s = line.decode(errors="ignore").strip()
+
+                    if s.startswith("out_time_ms="):
+                        ms = int(s.split("=", 1)[1])
+                        out_time_sec = ms / 1_000_000.0
+                        percent = min(100.0, (out_time_sec / full_duration) * 100.0)
+                        # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
+                        log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
+
+                    elif s == "progress=end":
+                        # print("100.0%  done")
+                        log.info(f"upscaling()::ffmpeg::100.0%  done")
+                        break
+
+                    await asyncio.sleep(3)
+
+                # ret2 = await proc_ffmpeg.wait()
+                # log.info(f'upscaling()::ffmpeg ret is {ret2}')
 
                 # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
                 upscaled_pathfile = UPSCALED_GATHER_PATH + file
