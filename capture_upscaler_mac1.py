@@ -1147,7 +1147,7 @@ async def upscaling(app):
                         log.info(f"upscaling()::ffmpeg::100.0%  done")
                         break
 
-                    await asyncio.sleep(3)
+                    # await asyncio.sleep(3)
 
                 _, err = await proc.communicate()
                 rc = proc.returncode
