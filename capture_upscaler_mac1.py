@@ -1,5 +1,5 @@
 import os
-#import time
+import time
 #import shutil
 import asyncio
 import aiohttp
@@ -91,7 +91,7 @@ UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled
 
 UPSCALED_TEMP_INTERM_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/MainTimeline.mov' if MY_IP == '192.168.100.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mov' 
 
-UPSCALED_PATH2_FFMPEG_COMMAND = f'/opt/homebrew/bin/ffmpeg -y -i {UPSCALED_TEMP_INTERM_FILE_NAME} -c:v hevc_videotoolbox -b:v 40M -pix_fmt yuv420p -c:a aac -b:a 192k {UPSCALED_TEMP_FILE_NAME}'
+UPSCALED_PATH2_FFMPEG_COMMAND = f'/opt/homebrew/bin/ffmpeg -y -i {UPSCALED_TEMP_INTERM_FILE_NAME} -c:v hevc_videotoolbox -b:v 40M -pix_fmt yuv420p -c:a aac -b:a 192k -progress pipe:1 {UPSCALED_TEMP_FILE_NAME}'
 
 # UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4'
 # UPSCALED_GATHER_PATH = '/mnt/f/Videos/_Upscaled/'
@@ -1122,6 +1122,8 @@ async def upscaling(app):
 
                 # ffmpeg는 대략 0.5~1초 간격으로 이런 줄들을 보냅니다:
                 # frame=..., fps=..., out_time_ms=1234567, out_time=00:00:01.23, speed=..., progress=continue
+
+                last_emit = time.monotonic()
                 while True:
                     line = await proc_ffmpeg.stdout.readline()
                     log.info(f'upscaling()::{line}')
@@ -1129,12 +1131,16 @@ async def upscaling(app):
                         break
                     s = line.decode(errors="ignore").strip()
 
+                    now = time.monotonic()
                     if s.startswith("out_time_ms="):
                         ms = int(s.split("=", 1)[1])
                         out_time_sec = ms / 1_000_000.0
-                        percent = min(100.0, (out_time_sec / full_duration) * 100.0)
-                        # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
-                        log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
+
+                        if now - last_emit > 10:
+                            percent = min(100.0, (out_time_sec / full_duration) * 100.0)
+                            # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
+                            log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
+                            last_emit = time.monotonic()
 
                     elif s == "progress=end":
                         # print("100.0%  done")
