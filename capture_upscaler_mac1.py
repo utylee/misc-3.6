@@ -166,7 +166,8 @@ async def report_ffmpeg(pct):
     # 현 진행율을 db에 갱신합니다
     try:
         app['ffmpeg_pct'] = pct
-        engine = request.app['db']
+        engine = app['db']
+        # engine = request.app['db']
         async with engine.acquire() as conn:
             await conn.execute(db.tbl_youtube_files.update()
                                .where(db.tbl_youtube_files.c.filename == request.app['current_upscaling_file'])
@@ -186,7 +187,7 @@ async def report_ffmpeg(pct):
         log.info(f'exception {e} while ffmpeg_pct needRefreshing')
 
     # return web.json_response([])
-    return 
+    return 1
 
 
 async def report_upscale(request):
