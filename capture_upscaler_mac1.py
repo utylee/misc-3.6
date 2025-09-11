@@ -162,6 +162,32 @@ async def ffprobe_duration_seconds(path: str) -> float:
     out, _ = await proc.communicate()
     return float(out.decode().strip())
 
+async def report_ffmpeg(pct):
+    # 현 진행율을 db에 갱신합니다
+    try:
+        app['ffmpeg_pct'] = pct
+        engine = request.app['db']
+        async with engine.acquire() as conn:
+            await conn.execute(db.tbl_youtube_files.update()
+                               .where(db.tbl_youtube_files.c.filename == request.app['current_upscaling_file'])
+                               .values(ffmpeg_pct=pct))
+
+    except Exception as e:
+        log.info(f'exception {e} while ffmpeg_pct updating')
+
+    # 또한 needRefresh를 호출해줍니다
+    try:
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(
+                    URL_UPLOADER_WS_REFRESH) as resp:
+                result = await resp.text()
+                log.info(f'call needRefresh: {result}')
+    except Exception as e:
+        log.info(f'exception {e} while ffmpeg_pct needRefreshing')
+
+    # return web.json_response([])
+    return 
+
 
 async def report_upscale(request):
     js = await request.json()
@@ -1174,6 +1200,7 @@ async def upscaling(app):
                         percent = min(100.0, (out_time_sec / full_duration) * 100.0)
                         # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
                         log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {full_duration:.1f}s)")
+                        await report_ffmpeg(int(percent))
                         last_emit = time.monotonic()
 
                     # elif s == "progress=end":
