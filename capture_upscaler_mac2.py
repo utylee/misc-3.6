@@ -1132,6 +1132,7 @@ async def upscaling(app):
                 # frame=..., fps=..., out_time_ms=1234567, out_time=00:00:01.23, speed=..., progress=continue
 
                 last_emit = time.monotonic()
+                out_time_sec = 0.0
                 while True:
                     line = await proc_ffmpeg.stdout.readline()
                     # log.info(f'upscaling()::{line}')
@@ -1159,7 +1160,7 @@ async def upscaling(app):
 
                     elif key == "progress" and val == "end":
                         # 마지막 한번 더 찍고 종료
-                        pct = 100.0 if total > 0 else 0.0
+                        pct = 100.0 if full_duration > 0 else 0.0
                         # print(f"{pct:5.1f}% | {total:.1f}s / {total:.1f}s | done")
                         log.info(f"{pct:5.1f}% | {full_duration:.1f}s / {full_duration:.1f}s | done")
                         break
