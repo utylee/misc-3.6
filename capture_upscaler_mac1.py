@@ -1172,7 +1172,8 @@ async def upscaling(app):
                 log.info(f'upscaling()::pathfile_mac:{pathfile_mac}')
 
                 # 전체재생시간 받아오기
-                full_duration = await ffprobe_duration_seconds( UPSCALED_TEMP_INTERM_FILE_NAME )
+                full_duration = await ffprobe_duration_seconds( pathfile_mac )
+                # full_duration = await ffprobe_duration_seconds( UPSCALED_TEMP_INTERM_FILE_NAME )
                 log.info(f'upscaling()::full_duration is {full_duration}')
 
                 UPSCALED_FULL_FFMPEG = f'/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
