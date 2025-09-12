@@ -829,11 +829,12 @@ async def monitor_upload(app):
                                 # upscale_pct 2분이상 제자리이면 업스케일오류로보고
                                 # 큐에서 제거하고 다음으로 넘깁니다
                                 if (cur_checktime - last_checktime > 120):
-                                    del app['upload_que'][temp_file]
                                     log.info(
                                         f'{temp_file} is deleted for upscale hang. continue.. ')
 
                                     try:
+                                        del app['upload_que'][temp_file]
+                                        app['upscale_que']['que'].append((r[0], r[8], r[13]))
                                         async with engine.acquire() as conn:
                                             async with conn.execute(db.tbl_youtube_files.update()
                                                                     .where(db.tbl_youtube_files.c.filename == temp_file)
@@ -865,8 +866,9 @@ async def monitor_upload(app):
                                     del app['upload_que'][temp_file]
                                     log.info(
                                         f'{temp_file} is deleted for ffmpeg hang. continue.. ')
-
                                     try:
+                                        del app['upload_que'][temp_file]
+                                        app['upscale_que']['que'].append((r[0], r[8], r[13]))
                                         async with engine.acquire() as conn:
                                             async with conn.execute(db.tbl_youtube_files.update()
                                                                     .where(db.tbl_youtube_files.c.filename == temp_file)
