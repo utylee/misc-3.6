@@ -836,7 +836,7 @@ async def monitor_upload(app):
                                     try:
                                         async with engine.acquire() as conn:
                                             async with conn.execute(db.tbl_youtube_files.update()
-                                                                    .where(db.tbl_youtube_files.c.filename == cur_file)
+                                                                    .where(db.tbl_youtube_files.c.filename == temp_file)
                                                                     .values(upscaled=2)):
                                                 log.info(f'db upscaled to 2')
 
@@ -869,7 +869,7 @@ async def monitor_upload(app):
                                     try:
                                         async with engine.acquire() as conn:
                                             async with conn.execute(db.tbl_youtube_files.update()
-                                                                    .where(db.tbl_youtube_files.c.filename == cur_file)
+                                                                    .where(db.tbl_youtube_files.c.filename == temp_file)
                                                                     .values(upscaled=2)):
                                                 log.info(f'db upscaled to 2')
 
