@@ -757,6 +757,8 @@ async def monitor_upload(app):
     # url_result = 'http://192.168.1.102/uploader/api/upload_complete'
 
 
+    # 장기간 hang이 걸려있으면 que에서 제거합니다
+    last_checktime = time.monotonic()
     last_upscale_pct = 0
     last_ffmpeg_pct = 0
     # 업로드 서버에 gimme que 요청에서 자체 que 탐색으로 변경합니다
@@ -779,8 +781,6 @@ async def monitor_upload(app):
 
         # log.info(f'[monitor]: {app["process"]}')
 
-        # 장기간 hang이 걸려있으면 que에서 제거합니다
-        last_checktime = time.monotonic()
 
         # 5초마다 큐를 탐색합니다
         await asyncio.sleep(5)
