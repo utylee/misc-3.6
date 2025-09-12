@@ -23,7 +23,7 @@ from collections import OrderedDict as od, defaultdict
 
 URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
 # MY_IP = '192.168.100.107'
- MY_IP = '192.168.100.108'
+MY_IP = '192.168.100.108'
 
 TRUNCATE_DAYS = 3
 # PATHS = [
@@ -818,6 +818,7 @@ async def monitor_upload(app):
                         log.info(f'upscaling()::last_checktime, cur_checktime = {last_checktime}, {cur_checktime}')
 
                         if (r[15] != 100):       #upscale_pct 가 100이 아닐경우
+                            log.info(f'upscaling()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
                             if last_upscale_pct == r[15]:
                                 # upscale_pct 2분이상 제자리이면 업스케일오류로보고
                                 # 큐에서 제거하고 다음으로 넘깁니다
