@@ -776,6 +776,11 @@ async def monitor_upload(app):
 
         # log.info(f'[monitor]: {app["process"]}')
 
+        # 장기간 hang이 걸려있으면 que에서 제거합니다
+        last_upscale_pct = 0
+        last_ffmpeg_pct = 0
+        last_checktime = time.monotonic()
+
         # 5초마다 큐를 탐색합니다
         await asyncio.sleep(5)
         # log.info(f'monitor_upload::while::app[uploading]:{app["uploading"]}, len(que):{len(que)}')
@@ -808,6 +813,34 @@ async def monitor_upload(app):
                     # if r[4] != 3:
                     # if r[13] != 1:
                     if r[13] == 0:
+                        cur_checktime = time.monotonic()
+
+                        if (r[15] != 100):       #upscale_pct 가 100이 아닐경우
+                            if last_upscale_pct == r[15]:
+                                # upscale_pct 2분이상 제자리이면 업스케일오류로보고
+                                # 큐에서 제거하고 다음으로 넘깁니다
+                                if (cur_checktime - last_checktime > 120):
+                                    del app['upload_que'][temp_file]
+                                    log.info(
+                                        f'{temp_file} is deleted for upscale hang. continue.. ')
+                                    continue
+                            else:
+                                last_checktime = cur_checktime
+                                 
+                        elif (r[16] != 100):
+                            if last_ffmpeg_pct == r[16]:
+                                # ffmpeg_pct 2분이상 제자리이면 업스케일오류로보고
+                                # 큐에서 제거하고 다음으로 넘깁니다
+                                if (cur_checktime - last_checktime > 120):
+                                    del app['upload_que'][temp_file]
+                                    log.info(
+                                        f'{temp_file} is deleted for ffmpeg hang. continue.. ')
+                                    continue
+                            else:
+                                last_checktime = cur_checktime
+
+                        last_upscale_pct = r[15]
+                        last_ffmpeg_pct = r[16]
                         log.info(
                             # f'{temp_file} is currently copying. continue next')
                             f'{temp_file} is not upscaled. continue.. ')
