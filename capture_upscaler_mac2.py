@@ -823,6 +823,26 @@ async def monitor_upload(app):
                                     del app['upload_que'][temp_file]
                                     log.info(
                                         f'{temp_file} is deleted for upscale hang. continue.. ')
+
+                                    try:
+                                        async with engine.acquire() as conn:
+                                            async with conn.execute(db.tbl_youtube_files.update()
+                                                                    .where(db.tbl_youtube_files.c.filename == cur_file)
+                                                                    .values(upscaled=2)):
+                                                log.info(f'db upscaled to 2')
+
+                                        # 변경후 클라이언트들에 리프레시 신호를 보냅니다
+                                        async with aiohttp.ClientSession() as sess:
+                                            async with sess.get(
+                                                    URL_UPLOADER_WS_REFRESH) as resp:
+                                                result = await resp.text()
+                                                log.info(f'call needRefresh: {result}')
+
+                                        # # 변경후 클라이언트들에 리프레시 신호를 보냅니다
+                                        # await send_ws(app['websockets'], 'needRefresh')
+                                    except:
+                                        log.info(f'exception:db copying column to 2')
+
                                     continue
                             else:
                                 last_checktime = cur_checktime
@@ -835,6 +855,26 @@ async def monitor_upload(app):
                                     del app['upload_que'][temp_file]
                                     log.info(
                                         f'{temp_file} is deleted for ffmpeg hang. continue.. ')
+
+                                    try:
+                                        async with engine.acquire() as conn:
+                                            async with conn.execute(db.tbl_youtube_files.update()
+                                                                    .where(db.tbl_youtube_files.c.filename == cur_file)
+                                                                    .values(upscaled=2)):
+                                                log.info(f'db upscaled to 2')
+
+                                        # 변경후 클라이언트들에 리프레시 신호를 보냅니다
+                                        async with aiohttp.ClientSession() as sess:
+                                            async with sess.get(
+                                                    URL_UPLOADER_WS_REFRESH) as resp:
+                                                result = await resp.text()
+                                                log.info(f'call needRefresh: {result}')
+
+                                        # # 변경후 클라이언트들에 리프레시 신호를 보냅니다
+                                        # await send_ws(app['websockets'], 'needRefresh')
+                                    except:
+                                        log.info(f'exception:db copying column to 2')
+
                                     continue
                             else:
                                 last_checktime = cur_checktime
