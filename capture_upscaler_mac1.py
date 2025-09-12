@@ -885,6 +885,7 @@ async def monitor_upload(app):
 
                         last_upscale_pct = r[15]
                         last_ffmpeg_pct = r[16]
+                        log.info(f'upscaling()::last_upscale_pct {last_upscale_pct}, last_ffmpeg_pct {last_ffmpeg_pct}')
                         log.info(
                             # f'{temp_file} is currently copying. continue next')
                             f'{temp_file} is not upscaled. continue.. ')
