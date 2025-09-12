@@ -22,8 +22,8 @@ import db_youtube as db
 from collections import OrderedDict as od, defaultdict
 
 URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
-# MY_IP = '192.168.100.107'
-MY_IP = '192.168.100.108'
+MY_IP = '192.168.100.107'
+# MY_IP = '192.168.100.108'
 
 TRUNCATE_DAYS = 3
 # PATHS = [
@@ -888,7 +888,7 @@ async def monitor_upload(app):
                                     continue
                             else:
                                 log.info(f'upscaling()::cur_checktime update for not same ffmpeg_pct')
-                                last_checktime = cur_checktime
+                                # last_checktime = cur_checktime
 
                         last_upscale_pct = r[15]
                         last_ffmpeg_pct = r[16]

@@ -888,7 +888,7 @@ async def monitor_upload(app):
                                     continue
                             else:
                                 log.info(f'upscaling()::cur_checktime update for not same ffmpeg_pct')
-                                last_checktime = cur_checktime
+                                # last_checktime = cur_checktime
 
                         last_upscale_pct = r[15]
                         last_ffmpeg_pct = r[16]
