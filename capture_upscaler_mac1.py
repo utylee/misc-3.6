@@ -93,6 +93,13 @@ UPSCALED_TEMP_INTERM_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_U
 
 UPSCALED_PATH2_FFMPEG_COMMAND = f'/opt/homebrew/bin/ffmpeg -y -i {UPSCALED_TEMP_INTERM_FILE_NAME} -c:v hevc_videotoolbox -b:v 40M -pix_fmt yuv420p -c:a aac -b:a 192k -progress pipe:1 {UPSCALED_TEMP_FILE_NAME}'
 
+UPSCALED_FULL_FFMPEG = f'ffmpeg -y -nostdin -i "in.mov" \
+  -vf "scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08" \
+  -c:v hevc_videotoolbox -b:v 42M -maxrate 42M -bufsize 42M -g 120 \
+  -pix_fmt yuv420p -tag:v hvc1 -movflags +faststart \
+  -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
+  -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}"'
+
 # UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mp4'
 # UPSCALED_GATHER_PATH = '/mnt/f/Videos/_Upscaled/'
 UPSCALED_GATHER_PATH = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/' if MY_IP == '192.168.100.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/'
@@ -1157,89 +1164,26 @@ async def upscaling(app):
 
                 app['upscaling_busy'] = 1
                 log.info(f'upscaling_busy is 1')
-                ver = await asyncio.create_subprocess_exec(PYTHONW_PATH, '--version', stdout=None)
-                log.info(f'python ver is {ver}')
 
-                log.info(
-                    f'upscaling()::upscaled==0::executing davinciResolve -nogui...')
-                app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, '-nogui', stdout=None)
-                # app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, stdout=None)
-                log.info(f'upscaling()::davinci_proc: {app["davinci_proc"]}')
-                log.info(f'upscaling()::wait for davinci resolve executing...')
-                # await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
-                # await asyncio.sleep(10)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
-                await asyncio.sleep(25)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
-                # await app['davinci_proc'].wait()
-
-                # 업스케일을 실행합니다
+                # ffmpeg 를 통해 풀 업스케일및 h.265 인코딩을 진행합니다
+                log.info(f'upscaling()::ffmpeg upscale h.265 processing...')
                 app['current_upscaling_file'] = file  # 현재만들어진 파일명을 갖고있습니다
-                # pathfile_win = 'c:' + pathfile[6:]  # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
-                # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
-                # pathfile_win = '"' + 'f:' + pathfile[6:] + '"'
-                # pathfile_win = 'f:' + pathfile[6:]
                 pathfile_mac = pathfile
                 log.info(f'upscaling()::pathfile_mac:{pathfile_mac}')
-                log.info(f'upscaling()::davinci upscale processing with pythonw...')
-                log.info(
-                    f'upscaling()::PYTHONW_PATH:{PYTHONW_PATH}, DAVINCI_UPSCALE_PY_PATH:{DAVINCI_UPSCALE_PY_PATH}, pathfile_mac:{pathfile_mac}, UPSCALING_RES: {UPSCALING_RES}')
-                proc_upscale = await asyncio.create_subprocess_exec(PYTHONW_PATH, DAVINCI_UPSCALE_PY_PATH, pathfile_mac, UPSCALING_RES, stdout=None)
-
-                ret = await proc_upscale.wait()
-                log.info(f'upscaling()::davinci upscale return code: {ret}')
-                if ret == 0:
-                    log.info(f'upscaling()::Upscale Succeeded!')
-
-                    # # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
-                    # upscaled_pathfile = UPSCALED_GATHER_PATH + file
-                    # log.info(
-                    #     f'upscaling()::upscaled_pathfile is {upscaled_pathfile}')
-                    # # db 상 넣어줄 start_path 를 upscale폴더로 변경해줍니다
-                    # path = UPSCALED_GATHER_PATH
-                    # # 생성된파일을 _Upscaled 폴더로 옮기고 원본 파일도 삭제합니다
-                    # try:
-                    #     os.rename(UPSCALED_TEMP_FILE_NAME, upscaled_pathfile)
-                    #     os.remove(pathfile)
-                    # except Exception as ose:
-                    #     log.info(
-                    #         f'upscaling()::exception while moving and removing upscaled file\n {ose}')
-                    # 또한 변환이 성공하였으니 upscale_pct도 100으로 지정해줍니다
-                    app['upscale_pct'] = 100
-                    upscaled = 1
-
-                # await asyncio.sleep(20)
-
-                log.info(
-                    f'upscaling()::killing davinci resolve by win python.exe ...')
-                # await asyncio.create_subprocess_exec('sudo', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
-                # proc = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=asyncio.subprocess.PIPE)
-                # proc = await asyncio.create_subprocess_exec('sudo', '-S', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
-                proc_killresolve = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
-
-                # import psutil
-                # for proc in psutil.process_iter():
-                #     log.info(f'proc: {proc.name()}')
-
-                await proc_killresolve.wait()
-                await asyncio.sleep(3)
-                # await asyncio.sleep(10)
-
-
-                # PATH 1 / 2 로 나누기로 합니다 Apple ProRes 로 만들고
-                #이후 H.265 는 ffmpeg가 담당하기로 합니다
-                # PATH2 H.265
-                log.info(f'upscaling()::ffmpeg_proc: {app["ffmpeg_proc"]}')
-                log.info(f'upscaling()::wait for ffmpeg h.265 encoding...')
-                log.info(f'upscaling()::{UPSCALED_PATH2_FFMPEG_COMMAND}')
-                # proc_ffmpeg = await asyncio.create_subprocess_exec(UPSCALED_PATH2_FFMPEG_COMMAND, '-nogui', stdout=None)
-                # proc_ffmpeg = await asyncio.create_subprocess_exec('ffmpeg', '-nogui', stdout=None)
-
 
                 # 전체재생시간 받아오기
                 full_duration = await ffprobe_duration_seconds( UPSCALED_TEMP_INTERM_FILE_NAME )
                 log.info(f'upscaling()::full_duration is {full_duration}')
 
+                UPSCALED_FULL_FFMPEG = f'ffmpeg -y -nostdin -i "{pathfile_mac}" \
+                  -vf "scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08" \
+                  -c:v hevc_videotoolbox -b:v 42M -maxrate 42M -bufsize 42M -g 120 \
+                  -pix_fmt yuv420p -tag:v hvc1 -movflags +faststart \
+                  -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
+                  -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}"'
+
                 proc_ffmpeg = await asyncio.create_subprocess_shell(
-                        UPSCALED_PATH2_FFMPEG_COMMAND,
+                        UPSCALED_FULL_FFMPEG,
                         stdout=asyncio.subprocess.PIPE,     # 진행정보를 여기로 받음
                         stderr=asyncio.subprocess.PIPE      # 에러만 여기로(원하면 DEVNULL)
                         )
@@ -1279,7 +1223,12 @@ async def upscaling(app):
                         pct = 100.0 if full_duration > 0 else 0.0
                         # print(f"{pct:5.1f}% | {total:.1f}s / {total:.1f}s | done")
                         log.info(f"{pct:5.1f}% | {full_duration:.1f}s / {full_duration:.1f}s | done")
+                        log.info(f'upscaling()::Upscale Succeeded!')
+                        app['upscale_pct'] = 100
+                        upscaled = 1
+
                         await report_ffmpeg(app, 100)
+
                         break
 
                     now = time.monotonic()
@@ -1294,21 +1243,170 @@ async def upscaling(app):
                         await report_ffmpeg(app, int(percent))
                         last_emit = time.monotonic()
 
-                    # elif s == "progress=end":
-                    #     # print("100.0%  done")
-                    #     log.info(f"upscaling()::ffmpeg::100.0%  done")
-                    #     break
+                #######################################################
+                ##
+                ## 기존 davinci resolve headless 방식을 버립니다. 
+                ## 큰 파일에서 계속 오류
+                ##
+                ##
+                #######################################################
 
-                    # await asyncio.sleep(3)
+                #ver = await asyncio.create_subprocess_exec(PYTHONW_PATH, '--version', stdout=None)
+                #log.info(f'python ver is {ver}')
 
-                # _, err = await proc_ffmpeg.communicate()
-                # rc = proc_ffmpeg.returncode
-                # if rc != 0:
-                #     log.info(f'upscaling()::ffmpeg failed:', rc, (err or b"").decode(errors="ignore"))
+                #log.info(
+                #    f'upscaling()::upscaled==0::executing davinciResolve -nogui...')
+                #app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, '-nogui', stdout=None)
+                ## app['davinci_proc'] = await asyncio.create_subprocess_exec(DAVINCI_PATH, stdout=None)
+                #log.info(f'upscaling()::davinci_proc: {app["davinci_proc"]}')
+                #log.info(f'upscaling()::wait for davinci resolve executing...')
+                ## await asyncio.sleep(2)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+                ## await asyncio.sleep(10)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+                #await asyncio.sleep(25)     # 실행시 10초정도는 기다려줘야하는 것 같습니다
+                ## await app['davinci_proc'].wait()
+
+                ## 업스케일을 실행합니다
+                #app['current_upscaling_file'] = file  # 현재만들어진 파일명을 갖고있습니다
+                ## pathfile_win = 'c:' + pathfile[6:]  # wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
+                ## wsl의 /mnt/c 를 윈도우 형태로 변환해줍니다
+                ## pathfile_win = '"' + 'f:' + pathfile[6:] + '"'
+                ## pathfile_win = 'f:' + pathfile[6:]
+                #pathfile_mac = pathfile
+                #log.info(f'upscaling()::pathfile_mac:{pathfile_mac}')
+                #log.info(f'upscaling()::davinci upscale processing with pythonw...')
+                #log.info(
+                #    f'upscaling()::PYTHONW_PATH:{PYTHONW_PATH}, DAVINCI_UPSCALE_PY_PATH:{DAVINCI_UPSCALE_PY_PATH}, pathfile_mac:{pathfile_mac}, UPSCALING_RES: {UPSCALING_RES}')
+                #proc_upscale = await asyncio.create_subprocess_exec(PYTHONW_PATH, DAVINCI_UPSCALE_PY_PATH, pathfile_mac, UPSCALING_RES, stdout=None)
+
+                #ret = await proc_upscale.wait()
+                #log.info(f'upscaling()::davinci upscale return code: {ret}')
+                #if ret == 0:
+                #    log.info(f'upscaling()::Upscale Succeeded!')
+
+                #    # # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
+                #    # upscaled_pathfile = UPSCALED_GATHER_PATH + file
+                #    # log.info(
+                #    #     f'upscaling()::upscaled_pathfile is {upscaled_pathfile}')
+                #    # # db 상 넣어줄 start_path 를 upscale폴더로 변경해줍니다
+                #    # path = UPSCALED_GATHER_PATH
+                #    # # 생성된파일을 _Upscaled 폴더로 옮기고 원본 파일도 삭제합니다
+                #    # try:
+                #    #     os.rename(UPSCALED_TEMP_FILE_NAME, upscaled_pathfile)
+                #    #     os.remove(pathfile)
+                #    # except Exception as ose:
+                #    #     log.info(
+                #    #         f'upscaling()::exception while moving and removing upscaled file\n {ose}')
+                #    # 또한 변환이 성공하였으니 upscale_pct도 100으로 지정해줍니다
+                #    app['upscale_pct'] = 100
+                #    upscaled = 1
+
+                ## await asyncio.sleep(20)
+
+                #log.info(
+                #    f'upscaling()::killing davinci resolve by win python.exe ...')
+                ## await asyncio.create_subprocess_exec('sudo', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
+                ## proc = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=asyncio.subprocess.PIPE)
+                ## proc = await asyncio.create_subprocess_exec('sudo', '-S', PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
+                #proc_killresolve = await asyncio.create_subprocess_exec(PYTHONW_PATH, KILL_DAVINCI_PY_PATH, stdout=None)
+
+                ## import psutil
+                ## for proc in psutil.process_iter():
+                ##     log.info(f'proc: {proc.name()}')
+
+                #await proc_killresolve.wait()
+                #await asyncio.sleep(3)
+                ## await asyncio.sleep(10)
 
 
-                # ret2 = await proc_ffmpeg.wait()
-                # log.info(f'upscaling()::ffmpeg ret is {ret2}')
+                ## PATH 1 / 2 로 나누기로 합니다 Apple ProRes 로 만들고
+                ##이후 H.265 는 ffmpeg가 담당하기로 합니다
+                ## PATH2 H.265
+                #log.info(f'upscaling()::ffmpeg_proc: {app["ffmpeg_proc"]}')
+                #log.info(f'upscaling()::wait for ffmpeg h.265 encoding...')
+                #log.info(f'upscaling()::{UPSCALED_PATH2_FFMPEG_COMMAND}')
+                ## proc_ffmpeg = await asyncio.create_subprocess_exec(UPSCALED_PATH2_FFMPEG_COMMAND, '-nogui', stdout=None)
+                ## proc_ffmpeg = await asyncio.create_subprocess_exec('ffmpeg', '-nogui', stdout=None)
+
+
+                ## 전체재생시간 받아오기
+                #full_duration = await ffprobe_duration_seconds( UPSCALED_TEMP_INTERM_FILE_NAME )
+                #log.info(f'upscaling()::full_duration is {full_duration}')
+
+                #proc_ffmpeg = await asyncio.create_subprocess_shell(
+                #        UPSCALED_PATH2_FFMPEG_COMMAND,
+                #        stdout=asyncio.subprocess.PIPE,     # 진행정보를 여기로 받음
+                #        stderr=asyncio.subprocess.PIPE      # 에러만 여기로(원하면 DEVNULL)
+                #        )
+
+                ## ffmpeg는 대략 0.5~1초 간격으로 이런 줄들을 보냅니다:
+                ## frame=..., fps=..., out_time_ms=1234567, out_time=00:00:01.23, speed=..., progress=continue
+
+                #last_emit = time.monotonic()
+                #out_time_sec = 0.0
+                #while True:
+                #    line = await proc_ffmpeg.stdout.readline()
+                #    # log.info(f'upscaling()::{line}')
+                #    if not line:
+                #        break
+                #    s = line.decode(errors="ignore").strip()
+                #    if not s or "=" not in s:
+                #        continue
+
+                #    key, val = s.split("=", 1)
+
+                #    if key == "out_time_ms":
+                #        # out_time_ms=N/A 케이스 대비
+                #        try:
+                #            ms = int(val)
+                #            out_time_sec = ms / 1_000_000.0
+                #        except ValueError:
+                #            pass  # N/A면 스킵
+
+                #    elif key == "out_time":
+                #        # 대체 파싱: 00:01:23.45 형태
+                #        t = parse_tc_to_seconds(val)
+                #        if t is not None:
+                #            out_time_sec = t
+
+                #    elif key == "progress" and val == "end":
+                #        # 마지막 한번 더 찍고 종료
+                #        pct = 100.0 if full_duration > 0 else 0.0
+                #        # print(f"{pct:5.1f}% | {total:.1f}s / {total:.1f}s | done")
+                #        log.info(f"{pct:5.1f}% | {full_duration:.1f}s / {full_duration:.1f}s | done")
+                #        await report_ffmpeg(app, 100)
+                #        break
+
+                #    now = time.monotonic()
+                #    # if s.startswith("out_time_ms="):
+                #        # ms = int(s.split("=", 1)[1])
+                #        # out_time_sec = ms / 1_000_000.0
+
+                #    if now - last_emit > 10:
+                #        percent = min(100.0, (out_time_sec / full_duration) * 100.0)
+                #        # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
+                #        log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {full_duration:.1f}s)")
+                #        await report_ffmpeg(app, int(percent))
+                #        last_emit = time.monotonic()
+
+                #    # elif s == "progress=end":
+                #    #     # print("100.0%  done")
+                #    #     log.info(f"upscaling()::ffmpeg::100.0%  done")
+                #    #     break
+
+                #    # await asyncio.sleep(3)
+
+                ## _, err = await proc_ffmpeg.communicate()
+                ## rc = proc_ffmpeg.returncode
+                ## if rc != 0:
+                ##     log.info(f'upscaling()::ffmpeg failed:', rc, (err or b"").decode(errors="ignore"))
+
+
+                ## ret2 = await proc_ffmpeg.wait()
+                ## log.info(f'upscaling()::ffmpeg ret is {ret2}')
+
+                ###################################################################
+
+
 
                 # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
                 upscaled_pathfile = UPSCALED_GATHER_PATH + file
@@ -1328,10 +1426,10 @@ async def upscaling(app):
                 app['upscaling_busy'] = 0
                 log.info(f'upscaling_busy is 0')
 
-                # 0이 아닐 경우 업스케일 실패입니다
-                if ret != 0:
-                    log.info(f'upscaling()::upscale failed!!')
-                    upscaled = 2
+                # # 0이 아닐 경우 업스케일 실패입니다
+                # if ret != 0:
+                #     log.info(f'upscaling()::upscale failed!!')
+                #     upscaled = 2
 
             #################################################
             #
