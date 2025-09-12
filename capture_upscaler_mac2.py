@@ -1175,11 +1175,12 @@ async def upscaling(app):
                 full_duration = await ffprobe_duration_seconds( UPSCALED_TEMP_INTERM_FILE_NAME )
                 log.info(f'upscaling()::full_duration is {full_duration}')
 
-                UPSCALED_FULL_FFMPEG = f'ffmpeg -y -nostdin -i "{pathfile_mac}" \
+                UPSCALED_FULL_FFMPEG = f'/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
                   -vf "scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08" \
                   -c:v hevc_videotoolbox -b:v 42M -maxrate 42M -bufsize 42M -g 120 \
                   -pix_fmt yuv420p -tag:v hvc1 -movflags +faststart \
                   -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
+                  -progress pipe:1
                   -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}"'
 
                 proc_ffmpeg = await asyncio.create_subprocess_shell(
