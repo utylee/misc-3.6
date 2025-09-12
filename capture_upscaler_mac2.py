@@ -814,10 +814,13 @@ async def monitor_upload(app):
                     # if r[13] != 1:
                     if r[13] == 0:
                         cur_checktime = time.monotonic()
-                        log.info(f'upscaling()::r[15], r[16] = {r[15]}, {r[16]}')
+                        up_pct = r[15]
+                        # log.info(f'upscaling()::r[15], r[16] = {r[15]}, {r[16]}')
+                        log.info(f'upscaling()::r[15], r[16] = {up_pct}, {r[16]}')
                         log.info(f'upscaling()::last_checktime, cur_checktime = {last_checktime}, {cur_checktime}')
 
-                        if (r[15] != 100):       #upscale_pct 가 100이 아닐경우
+                        # if (r[15] != 100):       #upscale_pct 가 100이 아닐경우
+                        if up_pct != 100:       #upscale_pct 가 100이 아닐경우
                             log.info(f'upscaling()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
                             if last_upscale_pct == r[15]:
                                 # upscale_pct 2분이상 제자리이면 업스케일오류로보고
