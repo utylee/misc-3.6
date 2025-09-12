@@ -1180,7 +1180,7 @@ async def upscaling(app):
                   -c:v hevc_videotoolbox -b:v 42M -maxrate 42M -bufsize 42M -g 120 \
                   -pix_fmt yuv420p -tag:v hvc1 -movflags +faststart \
                   -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
-                  -progress pipe:1
+                  -progress pipe:1 \
                   -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}"'
 
                 proc_ffmpeg = await asyncio.create_subprocess_shell(
