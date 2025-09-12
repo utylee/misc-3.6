@@ -866,39 +866,39 @@ async def monitor_upload(app):
                                 log.info(f'upscaling()::cur_checktime update for not same upscale_pct')
                                 last_checktime = cur_checktime
                                  
-                        elif (r[16] != 100):
-                            if last_ffmpeg_pct == r[16]:
-                                # ffmpeg_pct 2분이상 제자리이면 업스케일오류로보고
-                                # 큐에서 제거하고 다음으로 넘깁니다
-                                if (cur_checktime - last_checktime > 120):
-                                    del app['upload_que'][temp_file]
-                                    log.info(
-                                        f'{temp_file} is deleted for ffmpeg hang. continue.. ')
-                                    try:
-                                        del app['upload_que'][temp_file]
-                                        app['upscale_que']['que'].append((r[0], r[8], r[13]))
-                                        async with engine.acquire() as conn:
-                                            async with conn.execute(db.tbl_youtube_files.update()
-                                                                    .where(db.tbl_youtube_files.c.filename == temp_file)
-                                                                    .values(upscaled=2)):
-                                                log.info(f'db upscaled to 2')
+                        # elif (r[16] != 100):
+                        #     if last_ffmpeg_pct == r[16]:
+                        #         # ffmpeg_pct 2분이상 제자리이면 업스케일오류로보고
+                        #         # 큐에서 제거하고 다음으로 넘깁니다
+                        #         if (cur_checktime - last_checktime > 120):
+                        #             del app['upload_que'][temp_file]
+                        #             log.info(
+                        #                 f'{temp_file} is deleted for ffmpeg hang. continue.. ')
+                        #             try:
+                        #                 del app['upload_que'][temp_file]
+                        #                 app['upscale_que']['que'].append((r[0], r[8], r[13]))
+                        #                 async with engine.acquire() as conn:
+                        #                     async with conn.execute(db.tbl_youtube_files.update()
+                        #                                             .where(db.tbl_youtube_files.c.filename == temp_file)
+                        #                                             .values(upscaled=2)):
+                        #                         log.info(f'db upscaled to 2')
 
-                                        # 변경후 클라이언트들에 리프레시 신호를 보냅니다
-                                        async with aiohttp.ClientSession() as sess:
-                                            async with sess.get(
-                                                    URL_UPLOADER_WS_REFRESH) as resp:
-                                                result = await resp.text()
-                                                log.info(f'call needRefresh: {result}')
+                        #                 # 변경후 클라이언트들에 리프레시 신호를 보냅니다
+                        #                 async with aiohttp.ClientSession() as sess:
+                        #                     async with sess.get(
+                        #                             URL_UPLOADER_WS_REFRESH) as resp:
+                        #                         result = await resp.text()
+                        #                         log.info(f'call needRefresh: {result}')
 
-                                        # # 변경후 클라이언트들에 리프레시 신호를 보냅니다
-                                        # await send_ws(app['websockets'], 'needRefresh')
-                                    except:
-                                        log.info(f'exception:db copying column to 2')
+                        #                 # # 변경후 클라이언트들에 리프레시 신호를 보냅니다
+                        #                 # await send_ws(app['websockets'], 'needRefresh')
+                        #             except:
+                        #                 log.info(f'exception:db copying column to 2')
 
-                                    continue
-                            else:
-                                log.info(f'upscaling()::cur_checktime update for not same ffmpeg_pct')
-                                # last_checktime = cur_checktime
+                        #             continue
+                        #     else:
+                        #         log.info(f'upscaling()::cur_checktime update for not same ffmpeg_pct')
+                        #         # last_checktime = cur_checktime
 
                         last_upscale_pct = r[15]
                         last_ffmpeg_pct = r[16]
