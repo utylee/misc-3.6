@@ -22,8 +22,8 @@ import db_youtube as db
 from collections import OrderedDict as od, defaultdict
 
 URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
-MY_IP = '192.168.100.107'
-# MY_IP = '192.168.100.108'
+# MY_IP = '192.168.100.107'
+MY_IP = '192.168.100.108'
 
 TRUNCATE_DAYS = 3
 # PATHS = [
