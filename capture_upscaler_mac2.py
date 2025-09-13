@@ -1172,6 +1172,7 @@ async def upscaling(app):
         ret = 1
         # if len(que) >= 0:
         # if len(que) > 0:
+        log.info(f'upscaling()::len(que): {len(que)}, busy: {app["upscaling_busy"]}')
         if len(que) > 0 and app['upscaling_busy'] == 0:
             # 첫번째 항목을 큐에서 꺼냅니다
 
