@@ -838,7 +838,7 @@ async def monitor_upload(app):
                         # if up_pct != 100 and up_pct != -1:
                         # if up_pct != 100 :
                         # if (r[15] != 100):       
-                        if (r[15] != 100 r[15] == -1):       
+                        if (r[15] != 100 or r[15] == -1):       
                             log.info(f'monitor_upload()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
                             # if last_upscale_pct == r[15]:
                             if last_upscale_pct == up_pct:
