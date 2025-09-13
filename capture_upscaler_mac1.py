@@ -840,8 +840,8 @@ async def monitor_upload(app):
                         # if (r[15] != 100):       
                         if (r[15] != 100 or r[15] == -1):       
                             log.info(f'monitor_upload()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
-                            # if last_upscale_pct == r[15]:
-                            if last_upscale_pct == up_pct:
+                            if last_upscale_pct == r[15]:
+                            # if last_upscale_pct == up_pct:
                                 log.info(f'monitor_upload():: cur_pct == last_upscale_pct')
                                 # upscale_pct 2분이상 제자리이면 업스케일오류로보고
                                 # 큐에서 제거하고 다음으로 넘깁니다
