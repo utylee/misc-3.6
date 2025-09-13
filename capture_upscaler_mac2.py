@@ -800,6 +800,7 @@ async def monitor_upload(app):
             # log.info('sending gimme request')
 
             que_c = copy.deepcopy(que)
+            log.info('monitor_upload()::que current {que}')
 
             tup_c = que_c.popitem(last=False)
             temp_file = tup_c[0]
@@ -807,7 +808,9 @@ async def monitor_upload(app):
             temp_playlist = tup_c[1][1]
 
             log.info(
-                f'tup_c: {tup_c}, {temp_file}, {temp_title}, {temp_playlist}')
+                    f'monitor_upload()::tup_c: {tup_c}, {temp_file}, {temp_title}, {temp_playlist}')
+
+            log.info('monitor_upload()::que after {que}')
 
             continue_ = 0
             async with engine.acquire() as conn:
