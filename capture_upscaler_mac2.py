@@ -950,7 +950,8 @@ async def monitor_upload(app):
                         log.info(
                             f'monitor_upload()::{temp_file} upscaling failed. reinsert to upscaling que. ')
                         # 실패이므로 업로드 큐에서 제거를 해버립니다
-                        del app['upload_que'][temp_file]
+                        # 한번 제거하지 말아봅니다
+                        # del app['upload_que'][temp_file]
                         app['upscale_que']['que'].append((r[0], r[8], r[13]))
                         log.info(
                             f'monitor_upload()::deleted in upload que, reinsert to upscale que')
