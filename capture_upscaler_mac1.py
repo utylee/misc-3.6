@@ -828,8 +828,9 @@ async def monitor_upload(app):
                         log.info(f'upscaling()::r[15], r[16] = {up_pct}, {r[16]}')
                         log.info(f'upscaling()::last_checktime, cur_checktime = {last_checktime}, {cur_checktime}')
 
-                        # if (r[15] != 100):       #upscale_pct 가 100이 아닐경우
-                        if up_pct != 100:       #upscale_pct 가 100이 아닐경우
+                        # if (r[15] != 100):       
+                        #upscale_pct 가 100이 아닐경우
+                        if up_pct != 100 and up_pct != -1:
                             log.info(f'upscaling()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
                             # if last_upscale_pct == r[15]:
                             if last_upscale_pct == up_pct:
