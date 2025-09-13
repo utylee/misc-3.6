@@ -857,7 +857,8 @@ async def monitor_upload(app):
                                         log.info(
                                             f'monitor_upload()::delete from upload_que, add to upscale_que')
 
-                                        del app['upload_que'][temp_file]
+                                        # 업로드큐에서 제거하지 않습니다
+                                        # del app['upload_que'][temp_file]
                                         app['upscale_que']['que'].append((r[0], r[8], r[13]))
                                         async with engine.acquire() as conn:
                                             async with conn.execute(db.tbl_youtube_files.update()
@@ -879,6 +880,7 @@ async def monitor_upload(app):
                                             # f'{temp_file} upscaling failed. delete from que.. ')
                                             f'monitor_upload()::{temp_file} upscaling failed. reinsert to upscaling que. ')
                                         # 실패이므로 업로드 큐에서 제거를 해버립니다
+                                        # 업로드큐에서 제거하지 않습니다
                                         # del app['upload_que'][temp_file]
                                         # 업스케일 큐에 다시 넣습니다
                                         app['upscale_que']['que'].append((r[0], r[8], r[13]))
