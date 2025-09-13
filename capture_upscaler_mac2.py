@@ -794,6 +794,7 @@ async def monitor_upload(app):
         await asyncio.sleep(5)
         # log.info(f'monitor_upload::while::app[uploading]:{app["uploading"]}, len(que):{len(que)}')
 
+        log.info(f'monitor_upload()::while::app[uploading]:{app["uploading"]}, len(que):{len(que)}')
         if app['uploading'] == 0 and len(que) > 0:
             cur_file = ''
             title = ''
@@ -850,6 +851,9 @@ async def monitor_upload(app):
                                             f'monitor_upload()::{temp_file} is deleted for upscale hang. continue.. ')
 
                                     try:
+                                        log.info(
+                                            f'monitor_upload()::delete from upload_que, add to upscale_que')
+
                                         del app['upload_que'][temp_file]
                                         app['upscale_que']['que'].append((r[0], r[8], r[13]))
                                         async with engine.acquire() as conn:
