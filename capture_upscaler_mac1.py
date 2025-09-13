@@ -701,7 +701,7 @@ async def polling_api_que(app):
                         for k in res.keys():
                             kes=res[k]
                             log.info(
-                                    f'polling_api_que:if len(res) > 0: {len(res.keys())}')
+                                    f'polling_api_que()::polling_api_que:if len(res) > 0: {len(res.keys())}')
                             # log.info(k)
                             # log.info(kes)
                             # log.info(jes)
@@ -819,33 +819,35 @@ async def monitor_upload(app):
                     # copying이  2 즉 완료가 아니면, 즉 아직 복사중이면 패스합니다
                     log.info(
                         # f'{temp_file} copying check by db. r[4] is {r[4]}')
-                        f'{temp_file} copying check by db. r[13] is {r[13]}')
+                        f'monitor_upload()::{temp_file} copying check by db. r[13] is {r[13]}')
                     # if int(r[4]) != 2:
                     # if r[4] != 2:
                     # if r[4] != 3:
                     # if r[13] != 1:
 
+                    # upscaled 가 0이면 현재 진행형인 걸로 판답합니다
                     #upscaled == 0
                     if r[13] == 0:
                         cur_checktime = time.monotonic()
                         # up_pct = r[15]
-                        log.info(f'upscaling()::r[15], r[16] = {r[15]}, {r[16]}')
+                        log.info(f'monitor_upload()::r[15], r[16] = {r[15]}, {r[16]}')
                         # log.info(f'upscaling()::r[15], r[16] = {up_pct}, {r[16]}')
-                        log.info(f'upscaling()::last_checktime, cur_checktime = {last_checktime}, {cur_checktime}')
+                        log.info(f'monitor_upload()::last_checktime, cur_checktime = {last_checktime}, {cur_checktime}')
 
                         #upscale_pct 가 100이 아닐경우
                         # if up_pct != 100 and up_pct != -1:
                         # if up_pct != 100 :
-                        if (r[15] != 100):       
-                            log.info(f'upscaling()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
+                        # if (r[15] != 100):       
+                        if (r[15] != 100 r[15] == -1):       
+                            log.info(f'monitor_upload()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
                             # if last_upscale_pct == r[15]:
                             if last_upscale_pct == up_pct:
-                                log.info(f'upscaling():: cur_pct == last_upscale_pct')
+                                log.info(f'monitor_upload():: cur_pct == last_upscale_pct')
                                 # upscale_pct 2분이상 제자리이면 업스케일오류로보고
                                 # 큐에서 제거하고 다음으로 넘깁니다
                                 if (cur_checktime - last_checktime > 120):
                                     log.info(
-                                        f'{temp_file} is deleted for upscale hang. continue.. ')
+                                            f'monitor_upload()::{temp_file} is deleted for upscale hang. continue.. ')
 
                                     try:
                                         del app['upload_que'][temp_file]
@@ -854,14 +856,14 @@ async def monitor_upload(app):
                                             async with conn.execute(db.tbl_youtube_files.update()
                                                                     .where(db.tbl_youtube_files.c.filename == temp_file)
                                                                     .values(upscaled=2)):
-                                                log.info(f'db upscaled to 2')
+                                                log.info(f'monitor_upload()::db upscaled to 2')
 
                                         # 변경후 클라이언트들에 리프레시 신호를 보냅니다
                                         async with aiohttp.ClientSession() as sess:
                                             async with sess.get(
                                                     URL_UPLOADER_WS_REFRESH) as resp:
                                                 result = await resp.text()
-                                                log.info(f'call needRefresh: {result}')
+                                                log.info(f'monitor_upload()::call needRefresh: {result}')
 
                                         # # 변경후 클라이언트들에 리프레시 신호를 보냅니다
                                         # await send_ws(app['websockets'], 'needRefresh')
@@ -874,11 +876,11 @@ async def monitor_upload(app):
                                         # 업스케일 큐에 다시 넣습니다
                                         app['upscale_que']['que'].append((r[0], r[8], r[13]))
                                     except:
-                                        log.info(f'exception:db copying column to 2')
+                                        log.info(f'monitor_upload()::exception:db copying column to 2')
 
                                     continue
                             else:
-                                log.info(f'upscaling()::cur_checktime update for not same upscale_pct')
+                                log.info(f'monitor_upload()::cur_checktime update for not same upscale_pct')
                                 last_checktime = cur_checktime
                                  
                         # elif (r[16] != 100):
@@ -939,7 +941,7 @@ async def monitor_upload(app):
                         log.info(
                             # f'{temp_file} is currently copying. continue next')
                             # f'{temp_file} upscaling failed. delete from que.. ')
-                            f'{temp_file} upscaling failed. reinsert to upscaling que. ')
+                            f'monitor_upload()::{temp_file} upscaling failed. reinsert to upscaling que. ')
                         # 실패이므로 업로드 큐에서 제거를 해버립니다
                         del app['upload_que'][temp_file]
                         app['upscale_que']['que'].append((r[0], r[8], r[13]))
@@ -952,7 +954,7 @@ async def monitor_upload(app):
             cur_file = tup[0]
             title = tup[1][0]
             playlist = tup[1][1]
-            log.info(f'tup: {tup}, {cur_file}, {title}, {playlist}')
+            log.info(f'monitor_upload()::tup: {tup}, {cur_file}, {title}, {playlist}')
 
             # async with aiohttp.ClientSession() as sess:
             #     async with sess.get(url_gimme) as resp:
@@ -983,7 +985,7 @@ async def monitor_upload(app):
             # if (res['file'] != '0'):
             if (cur_file != 0):
                 # log.info('js[file] is not None.. upload starts')
-                log.info('cur_file is not None.. upload starts')
+                log.info('monitor_upload()::cur_file is not None.. upload starts')
                 # ret = upload(app, res)
                 filename = cur_file
                 path = f'{UPSCALED_GATHER_PATH}{filename}'
@@ -1004,12 +1006,12 @@ async def monitor_upload(app):
                         async with sess.get(
                                 URL_UPLOADER_WS_REFRESH) as resp:
                             result = await resp.text()
-                            log.info(f'call needRefresh: {result}')
+                            log.info(f'monitor_upload()::call needRefresh: {result}')
 
                     # # 변경후 클라이언트들에 리프레시 신호를 보냅니다
                     # await send_ws(app['websockets'], 'needRefresh')
                 except:
-                    log.info(f'exception:db copying column to 2')
+                    log.info(f'monitor_upload()::exception:db copying column to 2')
 
                 # asyncio.create_task(asyncupload(app, path, title))
                 # await yt.login()
@@ -1037,9 +1039,9 @@ async def monitor_upload(app):
 
                     # 업로드 직전 다시 로그인하고
                     await yt.login()
-                    log.info(f'yt.login() succeed')
-                    log.info(f'yt.uploadVideo starting...')
-                    log.info(f'path:{path}, title:{title}')
+                    log.info(f'monitor_upload()::yt.login() succeed')
+                    log.info(f'monitor_upload()::yt.uploadVideo starting...')
+                    log.info(f'monitor_upload()::path:{path}, title:{title}')
 
                     # 업로드를 시작합니다
                     ret = await yt.uploadVideo(
@@ -1050,7 +1052,7 @@ async def monitor_upload(app):
                         title=title)
                     # ret = json.loads(ret)
                     log.info(
-                        f'monitor_upload::yt.uploadVideo::upload completed.\n ret was {ret}')
+                        f'monitor_upload()::yt.uploadVideo::upload completed.\n ret was {ret}')
                     # log.info(f'upload completed. ')
 
                     video_id = ret["videoId"]
@@ -1118,7 +1120,7 @@ async def monitor_upload(app):
                         async with conn.execute(db.tbl_youtube_files.update().
                                                 where(db.tbl_youtube_files.c.filename == cur_file).
                                                 values(uploading=4)):
-                            log.info(f'erro:uploading to 4 to db')
+                            log.info(f'error:uploading to 4 to db')
 
                 except:
                     log.info(f'exception:: on uploading to 4 to db')
