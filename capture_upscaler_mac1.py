@@ -713,6 +713,9 @@ async def polling_api_que(app):
 
                             # request.app['upload_que'].update({filename: title})
                             app['upload_que'].update({filename: [title, playlist]})
+                            log.info(
+                                    f'polling_api_que()::upload queing, file:{filename}, title:{title}')
+                            # log.info(k)
 
                             await send_ws(app['websockets'], 'needRefresh')
 
