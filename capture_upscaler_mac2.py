@@ -23,7 +23,7 @@ from collections import OrderedDict as od, defaultdict
 
 URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
 # MY_IP = '192.168.100.107'
-MY_IP = '192.168.100.108'
+ MY_IP = '192.168.100.108'
 
 TRUNCATE_DAYS = 3
 # PATHS = [
@@ -728,12 +728,12 @@ async def monitor_upload(app):
     # result = await yt.login()
     try:
         result = await yt.login()
-        log.info(f'login result:{result}')
+        log.info(f'monitor_upload()::login result:{result}')
         print(f'login result:{result}')
     except Exception as e:
-        log.info('yt.login() excepted')
+        log.info('monitor_upload()::yt.login() excepted')
         print('yt.login() excepted')
-        log.info(f'Exception: {e}')
+        log.info(f'monitor_upload()::Exception: {e}')
         print(f'Exception: {e}')
 
     engine = app['db']
@@ -745,7 +745,7 @@ async def monitor_upload(app):
     readable_time = datetime.datetime.fromtimestamp(float_time)
     # .strftime('%y%m%d-%H:%M:%S')
     readable_time = readable_time.strftime('%y%m%d-%H:%M:%S')
-    log.info(f'login.json date: {readable_time}')
+    log.info(f'monitor_upload()::login.json date: {readable_time}')
 
     app['login_file_date'] = readable_time
 
@@ -757,7 +757,7 @@ async def monitor_upload(app):
                 pass
 
     except Exception as e:
-        log.info(f'exception in loginjson_date post::{e}')
+        log.info(f'monitor_upload()::exception in loginjson_date post::{e}')
 
     # 업로드 성공여부 리턴값입니다
     ret = 1
@@ -800,7 +800,7 @@ async def monitor_upload(app):
             # log.info('sending gimme request')
 
             que_c = copy.deepcopy(que)
-            log.info('monitor_upload()::que current {que}')
+            log.info(f'monitor_upload()::que current {que}')
 
             tup_c = que_c.popitem(last=False)
             temp_file = tup_c[0]
@@ -810,7 +810,7 @@ async def monitor_upload(app):
             log.info(
                     f'monitor_upload()::tup_c: {tup_c}, {temp_file}, {temp_title}, {temp_playlist}')
 
-            log.info('monitor_upload()::que after {que}')
+            log.info(f'monitor_upload()::que after {que}')
 
             continue_ = 0
             async with engine.acquire() as conn:
@@ -824,16 +824,19 @@ async def monitor_upload(app):
                     # if r[4] != 2:
                     # if r[4] != 3:
                     # if r[13] != 1:
+
+                    #upscaled == 0
                     if r[13] == 0:
                         cur_checktime = time.monotonic()
-                        up_pct = r[15]
-                        # log.info(f'upscaling()::r[15], r[16] = {r[15]}, {r[16]}')
-                        log.info(f'upscaling()::r[15], r[16] = {up_pct}, {r[16]}')
+                        # up_pct = r[15]
+                        log.info(f'upscaling()::r[15], r[16] = {r[15]}, {r[16]}')
+                        # log.info(f'upscaling()::r[15], r[16] = {up_pct}, {r[16]}')
                         log.info(f'upscaling()::last_checktime, cur_checktime = {last_checktime}, {cur_checktime}')
 
-                        # if (r[15] != 100):       
                         #upscale_pct 가 100이 아닐경우
-                        if up_pct != 100 and up_pct != -1:
+                        # if up_pct != 100 and up_pct != -1:
+                        # if up_pct != 100 :
+                        if (r[15] != 100):       
                             log.info(f'upscaling()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
                             # if last_upscale_pct == r[15]:
                             if last_upscale_pct == up_pct:
@@ -862,6 +865,14 @@ async def monitor_upload(app):
 
                                         # # 변경후 클라이언트들에 리프레시 신호를 보냅니다
                                         # await send_ws(app['websockets'], 'needRefresh')
+                                        log.info(
+                                            # f'{temp_file} is currently copying. continue next')
+                                            # f'{temp_file} upscaling failed. delete from que.. ')
+                                            f'monitor_upload()::{temp_file} upscaling failed. reinsert to upscaling que. ')
+                                        # 실패이므로 업로드 큐에서 제거를 해버립니다
+                                        # del app['upload_que'][temp_file]
+                                        # 업스케일 큐에 다시 넣습니다
+                                        app['upscale_que']['que'].append((r[0], r[8], r[13]))
                                     except:
                                         log.info(f'exception:db copying column to 2')
 
@@ -903,14 +914,25 @@ async def monitor_upload(app):
                         #     else:
                         #         log.info(f'upscaling()::cur_checktime update for not same ffmpeg_pct')
                         #         # last_checktime = cur_checktime
+                            last_upscale_pct = r[15]
+                            last_ffmpeg_pct = r[16]
+                            log.info(f'monitor_upload()::last_upscale_pct {last_upscale_pct}, last_ffmpeg_pct {last_ffmpeg_pct}')
+                            log.info(
+                                # f'{temp_file} is currently copying. continue next')
+                                f'monitor_upload()::{temp_file} is not upscaled. continue.. ')
+                            continue_ = 1
 
-                        last_upscale_pct = r[15]
-                        last_ffmpeg_pct = r[16]
-                        log.info(f'upscaling()::last_upscale_pct {last_upscale_pct}, last_ffmpeg_pct {last_ffmpeg_pct}')
-                        log.info(
-                            # f'{temp_file} is currently copying. continue next')
-                            f'{temp_file} is not upscaled. continue.. ')
-                        continue_ = 1
+                        # upscale_pct == 100
+                        else:
+                            continue_ = 0
+
+                        # last_upscale_pct = r[15]
+                        # last_ffmpeg_pct = r[16]
+                        # log.info(f'monitor_upload()::last_upscale_pct {last_upscale_pct}, last_ffmpeg_pct {last_ffmpeg_pct}')
+                        # log.info(
+                        #     # f'{temp_file} is currently copying. continue next')
+                        #     f'monitor_upload()::{temp_file} is not upscaled. continue.. ')
+                        # continue_ = 1
 
                     # upscale failed 업스케일링 실패로 업스케일 큐에 다시 넣습니다
                     elif r[13] == 2:
@@ -1165,7 +1187,7 @@ async def upscaling(app):
             print(f'sys.path:{sys.path}')
             log.info(f'sys.path:{sys.path}')
             # if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
-            if ((upscaled == 0 or upscaled ==2 ) and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
+            if ((upscaled == 0 or upscaled ==2 ) and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH and exst != 0):
                 # log.info(f'came in')
 
                 app['upscaling_busy'] = 1
