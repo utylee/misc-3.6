@@ -953,8 +953,6 @@ async def monitor_upload(app):
                         # 한번 제거하지 말아봅니다
                         # del app['upload_que'][temp_file]
                         app['upscale_que']['que'].append((r[0], r[8], r[13]))
-                        log.info(
-                            f'monitor_upload()::deleted in upload que, reinsert to upscale que')
 
                         continue_ = 1
             if (continue_ == 1):
