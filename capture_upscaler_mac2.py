@@ -1147,6 +1147,7 @@ async def upscaling(app):
             # file = '1.mp4'
             # path = '/Users/utylee/Downloads/_share_mac2/_Capture/'
             # upscaled = 0
+            path = TRANSFERED_PATHS[0]
             log.info(f'upscaling()::pop(0)::(file, path, upscaled)')
             log.info(f'({file}, {path}, {upscaled})')
             pathfile = f'{path}{file}'
