@@ -1200,7 +1200,7 @@ async def upscaling(app):
             # BOOL_UPSCALE 이 1이면서 upscale이 안되어있을 경우
             # 또한 해당파일이 존재할 경우에만
             # DaVinciResolve 프로세스를 실행합니다
-            print(f'sys.path:{sys.path}')
+            # print(f'sys.path:{sys.path}')
             log.info(f'sys.path:{sys.path}')
             # if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
             if ((upscaled == 0 or upscaled ==2 ) and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH and exst != 0):
@@ -1239,55 +1239,59 @@ async def upscaling(app):
 
                 last_emit = time.monotonic()
                 out_time_sec = 0.0
-                while True:
-                    line = await proc_ffmpeg.stdout.readline()
-                    # log.info(f'upscaling()::{line}')
-                    if not line:
-                        break
-                    s = line.decode(errors="ignore").strip()
-                    if not s or "=" not in s:
-                        continue
+                try:
+                    while True:
+                        line = await proc_ffmpeg.stdout.readline()
+                        # log.info(f'upscaling()::{line}')
+                        if not line:
+                            break
+                        s = line.decode(errors="ignore").strip()
+                        if not s or "=" not in s:
+                            continue
 
-                    key, val = s.split("=", 1)
+                        key, val = s.split("=", 1)
 
-                    if key == "out_time_ms":
-                        # out_time_ms=N/A 케이스 대비
-                        try:
-                            ms = int(val)
-                            out_time_sec = ms / 1_000_000.0
-                        except ValueError:
-                            pass  # N/A면 스킵
+                        if key == "out_time_ms":
+                            # out_time_ms=N/A 케이스 대비
+                            try:
+                                ms = int(val)
+                                out_time_sec = ms / 1_000_000.0
+                            except ValueError:
+                                pass  # N/A면 스킵
 
-                    elif key == "out_time":
-                        # 대체 파싱: 00:01:23.45 형태
-                        t = parse_tc_to_seconds(val)
-                        if t is not None:
-                            out_time_sec = t
+                        elif key == "out_time":
+                            # 대체 파싱: 00:01:23.45 형태
+                            t = parse_tc_to_seconds(val)
+                            if t is not None:
+                                out_time_sec = t
 
-                    elif key == "progress" and val == "end":
-                        # 마지막 한번 더 찍고 종료
-                        pct = 100.0 if full_duration > 0 else 0.0
-                        # print(f"{pct:5.1f}% | {total:.1f}s / {total:.1f}s | done")
-                        log.info(f"{pct:5.1f}% | {full_duration:.1f}s / {full_duration:.1f}s | done")
-                        log.info(f'upscaling()::Upscale Succeeded!')
-                        app['upscale_pct'] = 100
-                        upscaled = 1
+                        elif key == "progress" and val == "end":
+                            # 마지막 한번 더 찍고 종료
+                            pct = 100.0 if full_duration > 0 else 0.0
+                            # print(f"{pct:5.1f}% | {total:.1f}s / {total:.1f}s | done")
+                            log.info(f"{pct:5.1f}% | {full_duration:.1f}s / {full_duration:.1f}s | done")
+                            log.info(f'upscaling()::Upscale Succeeded!')
+                            app['upscale_pct'] = 100
+                            upscaled = 1
 
-                        await report_ffmpeg(app, 100)
+                            await report_ffmpeg(app, 100)
 
-                        break
+                            break
 
-                    now = time.monotonic()
-                    # if s.startswith("out_time_ms="):
-                        # ms = int(s.split("=", 1)[1])
-                        # out_time_sec = ms / 1_000_000.0
+                        now = time.monotonic()
+                        # if s.startswith("out_time_ms="):
+                            # ms = int(s.split("=", 1)[1])
+                            # out_time_sec = ms / 1_000_000.0
 
-                    if now - last_emit > 10:
-                        percent = min(100.0, (out_time_sec / full_duration) * 100.0)
-                        # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
-                        log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {full_duration:.1f}s)")
-                        await report_ffmpeg(app, int(percent))
-                        last_emit = time.monotonic()
+                        if now - last_emit > 10:
+                            percent = min(100.0, (out_time_sec / full_duration) * 100.0)
+                            # print(f"{percent:5.1f}%  ({out_time_sec:.1f}s / {total:.1f}s)")
+                            log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {full_duration:.1f}s)")
+                            await report_ffmpeg(app, int(percent))
+                            last_emit = time.monotonic()
+
+                except Exception as e:
+                        log.info(f'upscaling()::while():while():excepted')
 
                 #######################################################
                 ##
