@@ -859,7 +859,8 @@ async def monitor_upload(app):
 
                                         # 업로드큐에서 제거하지 않습니다
                                         # del app['upload_que'][temp_file]
-                                        app['upscale_que']['que'].append((r[0], r[8], r[13]))
+                                        if (r[0], r[8], r[13]) not in app['upscale_que']['que']:
+                                            app['upscale_que']['que'].append((r[0], r[8], r[13]))
                                         async with engine.acquire() as conn:
                                             async with conn.execute(db.tbl_youtube_files.update()
                                                                     .where(db.tbl_youtube_files.c.filename == temp_file)
@@ -1188,7 +1189,7 @@ async def upscaling(app):
             # upscaled = 0
             path = TRANSFERED_PATHS[0]
             log.info(f'upscaling()::pop(0)::(file, path, upscaled)')
-            log.info(f'({file}, {path}, {upscaled})')
+            log.info(f'upscaling()::({file}, {path}, {upscaled})')
             pathfile = f'{path}{file}'
 
             exst = os.path.isfile(pathfile)
@@ -1197,14 +1198,17 @@ async def upscaling(app):
             #제거합니다
             if (exst == 0):
                 log.info(f'upscaling()::({pathfile}) is not exists')
-                que.remove(file)
+                try:
+                    que.remove((file, path, upscaled))
+                except Exception as e:
+                    log.info(f'upscaling()::exception on que.remove')
 
 
             # BOOL_UPSCALE 이 1이면서 upscale이 안되어있을 경우
             # 또한 해당파일이 존재할 경우에만
             # DaVinciResolve 프로세스를 실행합니다
             # print(f'sys.path:{sys.path}')
-            log.info(f'sys.path:{sys.path}')
+            # log.info(f'upscaling()::sys.path:{sys.path}')
             # if (upscaled == 0 and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH):
             if ((upscaled == 0 or upscaled ==2 ) and BOOL_UPSCALE and path != UPSCALED_GATHER_PATH and exst != 0):
                 # log.info(f'came in')
