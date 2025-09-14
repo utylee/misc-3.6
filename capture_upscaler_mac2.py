@@ -954,7 +954,7 @@ async def monitor_upload(app):
                         # del app['upload_que'][temp_file]
                         app['upscale_que']['que'].append((r[0], r[8], r[13]))
                         log.info(
-                            f'monitor_upload()::after upscale_que append is {app["upscale_que"]["que"]')
+                            f'monitor_upload()::after upscale_que append is {app["upscale_que"]["que"]}')
 
                         continue_ = 1
             if (continue_ == 1):
