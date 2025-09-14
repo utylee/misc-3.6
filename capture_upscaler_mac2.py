@@ -1189,8 +1189,13 @@ async def upscaling(app):
             pathfile = f'{path}{file}'
 
             exst = os.path.isfile(pathfile)
+
+            # 해당파일이 없다면 업스케일이 완료됐거나 삭제되었다는 뜻이므로 큐에
+            #제거합니다
             if (exst == 0):
                 log.info(f'upscaling()::({pathfile}) is not exists')
+                que.remove(file)
+
 
             # BOOL_UPSCALE 이 1이면서 upscale이 안되어있을 경우
             # 또한 해당파일이 존재할 경우에만
