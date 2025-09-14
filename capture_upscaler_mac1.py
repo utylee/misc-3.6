@@ -948,7 +948,7 @@ async def monitor_upload(app):
                     # upscale failed 업스케일링 실패로 업스케일 큐에 다시 넣습니다
                     elif r[13] == 2:
                         log.info(
-                            f'monitor_upload()::{temp_file} upscaling failed. reinsert to upscaling que. ')
+                            f'monitor_upload()::r[13] is 2. {temp_file} upscaling failed. reinsert to upscaling que. ')
                         # 실패이므로 업로드 큐에서 제거를 해버립니다
                         # 한번 제거하지 말아봅니다
                         # del app['upload_que'][temp_file]
