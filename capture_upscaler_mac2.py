@@ -952,7 +952,8 @@ async def monitor_upload(app):
                         # 실패이므로 업로드 큐에서 제거를 해버립니다
                         # 한번 제거하지 말아봅니다
                         # del app['upload_que'][temp_file]
-                        app['upscale_que']['que'].append((r[0], r[8], r[13]))
+                        if (r[0], r[8], r[13]) not in app['upscale_que']['que']:
+                            app['upscale_que']['que'].append((r[0], r[8], r[13]))
                         log.info(
                             f'monitor_upload()::after upscale_que append is {app["upscale_que"]["que"]}')
 
