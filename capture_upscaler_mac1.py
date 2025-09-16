@@ -884,7 +884,7 @@ async def monitor_upload(app):
                                         # 업로드큐에서 제거하지 않습니다
                                         # del app['upload_que'][temp_file]
                                         # 업스케일 큐에 다시 넣습니다
-                                        app['upscale_que']['que'].append((r[0], r[8], r[13]))
+                                        # app['upscale_que']['que'].append((r[0], r[8], r[13]))
                                     except:
                                         log.info(f'monitor_upload()::exception:db copying column to 2')
 
@@ -1481,7 +1481,7 @@ async def upscaling(app):
 
 
                 app['upscaling_busy'] = 0
-                log.info(f'upscaling_busy is 0')
+                log.info(f'upscaling()::upscaling_busy is 0')
 
                 # # 0이 아닐 경우 업스케일 실패입니다
                 # if ret != 0:
