@@ -1203,15 +1203,15 @@ async def upscaling(app):
                     async with engine.acquire() as conn:
                         await conn.execute(db.tbl_youtube_files.update()
                                            .where(db.tbl_youtube_files.c.filename == file)
-                                           .values(upscaled=upscaled))
+                                           .values(upscaled=1))
                     # 또한 needRefresh를 호출해줍니다
                     async with aiohttp.ClientSession() as sess:
                         async with sess.get(URL_UPLOADER_WS_REFRESH):
                             log.info('upscaling()::call needRefresh')
                     que.remove((file, path, upscaled))
                 except Exception as e:
-                    log.info('upscaling()::db update excepted!!')
-                    log.info(f'upscaling()::exception on que.remove')
+                    log.info('upscaling()::maybe db update excepted!!')
+                    log.info(f'upscaling()::or exception on que.remove')
 
 
             # BOOL_UPSCALE 이 1이면서 upscale이 안되어있을 경우
