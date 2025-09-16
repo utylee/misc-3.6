@@ -1203,7 +1203,7 @@ async def upscaling(app):
                     async with engine.acquire() as conn:
                         await conn.execute(db.tbl_youtube_files.update()
                                            .where(db.tbl_youtube_files.c.filename == file)
-                                           .values(upscaled=upscaled)
+                                           .values(upscaled=upscaled))
                     # 또한 needRefresh를 호출해줍니다
                     async with aiohttp.ClientSession() as sess:
                         async with sess.get(URL_UPLOADER_WS_REFRESH):
