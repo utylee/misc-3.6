@@ -1196,11 +1196,21 @@ async def upscaling(app):
 
             # 해당파일이 없다면 업스케일이 완료됐거나 삭제되었다는 뜻이므로 큐에
             #제거합니다
+            #또한 db상 upscaled도 1도 수정해보도록 합니다 
             if (exst == 0):
                 log.info(f'upscaling()::({pathfile}) is not exists')
                 try:
+                    async with engine.acquire() as conn:
+                        await conn.execute(db.tbl_youtube_files.update()
+                                           .where(db.tbl_youtube_files.c.filename == file)
+                                           .values(upscaled=upscaled)
+                    # 또한 needRefresh를 호출해줍니다
+                    async with aiohttp.ClientSession() as sess:
+                        async with sess.get(URL_UPLOADER_WS_REFRESH):
+                            log.info('upscaling()::call needRefresh')
                     que.remove((file, path, upscaled))
                 except Exception as e:
+                    log.info('upscaling()::db update excepted!!')
                     log.info(f'upscaling()::exception on que.remove')
 
 
