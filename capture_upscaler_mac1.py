@@ -1200,10 +1200,11 @@ async def upscaling(app):
             if (exst == 0):
                 log.info(f'upscaling()::({pathfile}) is not exists')
                 try:
+                    upscaled = 1
                     async with engine.acquire() as conn:
                         await conn.execute(db.tbl_youtube_files.update()
                                            .where(db.tbl_youtube_files.c.filename == file)
-                                           .values(upscaled=1))
+                                           .values(upscaled=upscaled))
                     # 또한 needRefresh를 호출해줍니다
                     async with aiohttp.ClientSession() as sess:
                         async with sess.get(URL_UPLOADER_WS_REFRESH):
