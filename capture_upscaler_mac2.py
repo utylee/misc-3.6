@@ -1290,8 +1290,8 @@ async def upscaling(app):
                         )
 
 
-                emit_interval = 10, # 10초마다만 로그/리포트
-                idle_timeout = 60,  # 진행 라인 안 오면 종료
+                emit_interval = 10 # 10초마다만 로그/리포트
+                idle_timeout = 60  # 진행 라인 안 오면 종료
                 hard_timeout = 1800
 
                 start = last_emit = last_progress = time.monotonic()
@@ -1300,13 +1300,18 @@ async def upscaling(app):
                 finished = False
 
 
+                # log.info(f'came into here')
                 # 한 루프에서 stdout/stderr를 번갈아 읽기 위해 readline 작업을 태스크로 유지
                 t_out = asyncio.create_task(proc_ffmpeg.stdout.readline())
                 t_err = asyncio.create_task(proc_ffmpeg.stderr.readline())
+                # log.info(f'came into here2')
 
                 try:
+                    # log.info(f'came into here3')
                     while True:
+                        # log.info(f'came into here4')
                         now = time.monotonic()
+                        # log.info(f'came into here5')
                         # 타임아웃 검사
                         if now >= deadline:
                             log.info(f'upscaling()::Error:hard timeout')
@@ -1315,14 +1320,18 @@ async def upscaling(app):
                             log.info(f'upscaling()::Error:idle timeout(no progress)')
                             # raise asyncio.TimeoutError("idle timeout (no progress)")
 
+                        # log.info(f'came into here6')
                         # 둘 중 하나가 준비될 때까지 짧게 대기
                         done, _ = await asyncio.wait(
                             {t_out, t_err},
                             timeout=0.5,
                             return_when=asyncio.FIRST_COMPLETED
                         )
+                        # log.info(f'came into here7')
 
                         if t_out in done:
+                            # log.info(f'came into here4')
+
                             line = t_out.result()
                             if not line:
                                 t_out = None  # stdout EOF
@@ -1358,7 +1367,7 @@ async def upscaling(app):
                             # 필요하면 여기서 에러 로그 처리
                             if line:
                                 # print("ERR:", line.decode(errors="ignore").rstrip())
-                                log.info(f'upscaling()::Error:ffmpeg:stdout.readline() error')
+                                # log.info(f'upscaling()::Error:ffmpeg:stdout.readline() error')
                                 t_err = asyncio.create_task(proc_ffmpeg.stderr.readline())
                             else:
                                 t_err = None  # stderr EOF
