@@ -161,13 +161,49 @@ async def edit_playlist(app, yt, vid, playlist):
 
 
 async def ffprobe_duration_seconds(path: str) -> float:
-    # 전체 길이(초) 가져오기
-    cmd = f'/opt/homebrew/bin/ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "{path}"'
-    proc = await asyncio.create_subprocess_shell(
-        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL
+    # hang이 어딘가에서 자꾸 걸려서 하나씩 timeout을 걸어보기로 합니다
+    timeout = 5
+
+    cmd = (
+        f'/opt/homebrew/bin/ffprobe -v error '
+        f'-show_entries format=duration -of default=nw=1:nk=1 "{path}"'
     )
-    out, _ = await proc.communicate()
-    return float(out.decode().strip())
+    proc = await asyncio.create_subprocess_shell(
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    try:
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout)
+    except asyncio.TimeoutError:
+        log.info(f'ffprobe_duration_seconds()::terminating for hanging')
+        proc.terminate()
+        try:
+            await asyncio.wait_for(proc.wait(), 2)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+        raise
+
+    if proc.returncode != 0:
+        log.info(f'ffprobe_duration_seconds()::\
+                        returncode : {proc.returncode}, terminate for hanging')
+        # raise RuntimeError(f"ffprobe failed: rc={proc.returncode}")
+
+    s = (out or b"").decode().strip()
+    try:
+        return float(s) if s else 0.0
+    except ValueError:
+        return 0.0
+
+
+    # # 전체 길이(초) 가져오기
+    # cmd = f'/opt/homebrew/bin/ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "{path}"'
+    # proc = await asyncio.create_subprocess_shell(
+    #     cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL
+    # )
+    # out, _ = await proc.communicate()
+    # return float(out.decode().strip())
 
 async def report_ffmpeg(app, pct):
     # 현 진행율을 db에 갱신합니다
