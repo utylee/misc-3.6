@@ -1325,6 +1325,7 @@ async def upscaling(app):
                         now = time.monotonic()
                         if now >= deadline:
                             log.info(f'upscaling()::hard timeout')
+                            upscaled = 2
                             raise asyncio.TimeoutError("hard timeout")
 
                         # ★ 라인 읽기에 유휴 타임아웃 직접 적용
@@ -1332,6 +1333,7 @@ async def upscaling(app):
                             line = await asyncio.wait_for(proc_ffmpeg.stdout.readline(), timeout=idle_timeout)
                         except asyncio.TimeoutError:
                             log.info(f'upscaling()::idle timeout(no progress lines)')
+                            upscaled = 2
                             raise asyncio.TimeoutError("idle timeout (no progress lines)")
 
                         if not line:
@@ -1379,11 +1381,13 @@ async def upscaling(app):
                         log.info('upscaling()::Upscale Succeeded!')
                         upscaled = 1
                     else:
+                        upscaled = 2
                         log.info(f'upscaling()::returncode : {rc}')
 
                     # 필요 시 rc 반환/처리
                 except asyncio.TimeoutError as e:
                     log.info(f'upscaling()::terminating for hanging proc_ffmpeg ({e})')
+                    upscaled = 2
                     # 프로세스 그룹 종료(sh/자식 포함)
                     with contextlib.suppress(ProcessLookupError):
                         os.killpg(proc_ffmpeg.pid, signal.SIGTERM)
@@ -1762,18 +1766,19 @@ async def upscaling(app):
 
 
                 # 변환이 성공하였으니 출력파일을 upscale 폴더로 이동해줍니다
-                upscaled_pathfile = UPSCALED_GATHER_PATH + file
-                log.info(
-                    f'upscaling()::upscaled_pathfile is {upscaled_pathfile}')
-                # db 상 넣어줄 start_path 를 upscale폴더로 변경해줍니다
-                path = UPSCALED_GATHER_PATH
-                # 생성된파일을 _Upscaled 폴더로 옮기고 원본 파일도 삭제합니다
-                try:
-                    os.rename(UPSCALED_TEMP_FILE_NAME, upscaled_pathfile)
-                    os.remove(pathfile)
-                except Exception as ose:
+                if (finished == True):
+                    upscaled_pathfile = UPSCALED_GATHER_PATH + file
                     log.info(
-                        f'upscaling()::exception while moving and removing upscaled file\n {ose}')
+                        f'upscaling()::upscaled_pathfile is {upscaled_pathfile}')
+                    # db 상 넣어줄 start_path 를 upscale폴더로 변경해줍니다
+                    path = UPSCALED_GATHER_PATH
+                    # 생성된파일을 _Upscaled 폴더로 옮기고 원본 파일도 삭제합니다
+                    try:
+                        os.rename(UPSCALED_TEMP_FILE_NAME, upscaled_pathfile)
+                        os.remove(pathfile)
+                    except Exception as ose:
+                        log.info(
+                            f'upscaling()::exception while moving and removing upscaled file\n {ose}')
 
 
                 app['upscaling_busy'] = 0
