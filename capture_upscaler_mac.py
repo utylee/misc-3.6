@@ -1,6 +1,7 @@
 import os
 import platform
 import subprocess
+import signal
 import time
 #import shutil
 import asyncio
@@ -1204,6 +1205,13 @@ def _parse_tc_to_sec(tc: str):
     except Exception:
         return None
 
+# stderr 드레인 태스크(버퍼 꽉 차는 블록 방지)
+async def _drain_stderr(proc):
+    while True:
+        line = await proc.stderr.readline()
+        if not line:
+            break
+
 async def upscaling(app):
     # que, status = app['transfer_que']['que'], app['transfer_que']['status']
     engine = app['db']
@@ -1303,131 +1311,226 @@ async def upscaling(app):
                 out_time_sec = 0.0
                 finished = False
 
+                # 선택: 시작 0% 보고
+                try:
+                    await report_ffmpeg(app, 0)
+                except Exception:
+                    pass
 
-                # log.info(f'came into here')
-                # 한 루프에서 stdout/stderr를 번갈아 읽기 위해 readline 작업을 태스크로 유지
-                t_out = asyncio.create_task(proc_ffmpeg.stdout.readline())
-                t_err = asyncio.create_task(proc_ffmpeg.stderr.readline())
-                # log.info(f'came into here2')
+                t_err = asyncio.create_task(_drain_stderr(\
+                        proc_ffmpeg))
 
                 try:
-                    # log.info(f'came into here3')
                     while True:
-                        # log.info(f'came into here4')
                         now = time.monotonic()
-                        # log.info(f'came into here5')
-                        # 타임아웃 검사
                         if now >= deadline:
-                            log.info(f'upscaling()::Error:hard timeout')
-                            # raise asyncio.TimeoutError("hard timeout")
-                        if now - last_progress >= idle_timeout:
-                            log.info(f'upscaling()::Error:idle timeout(no progress)')
-                            # raise asyncio.TimeoutError("idle timeout (no progress)")
+                            log.info(f'upscaling()::hard timeout')
+                            raise asyncio.TimeoutError("hard timeout")
 
-                        # log.info(f'came into here6')
-                        # 둘 중 하나가 준비될 때까지 짧게 대기
-                        done, _ = await asyncio.wait(
-                            {t_out, t_err},
-                            timeout=0.5,
-                            return_when=asyncio.FIRST_COMPLETED
-                        )
-                        # log.info(f'came into here7')
+                        # ★ 라인 읽기에 유휴 타임아웃 직접 적용
+                        try:
+                            line = await asyncio.wait_for(proc_ffmpeg.stdout.readline(), timeout=idle_timeout)
+                        except asyncio.TimeoutError:
+                            log.info(f'upscaling()::idle timeout(no progress lines)')
+                            raise asyncio.TimeoutError("idle timeout (no progress lines)")
 
-                        if t_out in done:
-                            # log.info(f'came into here4')
+                        if not line:
+                            break  # stdout EOF → 종료 후보
 
-                            line = t_out.result()
-                            if not line:
-                                t_out = None  # stdout EOF
-                            else:
-                                s = line.decode(errors="ignore").strip()
-                                if "=" in s:
-                                    k, v = s.split("=", 1)
-                                    if k == "out_time_ms":
-                                        try:
-                                            out_time_sec = int(v) / 1_000_000.0
-                                            last_progress = now
-                                        except ValueError:
-                                            pass  # N/A 등은 무시
-                                    elif k == "out_time":
-                                        t = _parse_tc_to_sec(v)
-                                        if t is not None:
-                                            out_time_sec = t
-                                            last_progress = now
-                                    elif k == "progress" and v == "end":
-                                        finished = True
+                        s = line.decode(errors="ignore").strip()
+                        if "=" in s:
+                            key, val = s.split("=", 1)
 
-                                        log.info(f'upscaling()::Upscale Succeeded!')
-                                        app['upscale_pct'] = 100
-                                        upscaled = 1
+                            if key == "out_time_ms":
+                                try:
+                                    out_time_sec = int(val) / 1_000_000.0
+                                    last_progress = now
+                                except ValueError:
+                                    pass  # N/A 무시
 
-                                        await report_ffmpeg(app, 100)
-                                # 다음 라인 대기 재무장
-                                if t_out is not None:
-                                    t_out = asyncio.create_task(proc_ffmpeg.stdout.readline())
+                            elif key == "out_time":
+                                # 당신 코드에 이미 있는 함수 그대로 사용
+                                t = _parse_tc_to_sec(val)
+                                if t is not None:
+                                    out_time_sec = t
+                                    last_progress = now
 
-                        if t_err in done:
-                            line = t_err.result()
-                            # 필요하면 여기서 에러 로그 처리
-                            if line:
-                                # print("ERR:", line.decode(errors="ignore").rstrip())
-                                # log.info(f'upscaling()::Error:ffmpeg:stdout.readline() error')
-                                t_err = asyncio.create_task(proc_ffmpeg.stderr.readline())
-                            else:
-                                t_err = None  # stderr EOF
+                            elif key == "progress" and val == "end":
+                                pct = 100.0 if full_duration > 0 else 0.0
+                                log.info(f"{pct:5.1f}% | {full_duration:.1f}s / {full_duration:.1f}s | done")
+                                app['upscale_pct'] = 100
+                                await report_ffmpeg(app, 100)
+                                finished = True  # end 받았음
 
-                        # 주기적으로만 퍼센트 출력/보고
-                        if now - last_emit >= emit_interval:
-                            pct = 0.0 if full_duration <= 0 else max(
-                                0.0, min(100.0, 100.0 * out_time_sec / full_duration)
-                            )
-                            # 여기서 원하는 리포팅 함수 호출
-                            # await report_ffmpeg(app, int(pct))
-                            # print(f"{pct:5.1f}% ({out_time_sec:.1f}s / {full_duration:.1f}s)")
-                            log.info(f"upscaling()::ffmpeg:{pct:5.1f}% ({out_time_sec:.1f}s / {full_duration:.1f}s)")
-                            app['upscale_pct'] = pct
-                            await report_ffmpeg(app, int(pct))
-                            last_emit = now
+                        # 10초마다(원래 로직 유지) 진행 보고
+                        if now - last_emit >= 10:
+                            percent = min(100.0, (out_time_sec / full_duration) * 100.0) if full_duration > 0 else 0.0
+                            log.info(f"upscaling()::ffmpeg::{percent:5.1f}%  ({out_time_sec:.1f}s / {full_duration:.1f}s)")
+                            await report_ffmpeg(app, int(percent))
+                            last_emit = time.monotonic()
 
-                        # 프로세스 종료 + 두 스트림 EOF면 루프 종료
-                        if proc_ffmpeg.returncode is not None and not t_out and not t_err:
-                            break
+                    rc = await proc_ffmpeg.wait()
 
-                        # returncode 갱신 시도(논블로킹)
-                        if proc_ffmpeg.returncode is None:
-                            try:
-                                await asyncio.wait_for(proc_ffmpeg.wait(), timeout=0.0)
-                            except asyncio.TimeoutError:
-                                pass
+                    if rc == 0:
+                        # end 신호를 못 받았지만 정상 종료하면 마지막 100% 클램프
+                        if full_duration > 0 and not finished:
+                            app['upscale_pct'] = 100
+                            await report_ffmpeg(app, 100)
+                        log.info('upscaling()::Upscale Succeeded!')
+                        upscaled = 1
+                    else:
+                        log.info(f'upscaling()::returncode : {rc}')
 
-                    # 정상 종료: 마지막 클램프
-                    if full_duration > 0 and not finished:
-                        # await report_ffmpeg(app, 100)
-                        # print("100.0% done")
-                        log.info(f"upscaling()::ffmpeg:100.0% done")
-                        await report_ffmpeg(app, 100)
-                        app['upscale_pct'] = 100
-
-                    ret_ffmpeg = proc_ffmpeg.returncode
-
+                    # 필요 시 rc 반환/처리
                 except asyncio.TimeoutError as e:
-                    # 정리: TERM → wait → KILL
-                    proc_ffmpeg.terminate()
-                    log.info(f'upscaling()::ffmpeg:terminating for hanging')
+                    log.info(f'upscaling()::terminating for hanging proc_ffmpeg ({e})')
+                    # 프로세스 그룹 종료(sh/자식 포함)
+                    with contextlib.suppress(ProcessLookupError):
+                        os.killpg(proc_ffmpeg.pid, signal.SIGTERM)
                     try:
                         await asyncio.wait_for(proc_ffmpeg.wait(), 2)
                     except asyncio.TimeoutError:
-                        log.info(f'upscaling()::ffmpeg:killing for hanging')
-                        proc_ffmpeg.kill()
+                        with contextlib.suppress(ProcessLookupError):
+                            os.killpg(proc_ffmpeg.pid, signal.SIGKILL)
                         await proc_ffmpeg.wait()
                     raise
                 finally:
-                    # 남은 readline 태스크 취소
-                    for t in (t_out, t_err):
-                        if t and not t.done():
-                            t.cancel()
-                    with contextlib.suppress(Exception):
-                        await t
+                    if t_err and not t_err.done():
+                        t_err.cancel()
+                        with contextlib.suppress(Exception):
+                await t_err
+
+
+
+                # # log.info(f'came into here')
+                # # 한 루프에서 stdout/stderr를 번갈아 읽기 위해 readline 작업을 태스크로 유지
+                # t_out = asyncio.create_task(proc_ffmpeg.stdout.readline())
+                # t_err = asyncio.create_task(proc_ffmpeg.stderr.readline())
+
+                # # t_err = asyncio.create_task(\
+                # #             _drain_stderr(proc_ffmpeg))
+
+                # # log.info(f'came into here2')
+
+                # try:
+                #     # log.info(f'came into here3')
+                #     while True:
+                #         # log.info(f'came into here4')
+                #         now = time.monotonic()
+                #         # log.info(f'came into here5')
+                #         # 타임아웃 검사
+                #         if now >= deadline:
+                #             log.info(f'upscaling()::Error:hard timeout')
+                #             # raise asyncio.TimeoutError("hard timeout")
+
+                #         if now - last_progress >= idle_timeout:
+                #             log.info(f'upscaling()::Error:idle timeout(no progress)')
+                #             # raise asyncio.TimeoutError("idle timeout (no progress)")
+
+                #         # log.info(f'came into here6')
+                #         # 둘 중 하나가 준비될 때까지 짧게 대기
+                #         done, _ = await asyncio.wait(
+                #             {t_out, t_err},
+                #             timeout=0.5,
+                #             return_when=asyncio.FIRST_COMPLETED
+                #         )
+                #         # log.info(f'came into here7')
+
+                #         if t_out in done:
+                #             # log.info(f'came into here4')
+
+                #             line = t_out.result()
+                #             if not line:
+                #                 t_out = None  # stdout EOF
+                #             else:
+                #                 s = line.decode(errors="ignore").strip()
+                #                 if "=" in s:
+                #                     k, v = s.split("=", 1)
+                #                     if k == "out_time_ms":
+                #                         try:
+                #                             out_time_sec = int(v) / 1_000_000.0
+                #                             last_progress = now
+                #                         except ValueError:
+                #                             pass  # N/A 등은 무시
+                #                     elif k == "out_time":
+                #                         t = _parse_tc_to_sec(v)
+                #                         if t is not None:
+                #                             out_time_sec = t
+                #                             last_progress = now
+                #                     elif k == "progress" and v == "end":
+                #                         finished = True
+
+                #                         log.info(f'upscaling()::Upscale Succeeded!')
+                #                         app['upscale_pct'] = 100
+                #                         upscaled = 1
+
+                #                         await report_ffmpeg(app, 100)
+                #                 # 다음 라인 대기 재무장
+                #                 if t_out is not None:
+                #                     t_out = asyncio.create_task(proc_ffmpeg.stdout.readline())
+
+                #         if t_err in done:
+                #             line = t_err.result()
+                #             # 필요하면 여기서 에러 로그 처리
+                #             if line:
+                #                 # print("ERR:", line.decode(errors="ignore").rstrip())
+                #                 # log.info(f'upscaling()::Error:ffmpeg:stdout.readline() error')
+                #                 t_err = asyncio.create_task(proc_ffmpeg.stderr.readline())
+                #             else:
+                #                 t_err = None  # stderr EOF
+
+                #         # 주기적으로만 퍼센트 출력/보고
+                #         if now - last_emit >= emit_interval:
+                #             pct = 0.0 if full_duration <= 0 else max(
+                #                 0.0, min(100.0, 100.0 * out_time_sec / full_duration)
+                #             )
+                #             # 여기서 원하는 리포팅 함수 호출
+                #             # await report_ffmpeg(app, int(pct))
+                #             # print(f"{pct:5.1f}% ({out_time_sec:.1f}s / {full_duration:.1f}s)")
+                #             log.info(f"upscaling()::ffmpeg:{pct:5.1f}% ({out_time_sec:.1f}s / {full_duration:.1f}s)")
+                #             app['upscale_pct'] = pct
+                #             await report_ffmpeg(app, int(pct))
+                #             last_emit = now
+
+                #         # 프로세스 종료 + 두 스트림 EOF면 루프 종료
+                #         if proc_ffmpeg.returncode is not None and not t_out and not t_err:
+                #             break
+
+                #         # returncode 갱신 시도(논블로킹)
+                #         if proc_ffmpeg.returncode is None:
+                #             try:
+                #                 await asyncio.wait_for(proc_ffmpeg.wait(), timeout=0.0)
+                #             except asyncio.TimeoutError:
+                #                 pass
+
+                #     # 정상 종료: 마지막 클램프
+                #     if full_duration > 0 and not finished:
+                #         # await report_ffmpeg(app, 100)
+                #         # print("100.0% done")
+                #         log.info(f"upscaling()::ffmpeg:100.0% done")
+                #         await report_ffmpeg(app, 100)
+                #         app['upscale_pct'] = 100
+
+                #     ret_ffmpeg = proc_ffmpeg.returncode
+
+                # except asyncio.TimeoutError as e:
+                #     # 정리: TERM → wait → KILL
+                #     proc_ffmpeg.terminate()
+                #     log.info(f'upscaling()::ffmpeg:terminating for hanging')
+                #     try:
+                #         await asyncio.wait_for(proc_ffmpeg.wait(), 2)
+                #     except asyncio.TimeoutError:
+                #         log.info(f'upscaling()::ffmpeg:killing for hanging')
+                #         proc_ffmpeg.kill()
+                #         await proc_ffmpeg.wait()
+                #     raise
+                # finally:
+                #     # 남은 readline 태스크 취소
+                #     for t in (t_out, t_err):
+                #         if t and not t.done():
+                #             t.cancel()
+                #     with contextlib.suppress(Exception):
+                #         await t
 
 
 
