@@ -1304,7 +1304,7 @@ async def upscaling(app):
 
                 emit_interval = 10 # 10초마다만 로그/리포트
                 idle_timeout = 60  # 진행 라인 안 오면 종료
-                hard_timeout = 1800
+                hard_timeout = 1800 # 인코딩 시간이 30분이 넘어가면 일단 행으로 봅니다
 
                 start = last_emit = last_progress = time.monotonic()
                 deadline = start + hard_timeout
