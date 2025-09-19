@@ -1398,7 +1398,7 @@ async def upscaling(app):
                     if t_err and not t_err.done():
                         t_err.cancel()
                         with contextlib.suppress(Exception):
-                await t_err
+                            await t_err
 
 
 
