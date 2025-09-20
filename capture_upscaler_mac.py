@@ -6,7 +6,7 @@ import time
 #import shutil
 import asyncio
 import aiohttp
-from aiohttp import web
+from aiohttp import ClientSession, web
 import aiofiles
 import json
 import contextlib
@@ -1095,58 +1095,84 @@ async def monitor_upload(app):
                 else:
                     exit('no json file')
 
-                try:
-                    log.info(f'app["login_file"]')
-                    yt = Studio(app['login_file'])
-
-                    # 업로드 직전 다시 로그인하고
-                    await yt.login()
-                    log.info(f'monitor_upload()::yt.login() succeed')
-                    log.info(f'monitor_upload()::yt.uploadVideo starting...')
-                    log.info(f'monitor_upload()::path:{path}, title:{title}')
-
-                    # 업로드를 시작합니다
-                    ret = await yt.uploadVideo(
-                        path,
-                        progress=progress,
-                        description='',
-                        privacy=PRIVACY,
-                        title=title)
-                    # ret = json.loads(ret)
-                    log.info(
-                        f'monitor_upload()::yt.uploadVideo::upload completed.\n ret was {ret}')
-                    # log.info(f'upload completed. ')
-
-                    video_id = ret["videoId"]
-                    log.info(f'-- videoid: {video_id}')
-
-                    # db 상 video_id 를 업데이트해 줍니다
+                # login_json 실패시 자동으로 계속 호출하는 루틴을 추가해봅니다
+                trying = 0
+                while True:
                     try:
-                        async with engine.acquire() as conn:
-                            async with conn.execute(db.tbl_youtube_files.update()
-                                                    .where(db.tbl_youtube_files.c.filename == cur_file)
-                                                    .values(video_id=video_id)):
-                                log.info(f'video_id db updated')
+                        log.info(f'app["login_file"]')
+                        yt = Studio(app['login_file'])
 
-                    except Exception as E:
-                        log.info(f'exception {E} while video_id updating')
+                        # 업로드 직전 다시 로그인하고
+                        log.info(f'monitor_upload()::trying yt login.. [{trying}]')
+                        await yt.login()
+                        log.info(f'monitor_upload()::yt.login() succeed')
+                        log.info(f'monitor_upload()::yt.uploadVideo starting...')
+                        log.info(f'monitor_upload()::path:{path}, title:{title}')
 
-                    # 업로드후 playlist에 따라 옮겨줍니다
-                    await edit_playlist(app, yt, video_id, playlist)
+                        # 업로드를 시작합니다
+                        ret = await yt.uploadVideo(
+                            path,
+                            progress=progress,
+                            description='',
+                            privacy=PRIVACY,
+                            title=title)
+                        # ret = json.loads(ret)
+                        log.info(
+                            f'monitor_upload()::yt.uploadVideo::upload completed.\n ret was {ret}')
+                        # log.info(f'upload completed. ')
 
-                    # error 발생했을 경우
-                    if 'error' in ret.keys():
-                        log.info(f'upload error. ret is {ret}')
+                        video_id = ret["videoId"]
+                        log.info(f'-- videoid: {video_id}')
+
+                        # db 상 video_id 를 업데이트해 줍니다
+                        try:
+                            async with engine.acquire() as conn:
+                                async with conn.execute(db.tbl_youtube_files.update()
+                                                        .where(db.tbl_youtube_files.c.filename == cur_file)
+                                                        .values(video_id=video_id)):
+                                    log.info(f'video_id db updated')
+
+                        except Exception as E:
+                            log.info(f'exception {E} while video_id updating')
+
+                        # 업로드후 playlist에 따라 옮겨줍니다
+                        await edit_playlist(app, yt, video_id, playlist)
+
+                        # error 발생했을 경우
+                        if 'error' in ret.keys():
+                            log.info(f'upload error. ret is {ret}')
+                            ret = 1
+                            trying += 1
+
+                        # 성공했을 경우 while 을 종료합니다
+                        else:
+                            ret = 0
+                            break
+                    except Exception as e:
+                        log.info(f'yt.uploadVideo upload excepted')
+                        log.info(f'Exception: {e}')
+
+                        #login_json 갱신웹을 호출하고 2분 후 다시 시도합니다
+                        log.info(f'request login_json routine... retry uploading after 3 minutes...')
+                        url_login_json = f'192.168.1.204:9993/loginjson'
+                        # 또한 needRefresh를 호출해줍니다
+                        try:
+                            async with aiohttp.ClientSession() as sess:
+                                async with sess.get(
+                                        url_login_json) as resp:
+                                    result_login = await resp.text()
+                                    log.info(f'connect login_json: {result_login}')
+                        except Exception as e:
+                            log.info(f'monitor_upload()::exception {e} connecting login_json')
+
+                        await asyncio.sleep(180)
+                        trying += 1
                         ret = 1
-                    # 성공했을 경우
-                    else:
-                        ret = 0
-                except Exception as e:
-                    log.info(f'yt.uploadVideo upload excepted')
-                    log.info(f'Exception: {e}')
-                    print(f'yt.uploadVideo upload excepted')
-                    print(f'Exception: {e}')
-                    ret = 1
+                        continue
+
+                        # print(f'yt.uploadVideo upload excepted')
+                        # print(f'Exception: {e}')
+
                 # ret = json.loads(ret)
 
                 # SESSION_TOKEN 에 문제가 있을 때의 응답입니다
