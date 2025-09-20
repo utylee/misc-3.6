@@ -1153,6 +1153,12 @@ async def monitor_upload(app):
                     except Exception as e:
                         log.info(f'yt.uploadVideo upload excepted')
                         log.info(f'Exception: {e}')
+                        # [Errno 2]
+                        e_str = str(e)
+                        if e_str[0:9] == '[Errno 2]':
+                            log.info(f'upload exception cause of file problem')
+                            ret = 1
+                            break
 
                         #login_json 갱신웹을 호출하고 2분 후 다시 시도합니다
                         log.info(f'request login_json routine... retry uploading after 3 minutes...')
