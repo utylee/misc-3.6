@@ -1154,7 +1154,7 @@ async def monitor_upload(app):
 
                         #login_json 갱신웹을 호출하고 2분 후 다시 시도합니다
                         log.info(f'request login_json routine... retry uploading after 3 minutes...')
-                        url_login_json = f'192.168.1.204:9993/loginjson'
+                        url_login_json = f'http://192.168.1.204:9993/loginjson'
                         # 또한 needRefresh를 호출해줍니다
                         try:
                             async with aiohttp.ClientSession() as sess:
