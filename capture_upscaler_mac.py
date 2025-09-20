@@ -982,6 +982,7 @@ async def monitor_upload(app):
                             log.info(
                                 # f'{temp_file} is currently copying. continue next')
                                 f'monitor_upload()::{temp_file} is not upscaled. continue.. ')
+                            last_checktime = cur_checktime
                             continue_ = 1
 
                         # upscale_pct == 100
