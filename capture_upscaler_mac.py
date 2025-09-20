@@ -1075,30 +1075,32 @@ async def monitor_upload(app):
                 except:
                     log.info(f'monitor_upload()::exception:db copying column to 2')
 
-                # asyncio.create_task(asyncupload(app, path, title))
-                # await yt.login()
-                # privacy='PUBLIC')
-
-                # 'sessionToken': self.cookies['SESSION_TOKEN'],
-                if os.path.exists(JSON_PATH):
-                    app['login_file'] = json.loads(
-                        open(JSON_PATH, 'r').read())
-                    # print(app['login_file'])
-                    # sessionToken = app['login_file']['SESSION_TOKEN']
-                    # sidCc =  app['login_file']['SIDCC']
-
-                    # yt.cookies['SESSION_TOKEN'] = sessionToken
-                    # yt.cookies['SIDCC'] = sidCc
-
-                    # log.info(f'SESSION_TOKEN is {sessionToken}')
-                    # log.info(f'SIDCC is {sidCc}')
-                else:
-                    exit('no json file')
 
                 # login_json 실패시 자동으로 계속 호출하는 루틴을 추가해봅니다
                 trying = 0
                 while True:
                     try:
+
+                        # asyncio.create_task(asyncupload(app, path, title))
+                        # await yt.login()
+                        # privacy='PUBLIC')
+
+                        # 'sessionToken': self.cookies['SESSION_TOKEN'],
+                        if os.path.exists(JSON_PATH):
+                            app['login_file'] = json.loads(
+                                open(JSON_PATH, 'r').read())
+                            # print(app['login_file'])
+                            # sessionToken = app['login_file']['SESSION_TOKEN']
+                            # sidCc =  app['login_file']['SIDCC']
+
+                            # yt.cookies['SESSION_TOKEN'] = sessionToken
+                            # yt.cookies['SIDCC'] = sidCc
+
+                            # log.info(f'SESSION_TOKEN is {sessionToken}')
+                            # log.info(f'SIDCC is {sidCc}')
+                        else:
+                            exit('no json file')
+
                         log.info(f'app["login_file"]')
                         yt = Studio(app['login_file'])
 
