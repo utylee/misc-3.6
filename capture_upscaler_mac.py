@@ -32,6 +32,10 @@ MY_IP = '192.168.100.107' if subprocess.getoutput("scutil --get ComputerName")[:
 # MY_IP = '192.168.100.108'
 
 TRUNCATE_DAYS = 3
+PATHS = [
+    '/Users/utylee/Downloads/_share_mac2/_Capture/'
+    ]
+
 # PATHS = [
 #     '/Users/utylee/Downloads/_share_mac2/_Capture//mnt/f/Videos/World Of Warcraft/',
 #     '/mnt/f/Videos/Apex Legends/',
@@ -345,12 +349,12 @@ async def _deletefile(file_name, timestamp):
                 log.info(f'_deletefile::DB selected::{start_path}, {dest_path}')
 
         # 또한 transfer_que와 upscale_que 에서의 아이템도 삭제해줍니다
-        que = app['transfer_que']['que']
-        for q in que:
-            que.remove(q) if q[0] == file_name else 0
+        # que = app['transfer_que']['que']
+        # for q in que:
+        #     que.remove(q) if q[0] == file_name else 0
         que1 = app['upscale_que']['que']
         for q in que1:
-            que.remove(q) if q[0] == file_name else 0
+            que1.remove(q) if q[0] == file_name else 0
 
     except Exception as e:
         log.info(f'_deletefile()::exception {e}')
@@ -362,7 +366,7 @@ async def _deletefile(file_name, timestamp):
     # dest_path = os.path.join(dest_path, js['filename'])
 
     log.info(f'_deletefile::fetched::start:{start_path}')
-    log.info(f'_deletefile::fetched::dest:{dest_path}')
+    # log.info(f'_deletefile::fetched::dest:{dest_path}')
 
     try:
         # db에 패스가 없기에 모든 폴더를 적용해지워봅니다
@@ -394,15 +398,15 @@ async def _deletefile(file_name, timestamp):
     except Exception as e:
         log.info(f'exception while deleting start {file_name}, {e}')
 
-    try:
-        if (dest_path == None):
-            dest_path = app['target']
-        if (os.path.exists(os.path.join(dest_path, file_name))):
-            os.remove(os.path.join(dest_path, file_name))
+    # try:
+    #     if (dest_path == None):
+    #         dest_path = app['target']
+    #     if (os.path.exists(os.path.join(dest_path, file_name))):
+    #         os.remove(os.path.join(dest_path, file_name))
 
-        log.info(f'deleted dest paths {file_name}')
-    except Exception as e:
-        log.info(f'exception while deleting dest {file_name}, {e}')
+    #     log.info(f'deleted dest paths {file_name}')
+    # except Exception as e:
+    #     log.info(f'exception while deleting dest {file_name}, {e}')
 
     # 삭제됐으면 db의 local과 remote도 업데이트해줍니다
     # if (start_exists == 0
@@ -420,18 +424,18 @@ async def _deletefile(file_name, timestamp):
         except Exception as e:
             log.info(f'_deletefile()::{e}')
 
-    if (os.path.exists(os.path.join(dest_path, file_name)) == False):
-        # dest_removed = 1
-        dest_exists = 0
-        log.info('dest no exists')
-        try:
-            async with engine.acquire() as conn:
-                await conn.execute(db.tbl_youtube_files.update()
-                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
-                                                     db.tbl_youtube_files.c.timestamp == timestamp))
-                                   .values(remote=0))
-        except Exception as e:
-            log.info(f'_deletefile()::{e}')
+    # if (os.path.exists(os.path.join(dest_path, file_name)) == False):
+    #     # dest_removed = 1
+    #     dest_exists = 0
+    #     log.info('dest no exists')
+    #     try:
+    #         async with engine.acquire() as conn:
+    #             await conn.execute(db.tbl_youtube_files.update()
+    #                                .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
+    #                                                  db.tbl_youtube_files.c.timestamp == timestamp))
+    #                                .values(remote=0))
+    #     except Exception as e:
+    #         log.info(f'_deletefile()::{e}')
 
     # 둘다 없을 경우에만 db의 해당파일 튜플을 삭제합니다
     # if(start_removed == 1 and dest_removed == 1):
@@ -626,7 +630,7 @@ async def truncate(app):
                     # 중단된 전송을 초기 큐에 등록하는 프로세스입니다
                     # queueing 이 1인 것들이 예약된 상태로 전송완료가 되지 않은 것들입니다
                     if r[10] == 1:              # queueing
-                        log.info(f'truncate()::중단됐던 전송: {r}')
+                        log.info(f'truncate()::중단됐던 업스케일: {r}')
 
                         #  파일,경로,업스케일완료여부 등을 업스케일큐에 넣습니다,
                         # 물론 파일이 있을 경우에만 넣습니다
@@ -662,6 +666,37 @@ async def truncate(app):
                         # 파일이 없을 경우는 db및 파일 삭제명령을 내립니다
                         else:
                             await _deletefile(r[0], r[12])
+
+                        # 추가 후의 upscaling que 상태
+                        log.info(
+                            f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
+
+
+                    # 날짜 보고 파일들 다 지웁니다
+                    else:              # not queueing
+                        # log.info(f'truncate()::중단됐던 전송: {r}')
+
+                        pathfile = r[8] + r[0]     # start_path + filename
+                        log.info(f'truncate()::path/file is : {pathfile}')
+
+                        if (os.path.isfile(pathfile)):
+                            t = datetime.datetime.strptime(r[12], "%y%m%d%H%M%S")
+                            diff = now - t
+                            log.info(f'truncate()::경과일:{diff.days}, {r[0]}')
+                            log.info(f'truncate()::경과일:{diff.days}')
+
+                            # 일주일 기간 이상은 삭제합니다
+                            # 3일 기간 이상은 삭제합니다
+                            # if diff.days > 7:
+                            if diff.days > TRUNCATE_DAYS:
+                                await conn.execute(db.tbl_youtube_files.delete()
+                                                   .where(db.tbl_youtube_files.c.filename == r[0]))
+                                await _deletefile(r[0], r[12])
+                                # candidate.append(r[0])
+                            # log.info(f'{r[8]}')
+                        # 파일이 없을 경우는 db및 파일 삭제명령을 내립니다
+                        # else:
+                        #     await _deletefile(r[0], r[12])
 
                         # 추가 후의 upscaling que 상태
                         log.info(
