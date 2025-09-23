@@ -633,19 +633,20 @@ async def truncate(app):
                     pathfile = r[8] + r[0]     # start_path + filename
                     log.info(f'truncate()::path/file is : {pathfile}')
 
-                    if (os.path.isfile(pathfile)):
-                        t = datetime.datetime.strptime(r[12], "%y%m%d%H%M%S")
-                        diff = now - t
-                        log.info(f'truncate()::경과일:{diff.days}, {r[0]}')
-                        log.info(f'truncate()::경과일:{diff.days}')
+                    # if (os.path.isfile(pathfile)):
 
-                        # 일주일 기간 이상은 삭제합니다
-                        # 3일 기간 이상은 삭제합니다
-                        # if diff.days > 7:
-                        if diff.days > TRUNCATE_DAYS:
-                            await conn.execute(db.tbl_youtube_files.delete()
-                                               .where(db.tbl_youtube_files.c.filename == r[0]))
-                            await _deletefile(r[0], r[12])
+                    t = datetime.datetime.strptime(r[12], "%y%m%d%H%M%S")
+                    diff = now - t
+                    log.info(f'truncate()::경과일:{diff.days}, {r[0]}')
+                    log.info(f'truncate()::경과일:{diff.days}')
+
+                    # 일주일 기간 이상은 삭제합니다
+                    # 3일 기간 이상은 삭제합니다
+                    # if diff.days > 7:
+                    if diff.days > TRUNCATE_DAYS:
+                        await conn.execute(db.tbl_youtube_files.delete()
+                                           .where(db.tbl_youtube_files.c.filename == r[0]))
+                        await _deletefile(r[0], r[12])
                             # candidate.append(r[0])
                         # log.info(f'{r[8]}')
                     # 파일이 없을 경우는 db및 파일 삭제명령을 내립니다
@@ -653,8 +654,8 @@ async def truncate(app):
                     #     await _deletefile(r[0], r[12])
 
                     # 추가 후의 upscaling que 상태
-                    log.info(
-                        f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
+                    # log.info(
+                    #     f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
 
 
 
