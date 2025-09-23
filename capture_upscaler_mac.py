@@ -32,9 +32,9 @@ MY_IP = '192.168.100.107' if subprocess.getoutput("scutil --get ComputerName")[:
 # MY_IP = '192.168.100.108'
 
 TRUNCATE_DAYS = 3
-# PATHS = [
-#     '/Users/utylee/Downloads/_share_mac2/_Capture/'
-#     ]
+PATHS = [
+    '/Users/utylee/Downloads/_share_mac2/_Capture/'
+    ]
 
 # PATHS = [
 #     '/Users/utylee/Downloads/_share_mac2/_Capture//mnt/f/Videos/World Of Warcraft/',
@@ -352,9 +352,9 @@ async def _deletefile(file_name, timestamp):
         # que = app['transfer_que']['que']
         # for q in que:
         #     que.remove(q) if q[0] == file_name else 0
-        que1 = app['upscale_que']['que']
-        for q in que1:
-            que1.remove(q) if q[0] == file_name else 0
+        # que1 = app['upscale_que']['que']
+        # for q in que1:
+        #     que1.remove(q) if q[0] == file_name else 0
 
     except Exception as e:
         log.info(f'_deletefile()::exception {e}')
@@ -627,80 +627,111 @@ async def truncate(app):
         async with engine.acquire() as conn:
             async for r in conn.execute(db.tbl_youtube_files.select()):
                 try:
-                    # 중단된 전송을 초기 큐에 등록하는 프로세스입니다
-                    # queueing 이 1인 것들이 예약된 상태로 전송완료가 되지 않은 것들입니다
-                    if r[10] == 1:              # queueing
-                        log.info(f'truncate()::중단됐던 업스케일: {r}')
-
-                        #  파일,경로,업스케일완료여부 등을 업스케일큐에 넣습니다,
-                        # 물론 파일이 있을 경우에만 넣습니다
-                        pathfile = r[8] + r[0]     # start_path + filename
-                        log.info(f'truncate()::path/file is : {pathfile}')
-
-                        if (os.path.isfile(pathfile)):
-                            app['upscale_que']['que'].append((r[0], r[8], r[13]))
-                            q = app['upscale_que']['que'][-1]
-                            log.info(
-                                f'truncate()::upscale_queueing에 추가된 데이터: {q}')
-
-                            # #  파일,경로 등을 app['transfering'] 큐에 넣습니다,
-                            # app['transfer_que']['que'].append(
-                            #     (r[0], r[8], r[9]))
-                            # q = app['transfer_que']['que'][-1]
-                            # log.info(f'queueing 1 추가됨: {q}')
-
-                            # 경과일 계산부
-                            t = datetime.datetime.strptime(r[12], "%y%m%d%H%M%S")
-                            diff = now - t
-                            log.info(f'truncate()::경과일:{diff.days}, {r[0]}')
-                            log.info(f'truncate()::경과일:{diff.days}')
-
-                            # 일주일 기간 이상은 삭제합니다
-                            # 3일 기간 이상은 삭제합니다
-                            # if diff.days > 7:
-                            if diff.days > TRUNCATE_DAYS:
-                                await conn.execute(db.tbl_youtube_files.delete()
-                                                   .where(db.tbl_youtube_files.c.filename == r[0]))
-                                # candidate.append(r[0])
-                            # log.info(f'{r[8]}')
-                        # 파일이 없을 경우는 db및 파일 삭제명령을 내립니다
-                        else:
-                            await _deletefile(r[0], r[12])
-
-                        # 추가 후의 upscaling que 상태
-                        log.info(
-                            f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
-
-
                     # 날짜 보고 파일들 다 지웁니다
-                    else:              # not queueing
-                        # log.info(f'truncate()::중단됐던 전송: {r}')
+                    # log.info(f'truncate()::중단됐던 전송: {r}')
 
-                        pathfile = r[8] + r[0]     # start_path + filename
-                        log.info(f'truncate()::path/file is : {pathfile}')
+                    pathfile = r[8] + r[0]     # start_path + filename
+                    log.info(f'truncate()::path/file is : {pathfile}')
 
-                        if (os.path.isfile(pathfile)):
-                            t = datetime.datetime.strptime(r[12], "%y%m%d%H%M%S")
-                            diff = now - t
-                            log.info(f'truncate()::경과일:{diff.days}, {r[0]}')
-                            log.info(f'truncate()::경과일:{diff.days}')
+                    if (os.path.isfile(pathfile)):
+                        t = datetime.datetime.strptime(r[12], "%y%m%d%H%M%S")
+                        diff = now - t
+                        log.info(f'truncate()::경과일:{diff.days}, {r[0]}')
+                        log.info(f'truncate()::경과일:{diff.days}')
 
-                            # 일주일 기간 이상은 삭제합니다
-                            # 3일 기간 이상은 삭제합니다
-                            # if diff.days > 7:
-                            if diff.days > TRUNCATE_DAYS:
-                                await conn.execute(db.tbl_youtube_files.delete()
-                                                   .where(db.tbl_youtube_files.c.filename == r[0]))
-                                await _deletefile(r[0], r[12])
-                                # candidate.append(r[0])
-                            # log.info(f'{r[8]}')
-                        # 파일이 없을 경우는 db및 파일 삭제명령을 내립니다
-                        # else:
-                        #     await _deletefile(r[0], r[12])
+                        # 일주일 기간 이상은 삭제합니다
+                        # 3일 기간 이상은 삭제합니다
+                        # if diff.days > 7:
+                        if diff.days > TRUNCATE_DAYS:
+                            await conn.execute(db.tbl_youtube_files.delete()
+                                               .where(db.tbl_youtube_files.c.filename == r[0]))
+                            await _deletefile(r[0], r[12])
+                            # candidate.append(r[0])
+                        # log.info(f'{r[8]}')
+                    # 파일이 없을 경우는 db및 파일 삭제명령을 내립니다
+                    # else:
+                    #     await _deletefile(r[0], r[12])
 
-                        # 추가 후의 upscaling que 상태
-                        log.info(
-                            f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
+                    # 추가 후의 upscaling que 상태
+                    log.info(
+                        f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
+
+
+
+                    # # 중단된 전송을 초기 큐에 등록하는 프로세스입니다
+                    # # queueing 이 1인 것들이 예약된 상태로 전송완료가 되지 않은 것들입니다
+                    # if r[10] == 1:              # queueing
+                    #     log.info(f'truncate()::중단됐던 업스케일: {r}')
+
+                    #     #  파일,경로,업스케일완료여부 등을 업스케일큐에 넣습니다,
+                    #     # 물론 파일이 있을 경우에만 넣습니다
+                    #     pathfile = r[8] + r[0]     # start_path + filename
+                    #     log.info(f'truncate()::path/file is : {pathfile}')
+
+                    #     if (os.path.isfile(pathfile)):
+                    #         app['upscale_que']['que'].append((r[0], r[8], r[13]))
+                    #         q = app['upscale_que']['que'][-1]
+                    #         log.info(
+                    #             f'truncate()::upscale_queueing에 추가된 데이터: {q}')
+
+                    #         # #  파일,경로 등을 app['transfering'] 큐에 넣습니다,
+                    #         # app['transfer_que']['que'].append(
+                    #         #     (r[0], r[8], r[9]))
+                    #         # q = app['transfer_que']['que'][-1]
+                    #         # log.info(f'queueing 1 추가됨: {q}')
+
+                    #         # 경과일 계산부
+                    #         t = datetime.datetime.strptime(r[12], "%y%m%d%H%M%S")
+                    #         diff = now - t
+                    #         log.info(f'truncate()::경과일:{diff.days}, {r[0]}')
+                    #         log.info(f'truncate()::경과일:{diff.days}')
+
+                    #         # 일주일 기간 이상은 삭제합니다
+                    #         # 3일 기간 이상은 삭제합니다
+                    #         # if diff.days > 7:
+                    #         if diff.days > TRUNCATE_DAYS:
+                    #             await conn.execute(db.tbl_youtube_files.delete()
+                    #                                .where(db.tbl_youtube_files.c.filename == r[0]))
+                    #             # candidate.append(r[0])
+                    #         # log.info(f'{r[8]}')
+                    #     # 파일이 없을 경우는 db및 파일 삭제명령을 내립니다
+                    #     else:
+                    #         await _deletefile(r[0], r[12])
+
+                    #     # 추가 후의 upscaling que 상태
+                    #     log.info(
+                    #         f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
+
+
+                    # # 날짜 보고 파일들 다 지웁니다
+                    # else:              # not queueing
+                    #     # log.info(f'truncate()::중단됐던 전송: {r}')
+
+                    #     pathfile = r[8] + r[0]     # start_path + filename
+                    #     log.info(f'truncate()::path/file is : {pathfile}')
+
+                    #     if (os.path.isfile(pathfile)):
+                    #         t = datetime.datetime.strptime(r[12], "%y%m%d%H%M%S")
+                    #         diff = now - t
+                    #         log.info(f'truncate()::경과일:{diff.days}, {r[0]}')
+                    #         log.info(f'truncate()::경과일:{diff.days}')
+
+                    #         # 일주일 기간 이상은 삭제합니다
+                    #         # 3일 기간 이상은 삭제합니다
+                    #         # if diff.days > 7:
+                    #         if diff.days > TRUNCATE_DAYS:
+                    #             await conn.execute(db.tbl_youtube_files.delete()
+                    #                                .where(db.tbl_youtube_files.c.filename == r[0]))
+                    #             await _deletefile(r[0], r[12])
+                    #             # candidate.append(r[0])
+                    #         # log.info(f'{r[8]}')
+                    #     # 파일이 없을 경우는 db및 파일 삭제명령을 내립니다
+                    #     # else:
+                    #     #     await _deletefile(r[0], r[12])
+
+                    #     # 추가 후의 upscaling que 상태
+                    #     log.info(
+                    #         f'truncate()::upscale_que: {app["upscale_que"]["que"]}')
                 except:
                     log.info(f'truncate()::exception')
 
