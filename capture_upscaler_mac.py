@@ -737,7 +737,8 @@ async def truncate(app):
 
         # await asyncio.sleep(3600*24)  # 24시간 즉 하루에 한번 큐를 검색해줍니다
         # await asyncio.sleep(3600)  # 24시간 즉 하루에 한번 큐를 검색해줍니다
-        await asyncio.sleep(60)  # 24시간 즉 하루에 한번 큐를 검색해줍니다
+        # await asyncio.sleep(60)  # 24시간 즉 하루에 한번 큐를 검색해줍니다
+        await asyncio.sleep(3600*6)  # 6시간 한번 큐를 검색해줍니다
 
 
 async def create_bg_tasks(app):
