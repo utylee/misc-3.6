@@ -32,9 +32,9 @@ MY_IP = '192.168.100.107' if subprocess.getoutput("scutil --get ComputerName")[:
 # MY_IP = '192.168.100.108'
 
 TRUNCATE_DAYS = 3
-PATHS = [
-    '/Users/utylee/Downloads/_share_mac2/_Capture/'
-    ]
+# PATHS = [
+#     '/Users/utylee/Downloads/_share_mac2/_Capture/'
+#     ]
 
 # PATHS = [
 #     '/Users/utylee/Downloads/_share_mac2/_Capture//mnt/f/Videos/World Of Warcraft/',
@@ -728,7 +728,7 @@ async def create_bg_tasks(app):
     app['Studio'] = Studio(app['login_file'])
 
     # 앞에 await 를 안붙였어도 되긴 했던 것 같습니다
-    asyncio.create_task(truncate(app))          # 생성된지 일주일된 자료는 db상 삭제합니다
+    # asyncio.create_task(truncate(app))          # 생성된지 일주일된 자료는 db상 삭제합니다
     # asyncio.create_task(watching(app))
     # asyncio.create_task(transfering(app))
 
