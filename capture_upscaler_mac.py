@@ -962,7 +962,7 @@ async def monitor_upload(app):
                         # 복사가 완료된 경우 현재 진행중일 경우 hang을 
                         #감시합니다. 제한시간 1분
                         # elif (r[15] != 100 or r[15] == -1):       
-                        elif (r[15] != 100 or r[15] != -1):       
+                        elif (r[15] != 100 and r[15] != -1):       
                             log.info(f'monitor_upload()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
                             if last_upscale_pct == r[15]:
                             # if last_upscale_pct == up_pct:
