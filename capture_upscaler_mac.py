@@ -1402,7 +1402,7 @@ async def upscaling(app):
 
                 UPSCALED_FULL_FFMPEG = f'/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
                   -vf "scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08" \
-                  -c:v hevc_videotoolbox -b:v 42M -maxrate 42M -bufsize 42M -g 120 \
+                  -c:v hevc_videotoolbox -b:v 60M -maxrate 60M -bufsize 60M -g 120 \
                   -pix_fmt yuv420p -tag:v hvc1 -movflags +faststart \
                   -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
                   -progress pipe:1 \
