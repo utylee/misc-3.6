@@ -439,20 +439,22 @@ async def _deletefile(file_name, timestamp):
 
     # 둘다 없을 경우에만 db의 해당파일 튜플을 삭제합니다
     # if(start_removed == 1 and dest_removed == 1):
-    if (start_exists == 0 and dest_exists == 0):
-        try:
-            async with engine.acquire() as conn:
-                await conn.execute(db.tbl_youtube_files.delete()
-                                   .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
-                                          db.tbl_youtube_files.c.timestamp == timestamp)))
+    # if (start_exists == 0 and dest_exists == 0):
 
-            # 클라이언트에 needRefresh 를 보냅니다
-            async with aiohttp.ClientSession() as sess:
-                async with sess.get(URL_UPLOADER_WS_REFRESH):
-                    log.info('call needRefresh')
+    # 그냥 다 지웁니다 날짜 지난 것들은
+    try:
+        async with engine.acquire() as conn:
+            await conn.execute(db.tbl_youtube_files.delete()
+                               .where(db.sa.and_(db.tbl_youtube_files.c.filename == file_name,
+                                      db.tbl_youtube_files.c.timestamp == timestamp)))
 
-        except Exception as e:
-            log.info(f'_deletefile()::{e}')
+        # 클라이언트에 needRefresh 를 보냅니다
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(URL_UPLOADER_WS_REFRESH):
+                log.info('call needRefresh')
+
+    except Exception as e:
+        log.info(f'_deletefile()::{e}')
 
 
 async def deletefile(request):
