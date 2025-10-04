@@ -101,7 +101,7 @@ UPSCALED_TEMP_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled
 
 UPSCALED_TEMP_INTERM_FILE_NAME = '/Users/utylee/Downloads/_share_mac/_Capture/_Upscaled/MainTimeline.mov' if MY_IP == '192.168.100.107' else '/Users/utylee/Downloads/_share_mac2/_Capture/_Upscaled/MainTimeline.mov' 
 
-UPSCALED_PATH2_FFMPEG_COMMAND = f'/opt/homebrew/bin/ffmpeg -y -i {UPSCALED_TEMP_INTERM_FILE_NAME} -c:v hevc_videotoolbox -b:v 40M -pix_fmt yuv420p -c:a aac -b:a 192k -progress pipe:1 {UPSCALED_TEMP_FILE_NAME}'
+# UPSCALED_PATH2_FFMPEG_COMMAND = f'/opt/homebrew/bin/ffmpeg -y -i {UPSCALED_TEMP_INTERM_FILE_NAME} -c:v hevc_videotoolbox -b:v 40M -pix_fmt yuv420p -c:a aac -b:a 192k -progress pipe:1 {UPSCALED_TEMP_FILE_NAME}'
 
 # UPSCALED_FULL_FFMPEG = f'ffmpeg -y -nostdin -i "in.mov" \
 #   -vf "scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08" \
