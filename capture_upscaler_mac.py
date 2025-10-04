@@ -1086,6 +1086,12 @@ async def monitor_upload(app):
                             f'monitor_upload()::after upscale_que append is {app["upscale_que"]["que"]}')
 
                         continue_ = 1
+
+                    # upscaled = 1  로서 업스케일 완료인 경우 통과합니다
+                    # r[13] == 2:
+                    else:
+                        continue_ = 0
+
             if (continue_ == 1):
                 continue
 
