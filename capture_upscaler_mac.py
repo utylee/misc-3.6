@@ -930,7 +930,7 @@ async def monitor_upload(app):
 
             log.info(f'monitor_upload()::que after {que}')
 
-            continue_ = 0
+            continue_ = 1
             async with engine.acquire() as conn:
                 async for r in conn.execute(db.tbl_youtube_files.select()
                                             .where(db.tbl_youtube_files.c.filename == temp_file)):
@@ -948,9 +948,10 @@ async def monitor_upload(app):
                     if r[13] == 0:
                         cur_checktime = time.monotonic()
                         # up_pct = r[15]
-                        log.info(f'monitor_upload()::r[15], r[16] = {r[15]}, {r[16]}')
+                        log.info(f'monitor_upload()::if r[13] == 0')
+                        # log.info(f'monitor_upload()::r[15], r[16] = {r[15]}, {r[16]}')
                         # log.info(f'upscaling()::r[15], r[16] = {up_pct}, {r[16]}')
-                        log.info(f'monitor_upload()::last_checktime, cur_checktime = {last_checktime}, {cur_checktime}')
+                        # log.info(f'monitor_upload()::last_checktime, cur_checktime = {last_checktime}, {cur_checktime}')
 
                         #upscale_pct 가 100이 아닐경우
                         # if up_pct != 100 and up_pct != -1:
@@ -965,7 +966,8 @@ async def monitor_upload(app):
                         #감시합니다. 제한시간 1분
                         # elif (r[15] != 100 or r[15] == -1):       
                         elif (r[15] != 100 and r[15] != -1):       
-                            log.info(f'monitor_upload()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
+                            log.info(f'monitor_upload()::elif (r[15] != 100, -1)')
+                            # log.info(f'monitor_upload()::last_upscale_pct, r[15] = {last_upscale_pct}, {r[15]}')
                             if last_upscale_pct == r[15]:
                             # if last_upscale_pct == up_pct:
                                 log.info(f'monitor_upload():: cur_pct == last_upscale_pct')
