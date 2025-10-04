@@ -1061,6 +1061,7 @@ async def monitor_upload(app):
 
                         # upscale_pct == 100
                         else:
+                            log.info(f'monitor_upload()::else(upscale_pct==100)::continue = 0')
                             continue_ = 0
 
                         # last_upscale_pct = r[15]
