@@ -1412,6 +1412,7 @@ async def upscaling(app):
                 # full_duration = await ffprobe_duration_seconds( UPSCALED_TEMP_INTERM_FILE_NAME )
                 log.info(f'upscaling()::full_duration is {full_duration}')
 
+                ''' 
                 UPSCALED_FULL_FFMPEG = f'/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
                   -vf "scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08" \
                   -c:v hevc_videotoolbox -b:v 60M -maxrate 60M -bufsize 60M -g 120 \
@@ -1419,9 +1420,27 @@ async def upscaling(app):
                   -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
                   -progress pipe:1 \
                   -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}"'
+                ''' 
+
+                UPSCALED_FULL_FFMPEG = f'/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
+                    -vf "tmix=frames=2:weights='1 1',fps=60000/1001,\
+scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,setsar=1" \
+  -c:v hevc_videotoolbox -profile:v main -level 5.2 -tag:v hvc1 -pix_fmt yuv420p \
+  -b:v 40M -maxrate 40M -bufsize 80M -g 120 \
+  -c:a aac -b:a 160k -movflags +faststart out_1440p60_smooth.mp4'
+
+
+                BITRATE = "60M"  # 고속·격한 장면 많으면 "45M" 정도 추천
+                UPSCALED_SMOOTH_60 = f"""/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
+                    -vf "tmix=frames=2:weights='1 1',fps=60000/1001,scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,setsar=1" \
+                    -c:v hevc_videotoolbox -profile:v main -level 5.2 -b:v {BITRATE} -maxrate {BITRATE} -bufsize {int(BITRATE[:-1])*2}M -g 120 \
+                    -pix_fmt yuv420p -tag:v hvc1 -movflags +faststart \
+                    -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
+                    -progress pipe:1 -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}" """
 
                 proc_ffmpeg = await asyncio.create_subprocess_shell(
-                        UPSCALED_FULL_FFMPEG,
+                        # UPSCALED_FULL_FFMPEG,
+                        UPSCALED_SMOOTH_60,
                         stdout=asyncio.subprocess.PIPE,     # 진행정보를 여기로 받음
                         stderr=asyncio.subprocess.PIPE      # 에러만 여기로(원하면 DEVNULL)
                         )
