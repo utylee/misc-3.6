@@ -1422,12 +1422,14 @@ async def upscaling(app):
                   -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}"'
                 ''' 
 
+                ''' 
                 UPSCALED_FULL_FFMPEG = f'/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
                     -vf "tmix=frames=2:weights='1 1',fps=60000/1001,\
 scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,setsar=1" \
   -c:v hevc_videotoolbox -profile:v main -level 5.2 -tag:v hvc1 -pix_fmt yuv420p \
   -b:v 40M -maxrate 40M -bufsize 80M -g 120 \
   -c:a aac -b:a 160k -movflags +faststart out_1440p60_smooth.mp4'
+                '''
 
 
                 BITRATE = "60M"  # 고속·격한 장면 많으면 "45M" 정도 추천
