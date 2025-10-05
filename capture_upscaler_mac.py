@@ -1448,19 +1448,31 @@ scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,setsar=1" \
                     -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
                     -progress pipe:1 -c:a aac -b:a 192k -movflags +faststart "{UPSCALED_TEMP_FILE_NAME}" """
 
-                UPSCALED_SUPERSMOOTH_X265_C = f"""/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
-                    -vf "tmix=frames=2:weights='1 1',fps=60000/1001,\
-                    scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
-                    -c:v libx265 -preset medium -crf 19 -pix_fmt yuv420p -tag:v hvc1 \
-                    -x265-params "keyint=120:min-keyint=120:scenecut=0:aq-mode=2:qcomp=0.65:psy-rd=1.5:psy-rdoq=0.8" \
-                    -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
-                    -progress pipe:1 -c:a aac -b:a 192k -movflags +faststart "{UPSCALED_TEMP_FILE_NAME}" """
+                # UPSCALED_SUPERSMOOTH_X265_C = f"""/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
+                #     -vf "tmix=frames=2:weights='1 1',fps=60000/1001,\
+                #     scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
+                #     -c:v libx265 -preset medium -crf 19 -pix_fmt yuv420p -tag:v hvc1 \
+                #     -x265-params "keyint=120:min-keyint=120:scenecut=0:aq-mode=2:qcomp=0.65:psy-rd=1.5:psy-rdoq=0.8" \
+                #     -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
+                #     -progress pipe:1 -c:a aac -b:a 192k -movflags +faststart "{UPSCALED_TEMP_FILE_NAME}" """
 
+
+                BITRATE = "60M"  # 필요시 50~70M에서 조절
+                UPSCALED_SMOOTH_60_8_2 = f"""/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
+                    -vf "minterpolate=fps=60000/1001:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:scd=fdiff,\
+                    tmix=frames=2:weights='8 2',\
+                    scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
+                    -c:v hevc_videotoolbox -profile:v main -level 5.2 -b:v {BITRATE} -maxrate {BITRATE} -bufsize 120M -g 120 \
+                    -pix_fmt yuv420p -tag:v hvc1 -movflags +faststart \
+                    -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
+                    -progress pipe:1 -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}" """
+                    
                 proc_ffmpeg = await asyncio.create_subprocess_shell(
                         # UPSCALED_FULL_FFMPEG,
                         # UPSCALED_SMOOTH_60,
                         # UPSCALED_SUPERSMOOTH_X265,
-                        UPSCALED_SUPERSMOOTH_X265_C,
+                        # UPSCALED_SUPERSMOOTH_X265_C,
+                        UPSCALED_SMOOTH_60_8_2,
                         stdout=asyncio.subprocess.PIPE,     # 진행정보를 여기로 받음
                         stderr=asyncio.subprocess.PIPE      # 에러만 여기로(원하면 DEVNULL)
                         )
