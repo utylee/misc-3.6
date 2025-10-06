@@ -1495,12 +1495,20 @@ scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
                     -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
                     -progress pipe:1 -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}" """
 
+                # UPSCALED_FULL_FFMPEG_REWORK = f"""/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
+                #     -vf "fps=60,scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
+                #     -c:v hevc_videotoolbox -b:v 60M -maxrate 60M -minrate 60M -bufsize 120M -g 120 \
+                #     -pix_fmt yuv420p -tag:v hvc1 -movflags +faststart -video_track_timescale 60000 \
+                #     -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
+                #     -progress pipe:1 -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}" """
+
                 UPSCALED_FULL_FFMPEG_REWORK = f"""/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
+
                     -vf "fps=60,scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
-                    -c:v hevc_videotoolbox -b:v 60M -maxrate 60M -minrate 60M -bufsize 120M -g 120 \
+                    -c:v hevc_videotoolbox -profile:v main -level 5.2 \
+                    -b:v 60M -maxrate 60M -minrate 60M -bufsize 120M -g 120 \
                     -pix_fmt yuv420p -tag:v hvc1 -movflags +faststart -video_track_timescale 60000 \
-                    -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
-                    -progress pipe:1 -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}" """
+                    -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}" """
                                         
                 proc_ffmpeg = await asyncio.create_subprocess_shell(
                         # UPSCALED_FULL_FFMPEG,
