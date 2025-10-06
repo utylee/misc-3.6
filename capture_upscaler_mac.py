@@ -1502,7 +1502,7 @@ scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
                 #     -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
                 #     -progress pipe:1 -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}" """
 
-                UPSCALED_FULL_FFMPEG_REWORK = f"""/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
+                UPSCALED_FULL_FFMPEG_ANOTHER = f"""/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
 
                     -vf "fps=60,scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
                     -c:v hevc_videotoolbox -profile:v main -level 5.2 \
@@ -1519,7 +1519,8 @@ scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
                         # UPSCALED_FULL_FFMPEG_DEFAULT,
                         # UPSCALED_MICRO_95_5_X265,
                         # UPSCALED_MICRO_95_5_HW,
-                        UPSCALED_FULL_FFMPEG_REWORK,
+                        # UPSCALED_FULL_FFMPEG_REWORK,
+                        UPSCALED_FULL_FFMPEG_ANOTHER,
                         stdout=asyncio.subprocess.PIPE,     # 진행정보를 여기로 받음
                         stderr=asyncio.subprocess.PIPE      # 에러만 여기로(원하면 DEVNULL)
                         )
