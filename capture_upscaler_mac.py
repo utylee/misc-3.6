@@ -1503,7 +1503,6 @@ scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
                 #     -progress pipe:1 -c:a aac -b:a 192k "{UPSCALED_TEMP_FILE_NAME}" """
 
                 UPSCALED_FULL_FFMPEG_ANOTHER = f"""/opt/homebrew/bin/ffmpeg -y -nostdin -i "{pathfile_mac}" \
-
                     -vf "fps=60,scale=2560:1440:flags=spline+accurate_rnd+full_chroma_int,cas=0.08,setsar=1" \
                     -c:v hevc_videotoolbox -profile:v main -level 5.2 \
                     -b:v 60M -maxrate 60M -minrate 60M -bufsize 120M -g 120 \
