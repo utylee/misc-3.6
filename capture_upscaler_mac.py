@@ -394,7 +394,7 @@ async def _deletefile(file_name, timestamp):
         #     if(os.path.exists(os.path.join(start_path, js['filename']))):
         #         os.remove(os.path.join(start_path, js['filename']))
 
-        log.info(f'deleted start paths {file_name}')
+        log.info(f'deleted {start_path}/{file_name}')
     except Exception as e:
         log.info(f'exception while deleting start {file_name}, {e}')
 
