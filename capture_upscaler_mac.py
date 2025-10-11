@@ -442,6 +442,27 @@ async def _deletefile(file_name, timestamp):
     # if (start_exists == 0 and dest_exists == 0):
 
     # 그냥 다 지웁니다 날짜 지난 것들은
+
+    # # 로컬파일도 날짜보고 다 지웁니다
+    # else:
+    #     if os.path.exists(start_path) == True:
+    #         now = datetime.datetime.now()
+
+    #         for f in os.listdir(start_path):
+    #             t = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(start_path ,f)))
+                
+    #             diff = now - t
+    #             # 3일 기간 이상은 삭제합니다
+    #             # if diff.days > 7:
+    #             if diff.days > TRUNCATE_DAYS:
+    #                 if (os.path.exists(os.path.join(start_path, file_name))):
+    #                     os.remove(os.path.join(start_path, file_name))
+    #                 # else:
+    #                 #     if(os.path.exists(os.path.join(start_path, js['filename']))):
+    #                 #         os.remove(os.path.join(start_path, js['filename']))
+
+    #                 log.info(f'deleted {start_path}/{file_name}')
+
     try:
         async with engine.acquire() as conn:
             await conn.execute(db.tbl_youtube_files.delete()
@@ -622,10 +643,13 @@ async def truncate(app):
     # candidate = []          # 삭제 후보리스트
 
     # os.path.getmtime(paths[n] + f)).strftime("%y%m%d%H%M%S")) for f in os.listdir(paths[n])]))
-    now = datetime.datetime.now()
-    log.info(f'truncate()::now is {datetime.datetime.now()}')
+    # now = datetime.datetime.now()
+    # log.info(f'truncate()::now is {datetime.datetime.now()}')
     # 24시간 주기로 실행합니다
+    # 6시간 주기로 실행합니다
     while True:
+        now = datetime.datetime.now()
+        log.info(f'truncate()::now is {datetime.datetime.now()}')
         async with engine.acquire() as conn:
             async for r in conn.execute(db.tbl_youtube_files.select()):
                 try:
@@ -651,6 +675,9 @@ async def truncate(app):
                         await _deletefile(r[0], r[12])
                             # candidate.append(r[0])
                         # log.info(f'{r[8]}')
+
+
+                    await delete_files(r[8]);
                     # 파일이 없을 경우는 db및 파일 삭제명령을 내립니다
                     # else:
                     #     await _deletefile(r[0], r[12])
@@ -738,10 +765,30 @@ async def truncate(app):
                 except:
                     log.info(f'truncate()::exception')
 
+
         # await asyncio.sleep(3600*24)  # 24시간 즉 하루에 한번 큐를 검색해줍니다
         # await asyncio.sleep(3600)  # 24시간 즉 하루에 한번 큐를 검색해줍니다
         # await asyncio.sleep(60)  # 24시간 즉 하루에 한번 큐를 검색해줍니다
         await asyncio.sleep(3600*6)  # 6시간 한번 큐를 검색해줍니다
+
+async def delete_files(path):
+    if os.path.exists(path) == True:
+        now = datetime.datetime.now()
+
+        for f in os.listdir(path):
+            t = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(path ,f)))
+            
+            diff = now - t
+            # 3일 기간 이상은 삭제합니다
+            # if diff.days > 7:
+            if diff.days > TRUNCATE_DAYS:
+                if (os.path.exists(os.path.join(path, f))):
+                    os.remove(os.path.join(path, f))
+                # else:
+                #     if(os.path.exists(os.path.join(start_path, js['filename']))):
+                #         os.remove(os.path.join(start_path, js['filename']))
+
+                log.info(f'deleted {path}/{f}')
 
 
 async def create_bg_tasks(app):
