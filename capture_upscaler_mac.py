@@ -31,7 +31,7 @@ URL_UPLOADER_WS_REFRESH = 'http://192.168.1.204:9993/ws_refresh'
 MY_IP = '192.168.100.107' if subprocess.getoutput("scutil --get ComputerName")[:3] == "Lee" else '192.168.100.108'
 # MY_IP = '192.168.100.108'
 
-TRUNCATE_DAYS = 3
+TRUNCATE_DAYS = 2
 PATHS = [
     '/Users/utylee/Downloads/_share_mac2/_Capture/'
     ]
@@ -788,7 +788,7 @@ async def delete_files(path):
                 #     if(os.path.exists(os.path.join(start_path, js['filename']))):
                 #         os.remove(os.path.join(start_path, js['filename']))
 
-                log.info(f'deleted {path}/{f}')
+                log.info(f'deleted {path}{f}')
 
 
 async def create_bg_tasks(app):
